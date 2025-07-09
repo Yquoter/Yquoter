@@ -17,7 +17,7 @@ yquoter/
 │   └── basic_usage.ipynb # 示例 Jupyter Notebook
 │
 ├── temp/                 # debug
-├── cache/                # 缓存
+├── .cache/                # 缓存
 ├── tests/
 │   └── test_china.py     # 单元测试
 │

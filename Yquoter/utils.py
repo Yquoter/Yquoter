@@ -118,22 +118,3 @@ def log_info(msg: str):
 def log_error(msg: str):
     logger.error(msg)
 
-# ---------- 单元测试 ----------
-if __name__ == "__main__":
-    test_codes = ['600519', '000001', '300750', '700', 'AAPL', '600519.SH', '00700.HK']
-    markets = ['cn', 'cn', 'cn', 'hk', 'us', 'cn', 'hk']
-
-    for code, market in zip(test_codes, markets):
-        try:
-            converted = convert_code_to_tushare(code, market)
-            log_info(f"{code} ({market}) -> {converted}")
-        except Exception as e:
-            log_error(str(e))
-
-    test_dates = ['2023-07-09', '2023/07/09', '20230709', '2023-07-09 15:30:00', 'invalid-date']
-    for d in test_dates:
-        try:
-            out = parse_date_str(d)
-            log_info(f"'{d}' -> '{out}'")
-        except Exception as e:
-            log_error(str(e))

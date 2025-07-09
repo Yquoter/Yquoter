@@ -1,0 +1,29 @@
+# Python 编译缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 虚拟环境文件夹
+venv/
+env/
+.env/
+
+# 日志文件
+*.log
+
+# Jupyter Notebook 检查点
+.ipynb_checkpoints/
+
+# 缓存文件夹
+.cache/
+
+# IDE 和编辑器配置
+.vscode/
+.idea/
+
+# 系统文件
+Thumbs.db
+.DS_Store
+
+# 环境变量配置文件
+*.env

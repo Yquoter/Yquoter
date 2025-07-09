@@ -74,18 +74,3 @@ def save_cache(df: pd.DataFrame, path: str):
     except Exception as e:
         logger.error(f"保存缓存文件失败: {path}，异常: {e}")
         raise
-
-if __name__ == "__main__":
-    # 测试
-    p = get_cache_path("cn", "600519", "2023-01-01", "2023-06-30")
-    print(f"缓存路径示例：{p}")
-    print(f"是否存在：{cache_exists(p)}")
-
-    # 试加载不存在的缓存
-    df = load_cache(p)
-    print(f"加载缓存结果：{df}")
-
-    # 试保存空DataFrame
-    import pandas as pd
-    df_save = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-    save_cache(df_save, p)
