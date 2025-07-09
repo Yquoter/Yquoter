@@ -7,7 +7,7 @@ yquoter/
 ├── yquoter/
 │   ├── __init__.py
 │   ├── base.py           # 公共工具函数与统一接口
-│   ├── china.py          # A 股行情抓取模块
+│   ├── cn.py             # A 股行情抓取模块
 │   ├── hk.py             # 港股行情抓取模块
 │   ├── us.py             # 美股行情抓取模块
 │   ├── cache.py          # 本地缓存管理
@@ -16,6 +16,8 @@ yquoter/
 ├── examples/
 │   └── basic_usage.ipynb # 示例 Jupyter Notebook
 │
+├── temp/                 # debug
+├── cache/                # 缓存
 ├── tests/
 │   └── test_china.py     # 单元测试
 │
