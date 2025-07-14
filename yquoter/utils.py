@@ -1,15 +1,10 @@
 import re
-import logging
+from yquoter.logger import get_logger
 from datetime import datetime
 from typing import Optional, Literal
 
 # ---------- 日志配置 ----------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # ---------- 异常 ----------
 class CodeFormatError(ValueError):
@@ -109,12 +104,3 @@ def parse_date_str(
             continue
     logger.error(f"无法识别的日期格式: {date_str}")
     raise DateFormatError(f"无法识别的日期格式: {date_str}")
-
-# ---------- 简易日志辅助 ----------
-
-def log_info(msg: str):
-    logger.info(msg)
-
-def log_error(msg: str):
-    logger.error(msg)
-

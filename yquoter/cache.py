@@ -1,18 +1,11 @@
 import os
 import pandas as pd
-import logging
 from typing import Optional
+from yquoter.logger import get_logger
+from yquoter.config import CACHE_ROOT  # 导入缓存根目录
 
 # ---------- 日志配置 ----------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-logger = logging.getLogger(__name__)
-
-# ---------- 缓存根目录（可外部配置） ----------
-CACHE_ROOT = ".cache"
+logger = get_logger(__name__)
 
 def get_cache_path(
     market: str,
