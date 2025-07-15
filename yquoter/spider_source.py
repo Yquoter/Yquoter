@@ -4,9 +4,9 @@ import random
 from datetime import datetime, timedelta
 import time
 
-def get_stock_history_spider(stock_code, start_date, end_date, klt=101, fqt=1):
+def get_cn_stock_history_spider(stock_code, start_date, end_date, klt=101, fqt=1):
         """
-        undo: klt & fgt
+        undo: klt & fgt(暂不需要）
         tag: 获取东方财富网股票  A股   历史行情数据    
         args:   stock_code: 股票代码，如'300195'
                 start_date: 开始日期，格式'YYYYMMDD'
