@@ -6,13 +6,15 @@ import time
 
 def get_stock_history_spider(stock_code, start_date, end_date, klt=101, fqt=1):
         """
-        获取东方财富网股票历史行情数据    
-        参数:
-        stock_code: 股票代码，如'300195'
-        start_date: 开始日期，格式'YYYYMMDD'
-        end_date: 结束日期，格式'YYYYMMDD'
-        klt: K线周期，101=日线，102=周线，103=月线
-        fqt: 复权类型，0=不复权，1=前复权，2=后复权
+        undo: klt & fgt
+        tag: 获取东方财富网股票  A股   历史行情数据    
+        args:   stock_code: 股票代码，如'300195'
+                start_date: 开始日期，格式'YYYYMMDD'
+                end_date: 结束日期，格式'YYYYMMDD'
+                klt: K线周期，101=日线，102=周线，103=月线
+                fqt: 复权类型，0=不复权，1=前复权，2=后复权
+        return: a dataframe
+        
         """
         #确定secid（根据股票代码判断市场）
         if stock_code.startswith(('600', '601', '603', '605')):  # 沪市
@@ -96,8 +98,4 @@ def get_stock_history_spider(stock_code, start_date, end_date, klt=101, fqt=1):
             return None
 
 
-print(get_stock_history_spider(
-    stock_code="300195",
-    start_date="20230101",
-    end_date="20241231"
-))
+
