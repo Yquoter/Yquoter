@@ -3,6 +3,7 @@
 import os
 import tushare as ts
 import pandas as pd
+from typing import Optional
 from yquoter.config import TUSHARE_TOKEN
 from yquoter.utils import convert_code_to_tushare, parse_date_str
 from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
@@ -39,7 +40,7 @@ def get_pro():
         return _pro
     raise ValueError("TuShare 未初始化，请调用 init_tushare 或设置 .env 中的 TUSHARE_TOKEN")
 
-def _fetch_tushare(market: str, code: str, start: str, end: str) -> pd.DataFrame:
+def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, fqt: int=1) -> pd.DataFrame:
     """
     通用内部函数：调用 TuShare API 拉取日线数据（不同市场对应不同接口名）
     """
@@ -47,31 +48,62 @@ def _fetch_tushare(market: str, code: str, start: str, end: str) -> pd.DataFrame
     ts_code = convert_code_to_tushare(code, market)
     sd = parse_date_str(start)
     ed = parse_date_str(end)
+    def _klt_to_freq(klt: int) -> str:
+        return {
+            101: 'D',  # 日线
+            102: 'W',  # 周线
+            103: 'M',  # 月线
+        }.get(klt, 'D')
+
+    def _fqt_to_adj(fqt: int) -> Optional[str]:
+        return {
+            0: None,
+            1: 'qfq',
+            2: 'hfq'
+        }.get(fqt, None)
+
     if market == "cn":
-        df = pro.daily(ts_code=ts_code, start_date=sd, end_date=ed)
+        df = ts.pro_bar(
+            ts_code=ts_code,
+            start_date=sd,
+            end_date=ed,
+            freq=_klt_to_freq(klt),
+            adj=_fqt_to_adj(fqt),
+            asset="E"
+        )
     elif market == "hk":
-        df = pro.hk_daily(ts_code=ts_code, start_date=sd, end_date=ed)
+        df = pro.hk_daily(
+            ts_code=ts_code,
+            start_date=sd,
+            end_date=ed
+        )
     elif market == "us":
-        df = pro.us_daily(ts_code=ts_code, start_date=sd, end_date=ed)
+        df = pro.us_daily(
+            ts_code=ts_code,
+            start_date=sd,
+            end_date=ed
+        )
     else:
-        raise ValueError(f"未知市场：{market}")
+        raise ValueError(f"不支持的 market: {market}")
     return df
 
 def get_stock_daily_tushare(
     market: str,
     code: str,
     start: str,
-    end: str
+    end: str,
+    klt: int = 101,
+    fqt: int = 1
 ) -> pd.DataFrame:
     """
     带缓存的通用 TuShare 日线获取：
     - market: 'cn','hk','us'
     """
-    cache_path = get_cache_path(market, code, start, end)
+    cache_path = get_cache_path(market, code, start, end, klt, fqt)
     if cache_exists(cache_path):
         return load_cache(cache_path)
 
-    df = _fetch_tushare(market, code, start, end)
+    df = _fetch_tushare(market, code, start, end, klt=klt, fqt=fqt)
     if df.empty:
         return df
 

@@ -12,6 +12,8 @@ def get_cache_path(
     code: str,
     start: str,
     end: str,
+    klt: int,
+    fqt: int,
     cache_root: Optional[str] = None
 ) -> str:
     """
@@ -26,7 +28,7 @@ def get_cache_path(
     except Exception as e:
         logger.error(f"创建缓存目录失败: {folder}，异常: {e}")
         raise
-    filename = f"{start_fmt}_{end_fmt}.csv"
+    filename = f"{start_fmt}_{end_fmt}_klt{klt}_fqt{fqt}.csv"
     path = os.path.join(folder, filename)
     logger.debug(f"生成缓存路径: {path}")
     return path

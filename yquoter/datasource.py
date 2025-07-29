@@ -10,6 +10,8 @@ def get_stock_data(
     start: str,
     end: str,
     source: str = "tushare",
+    klt: int = 101,
+    fqt: int = 1,
     allow_spider: bool = True
 ) -> pd.DataFrame:
     """
@@ -21,10 +23,11 @@ def get_stock_data(
     source = source.lower()
     if source in ("tushare", "auto"):
         try:
-            return get_stock_daily_tushare(market, code, start, end)
+            # 只有A股才会用到klt与fqt，tushare关于港股与美股的pro_bar接口不支持
+            return get_stock_daily_tushare(market, code, start, end, klt, fqt)
         except Exception as e:
             if source == "auto" and allow_spider:
-                # return get_stock_daily_spider(market, code, start, end)
+                # return get_stock_daily_spider(market, code, start, end, klt, fqt)
                 raise NotImplementedError("备用爬虫未实现")
             raise
 
