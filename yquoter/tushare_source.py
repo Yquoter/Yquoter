@@ -46,8 +46,6 @@ def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, f
     """
     pro = get_pro()
     ts_code = convert_code_to_tushare(code, market)
-    sd = parse_date_str(start)
-    ed = parse_date_str(end)
     def _klt_to_freq(klt: int) -> str:
         return {
             101: 'D',  # 日线
@@ -65,8 +63,8 @@ def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, f
     if market == "cn":
         df = ts.pro_bar(
             ts_code=ts_code,
-            start_date=sd,
-            end_date=ed,
+            start_date=start,
+            end_date=end,
             freq=_klt_to_freq(klt),
             adj=_fqt_to_adj(fqt),
             asset="E"
@@ -74,14 +72,14 @@ def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, f
     elif market == "hk":
         df = pro.hk_daily(
             ts_code=ts_code,
-            start_date=sd,
-            end_date=ed
+            start_date=start,
+            end_date=end
         )
     elif market == "us":
         df = pro.us_daily(
             ts_code=ts_code,
-            start_date=sd,
-            end_date=ed
+            start_date=start,
+            end_date=end
         )
     else:
         raise ValueError(f"不支持的 market: {market}")

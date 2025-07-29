@@ -1,101 +1,134 @@
-import requests
+# yquoter/spider_source.py
+
 import pandas as pd
-import random
-from datetime import datetime, timedelta
 import time
+from yquoter.spider_core import crawl_kline_segments
+from yquoter.utils import *
 
-def get_cn_stock_history_spider(stock_code, start_date, end_date, klt=101, fqt=1):
-        """
-        undo: klt & fgt(暂不需要）
-        tag: 获取东方财富网股票  A股   历史行情数据    
-        args:   stock_code: 股票代码，如'300195'
-                start_date: 开始日期，格式'YYYYMMDD'
-                end_date: 结束日期，格式'YYYYMMDD'
-                klt: K线周期，101=日线，102=周线，103=月线
-                fqt: 复权类型，0=不复权，1=前复权，2=后复权
-        return: a dataframe
-        
-        """
-        #确定secid（根据股票代码判断市场）
-        if stock_code.startswith(('600', '601', '603', '605')):  # 沪市
-            secid = f"1.{stock_code}"
-        elif stock_code.startswith(('000', '001', '002', '003', '300', '301')):  # 深市（含创业板）
-            secid = f"0.{stock_code}"
-        else:
-            print("未知市场的股票代码")
-            return None
-    
-        #处理日期范围
-        all_data = []
-        start = datetime.strptime(start_date, '%Y%m%d')
-        end = datetime.strptime(end_date, '%Y%m%d')
-        segment_size = timedelta(days=365)
-        current_start = start
-        
-        while current_start <= end:
-            #这个while的作用是分段获取数据
-            current_end = min(current_start + segment_size, end)
-            current_start_str = current_start.strftime('%Y%m%d')
-            current_end_str = current_end.strftime('%Y%m%d')
-        
-            #构建接口URL
-            timestamp = int(time.time() * 1000)
-            url = (
-                f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
-                f"?secid={secid}"
-                f"&ut=fa5fd1943c7b386f1734de82599f7dc"
-                f"&fields1=f1,f2,f3,f4,f5,f6"
-                f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58"
-                f"&klt={klt}"#k线周期
-                f"&fqt={fqt}"#复权
-                f"&beg={current_start_str}"
-                f"&end={current_end_str}"
-                f"&lmt=10000"
-                f"&_={timestamp}"
-            )
-        
-            #发送请求 
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Referer": "https://quote.eastmoney.com/",
-            }
-            try:
-                response = requests.get(url, headers=headers)
-                response.raise_for_status()
-                data = response.json()
-            
-                if data.get("data") and data["data"].get("klines"):
-                    klines = data["data"]["klines"]
-                    columns = ["date","open","high","low","close","volume"]
-                    need=[]
-                    for line in klines:
-                        need.append([line.split(',')[i] for i in [0,1,3,4,2,5]])
-                    segment_df = pd.DataFrame(
-                        need,
-                        columns=columns
-                    )
-                    all_data.append(segment_df)
-                    print(f"成功获取股票 {stock_code} 从 {current_start_str} 至 {current_end_str} 的数据，共 {len(segment_df)} 行")
-                else:
-                    print(f"分段请求失败: {data.get('msg', '未知错误')}")
-            
-                time.sleep(1)
-            
-            except Exception as e:
-                print(f"请求异常: {e}")
-                time.sleep(3)        
-            current_start = current_end + timedelta(days=1)
-        response.close()
-        #合并所有分段数据
-        if all_data:
-            df = pd.concat(all_data, ignore_index=True)
-        #转换数据类型（排除日期列）
-            for col in df.columns[1:]:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
-            return df
-        else:
-            print("未获取到任何数据")
-            return None
+def get_stock_daily_spider(
+    market: str,
+    code: str,
+    start: str,
+    end: str,
+    klt: int = 101,
+    fqt: int = 1
+) -> pd.DataFrame:
+    """统一 spider 接口，支持各市场历史数据抓取。"""
+    market = market.lower()
+    if market == "cn":
+        return _get_cn_spider(code, start, end, klt, fqt)
+    elif market == "hk":
+        return _get_hk_spider(code, start, end, klt, fqt)
+    elif market == "us":
+        return _get_us_spider(code, start, end, klt, fqt)
+    else:
+        raise ValueError(f"未知市场：{market}")
 
+
+def _get_cn_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.DataFrame:
+    """
+    东方财富 A 股 K 线数据爬虫（使用分页器抽象）
+
+    参数说明：
+        code: 股票代码，如 '600519' 表示贵州茅台
+        start: 起始日期，格式 'YYYYMMDD'
+        end: 结束日期，格式 'YYYYMMDD'
+        klt: K线类型（101=1分钟, 102=5分钟, 103=15分钟, 104=30分钟,
+                      105=60分钟, 1=日K, 2=周K, 3=月K）
+        fqt: 复权类型（0=不复权，1=前复权，2=后复权）
+
+    返回：
+        包含 ['date', 'open', 'low', 'high', 'close', 'volume'] 的 DataFrame
+    """
+
+    # 根据股票代码前缀判断是上交所还是深交所，构造东方财富 API 使用的 secid
+    if code.startswith(("600", "601", "603", "605")):
+        secid = f"1.{code}"  # 上交所
+    elif code.startswith(("000", "001", "002", "003", "300", "301")):
+        secid = f"0.{code}"  # 深交所
+    else:
+        raise CodeFormatError("未知A股代码，无法判断市场")
+
+    # 构造获取某一时间区间 K 线数据的请求 URL
+    def make_url(beg: str, end_: str) -> str:
+        ts = int(time.time() * 1000)  # 当前时间戳用于防止缓存
+        return (
+            f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
+            f"?secid={secid}"
+            f"&ut=fa5fd1943c7b386f1734de82599f7dc"
+            f"&fields1=f1,f2,f3,f4,f5,f6"  # 基础字段
+            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58"  # K线字段
+            f"&klt={klt}&fqt={fqt}&beg={beg}&end={end_}&lmt=10000&_={ts}"
+        )
+
+    # 将返回的 JSON 数据解析成二维数组（行列表）
+    def parse_kline(json_data):
+        klines = json_data.get("data", {}).get("klines", [])
+        rows = []
+        for line in klines:
+            parts = line.split(',')
+            # 调整顺序为：date, open, low, high, close, volume
+            rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5]])
+        return rows
+
+    # 使用分页器处理跨日期段抓取、拼接成完整的 DataFrame
+    return crawl_kline_segments(start, end, make_url, parse_kline)
+
+def _get_hk_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.DataFrame:
+    """
+    东方财富 港股 K 线数据爬虫（分页）
+    说明：secid 格式为 116.{code}，如 '00700' -> '116.00700'
+    """
+    secid = f"116.{code.zfill(5)}"  # 确保代码五位数，前补零
+
+    def make_url(beg: str, end_: str) -> str:
+        ts = int(time.time() * 1000)
+        return (
+            f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
+            f"?secid={secid}"
+            f"&ut=fa5fd1943c7b386f1734de82599f7dc"
+            f"&fields1=f1,f2,f3,f4,f5,f6"
+            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58"
+            f"&klt={klt}&fqt={fqt}&beg={beg}&end={end_}&lmt=10000&_={ts}"
+        )
+
+    def parse_kline(json_data):
+        klines = json_data.get("data", {}).get("klines", [])
+        rows = []
+        for line in klines:
+            parts = line.split(',')
+            rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5]])
+        return rows
+
+    return crawl_kline_segments(start, end, make_url, parse_kline)
+
+
+def _get_us_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.DataFrame:
+    """
+    东方财富 美股 K 线数据爬虫（分页）
+    说明：secid 格式为 105.{code}，如 'AAPL' -> '105.AAPL'
+    """
+    secid = f"105.{code.upper()}"  # 美股代码大写标准化
+
+    def make_url(beg: str, end_: str) -> str:
+        ts = int(time.time() * 1000)
+        return (
+            f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
+            f"?secid={secid}"
+            f"&ut=fa5fd1943c7b386f1734de82599f7dc"
+            f"&fields1=f1,f2,f3,f4,f5,f6"
+            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58"
+            f"&klt={klt}&fqt={fqt}&beg={beg}&end={end_}&lmt=10000&_={ts}"
+        )
+
+    def parse_kline(json_data):
+        klines = json_data.get("data", {}).get("klines", [])
+        rows = []
+        for line in klines:
+            parts = line.split(',')
+            rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5]])
+        return rows
+
+    return crawl_kline_segments(start, end, make_url, parse_kline)
 
 

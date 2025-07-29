@@ -9,7 +9,8 @@ yquoter/
 │   ├── base.py           # 公共工具函数与统一接口
 │   ├── datasource.py     # 统一数据源接口
 │   ├── tushare_source.py # 仅封装 tushare 的 raw 实现
-│   ├── spider_source.py  # 未来写自爬虫的 fallback 数据源
+│   ├── spider_source.py  # 自爬虫的 fallback 数据源
+│   ├── spider_core.py    # 爬虫机制
 │   ├── config.py         # 管理 token、路径
 │   ├── .env              # 管理tuShare的token
 │   ├── logger.py         # 日志配置
