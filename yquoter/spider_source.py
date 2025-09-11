@@ -63,6 +63,8 @@ def _get_cn_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.Da
 
     # 将返回的 JSON 数据解析成二维数组（行列表）
     def parse_kline(json_data):
+        if not json_data or "data" not in json_data:
+            return []
         klines = json_data.get("data", {}).get("klines", [])
         rows = []
         for line in klines:

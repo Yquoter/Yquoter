@@ -1,5 +1,21 @@
-from yquoter import init_tushare, get_stock_data
+from yquoter import register_source, get_stock_data
+import pandas as pd
 
-init_tushare("61b9be5ca7ac6921a8daefed77c19644ac42c9a574f8b63e54def692")
-df_hk = get_stock_data("hk", "00700", "2023-01-01", "2023-06-30", source="spider")
-print(df_hk, "\n")
+# 定义一个自定义数据源函数
+def costom(market, code, start, end, klt=101, fqt=1):
+    # 演示，返回一个空 DataFrame
+    return pd.DataFrame({
+        "date": [start, end],
+        "open": [100, 110],
+        "high": [105, 115],
+        "low": [95, 108],
+        "close": [102, 112],
+        "volume": [1000, 1200]
+    })
+
+# 注册数据源
+register_source("costom", costom)
+
+# 使用自定义数据源
+df_cn = get_stock_data("cn", "002475", "2025-09-01", "2025-09-10", freq='d', source='costom')
+print(df_cn, "\n")

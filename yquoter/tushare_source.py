@@ -8,7 +8,7 @@ from yquoter.config import TUSHARE_TOKEN
 from yquoter.utils import convert_code_to_tushare, parse_date_str
 from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
 
-_pro = None # 全局 TuShare 实例
+_pro = None  # 全局 TuShare 实例
 
 
 def init_tushare(token: str = None):
