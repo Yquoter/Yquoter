@@ -4,11 +4,11 @@ import os
 import tushare as ts
 import pandas as pd
 from typing import Optional
-from yquoter.config import TUSHARE_TOKEN
 from yquoter.utils import convert_code_to_tushare, parse_date_str
 from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
 
 _pro = None  # 全局 TuShare 实例
+_token = None  # 延迟保存token
 
 
 def init_tushare(token: str = None):
@@ -21,24 +21,30 @@ def init_tushare(token: str = None):
     Raises:
         ValueError: 如果未传入 token 且环境变量未设置。
     """
-    global _pro
+    global _pro, _token
     if token is None:
         token = os.environ.get("TUSHARE_TOKEN")
 
     if not token:
         raise ValueError("TuShare Token 未提供，请传入 token 或设置环境变量 TUSHARE_TOKEN")
 
+    _token = token
     _pro = ts.pro_api(token)
+    return _pro
 
 def get_pro():
     """返回已初始化的 TuShare 接口实例。"""
-    global _pro
+    global _pro, _token
     if _pro:
         return _pro
-    if TUSHARE_TOKEN:
-        _pro = ts.pro_api(TUSHARE_TOKEN)
-        return _pro
-    raise ValueError("TuShare 未初始化，请调用 init_tushare 或设置 .env 中的 TUSHARE_TOKEN")
+    if not _token:
+        token = os.environ.get("TUSHARE_TOKEN")
+        if not token:
+            raise ValueError("TuShare 未初始化，请调用 init_tushare 或设置环境变量 TUSHARE_TOKEN")
+        _token = token
+        _pro = ts.pro_api(_token)
+    return _pro
+
 
 def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, fqt: int=1) -> pd.DataFrame:
     """
