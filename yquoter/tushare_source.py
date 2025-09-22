@@ -21,6 +21,8 @@ def init_tushare(token: str = None):
     Raises:
         ValueError: 如果未传入 token 且环境变量未设置。
     """
+    from yquoter.datasource import register_source
+
     global _pro, _token
     if token is None:
         token = os.environ.get("TUSHARE_TOKEN")
@@ -30,7 +32,7 @@ def init_tushare(token: str = None):
 
     _token = token
     _pro = ts.pro_api(token)
-    return _pro
+    register_source("tushare", get_stock_daily_tushare)
 
 def get_pro():
     """返回已初始化的 TuShare 接口实例。"""

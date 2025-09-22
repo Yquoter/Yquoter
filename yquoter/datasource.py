@@ -4,14 +4,12 @@ import inspect
 import pandas as pd
 from datetime import datetime
 from typing import Dict, Callable, Optional, Union, List
-from yquoter.tushare_source import get_stock_daily_tushare
 from yquoter.spider_source import get_stock_daily_spider
 from yquoter.utils import *
 
 # 全局注册表
 _SOURCE_REGISTRY: Dict[str, Callable] = {
-    "spider": get_stock_daily_spider,
-    "tushare": get_stock_daily_tushare,
+    "spider": get_stock_daily_spider
 }
 _DEFAULT_SOURCE = "spider"  # 优先爬虫
 
@@ -94,6 +92,11 @@ def get_stock_data(
         print("⚠️ 区间过短，可能无月K数据")
 
     src = (source or _DEFAULT_SOURCE).lower()
+    if src == "tushare" and "tushare" not in _SOURCE_REGISTRY:
+        raise ValueError(
+            "TuShare 数据源尚未启用。请先调用 `yquoter.init_tushare(token)` 来初始化并注册 tushare，"
+            "或使用 source='spider'。"
+        )
     if src not in _SOURCE_REGISTRY:
         raise ValueError(f"未知数据源：{src}，可用数据源：{list(_SOURCE_REGISTRY)}")
 
