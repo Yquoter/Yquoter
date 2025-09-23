@@ -1,7 +1,29 @@
 import re
+import os
+import pandas as pd
+from dotenv import load_dotenv
 from yquoter.logger import get_logger
 from datetime import datetime
 from typing import Optional, Literal
+
+# 配置加载
+# -------------------------
+
+def load_config():
+    """
+    加载 .env 配置，返回一个 dict
+    """
+    load_dotenv()
+
+    config = {
+        "TUSHARE_TOKEN": os.getenv("TUSHARE_TOKEN"),
+        "CACHE_ROOT": os.getenv("CACHE_ROOT", ".cache")
+    }
+
+    if not config["TUSHARE_TOKEN"]:
+        raise ValueError("请在 .env 中设置 TUSHARE_TOKEN")
+
+    return config
 
 # ---------- 日志配置 ----------
 logger = get_logger(__name__)
@@ -104,3 +126,41 @@ def parse_date_str(
             continue
     logger.error(f"无法识别的日期格式: {date_str}")
     raise DateFormatError(f"无法识别的日期格式: {date_str}")
+
+
+def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
+    """
+    根据文件后缀自动加载为 DataFrame
+    支持 csv / xlsx / json / parquet
+    额外参数通过 kwargs 传给对应的 pandas 读取函数
+
+    返回：
+        pd.DataFrame，包含至少 ['date', 'close'] 列
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"文件不存在: {path}")
+
+    ext = os.path.splitext(path)[-1].lower()
+
+    if ext == ".csv":
+        df = pd.read_csv(path, **kwargs)
+    elif ext in [".xls", ".xlsx"]:
+        df = pd.read_excel(path, **kwargs)
+    elif ext == ".json":
+        df = pd.read_json(path, **kwargs)
+    elif ext == ".parquet":
+        df = pd.read_parquet(path, **kwargs)
+    else:
+        raise ValueError(f"不支持的文件格式: {ext}")
+
+    # 标准化字段
+    if "date" not in df.columns:
+        raise ValueError("数据缺少 'date' 列")
+    if "close" not in df.columns:
+        raise ValueError("数据缺少 'close' 列")
+
+    # 确保日期列转成 datetime
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df.dropna(subset=["date"]).reset_index(drop=True)
+
+    return df
