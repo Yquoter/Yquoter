@@ -15,19 +15,20 @@ def init_tushare(token: str = None):
     初始化 TuShare 接口。
 
     - 若手动传入 token，则使用之；
-    - 否则默认从环境变量 `TUSHARE_TOKEN` 读取。
+    - 否则默认调用get_tushare_token。
 
     Raises:
         ValueError: 如果未传入 token 且环境变量未设置。
     """
+    from yquoter.config import get_tushare_token
     from yquoter.datasource import register_source
 
     global _pro, _token
     if token is None:
-        token = os.environ.get("TUSHARE_TOKEN")
+        token = get_tushare_token()
 
     if not token:
-        raise ValueError("TuShare Token 未提供，请传入 token 或设置环境变量 TUSHARE_TOKEN")
+        raise ValueError("TuShare Token 未提供，请传入 token 或在 .env/环境变量中设置 TUSHARE_TOKEN")
 
     _token = token
     _pro = ts.pro_api(token)
