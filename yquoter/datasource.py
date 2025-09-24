@@ -4,6 +4,7 @@ import inspect
 import pandas as pd
 from datetime import datetime
 from typing import Dict, Callable, Optional, Union, List
+from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
 from yquoter.spider_source import get_stock_daily_spider
 from yquoter.utils import *
 
@@ -107,6 +108,12 @@ def get_stock_data(
             raise ValueError(f"未知 freq：{freq}，可选值：{list(FREQ_TO_KLT)}")
         klt = FREQ_TO_KLT[freq]
 
+    # 1.查缓存
+    cache_path = get_cache_path(market, code, start, end, klt, fqt)
+    if cache_exists(cache_path):
+        df = load_cache(cache_path)
+
+    # 2.没有缓存 -> 调用数据源
     func = _SOURCE_REGISTRY[src]
 
     # 构造统一参数
@@ -126,6 +133,9 @@ def get_stock_data(
     filtered_params = {k: v for k, v in params.items() if k in sig.parameters}
 
     df = func(**filtered_params)
+
+    # 存缓存
+    save_cache(cache_path, df)
 
     # 校验输出
     return _validate_dataframe(df)

@@ -59,7 +59,7 @@ def load_cache(path: str) -> Optional[pd.DataFrame]:
         logger.error(f"加载缓存文件失败: {path}，异常: {e}")
         return None
 
-def save_cache(df: pd.DataFrame, path: str):
+def save_cache(path: str, df: pd.DataFrame):
     """
     将 DataFrame 保存到缓存文件
     """

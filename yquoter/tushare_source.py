@@ -5,7 +5,6 @@ import tushare as ts
 import pandas as pd
 from typing import Optional
 from yquoter.utils import convert_code_to_tushare, parse_date_str
-from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
 
 _pro = None  # 全局 TuShare 实例
 _token = None  # 延迟保存token
@@ -105,10 +104,6 @@ def get_stock_daily_tushare(
     带缓存的通用 TuShare 日线获取：
     - market: 'cn','hk','us'
     """
-    cache_path = get_cache_path(market, code, start, end, klt, fqt)
-    if cache_exists(cache_path):
-        return load_cache(cache_path)
-
     df = _fetch_tushare(market, code, start, end, klt=klt, fqt=fqt)
     if df.empty:
         return df
@@ -117,5 +112,4 @@ def get_stock_daily_tushare(
     df.sort_values(df.columns[1], inplace=True)  # trade_date 列位置视 market 而定
     df.reset_index(drop=True, inplace=True)
     # TODO: 根据不同市场统一重命名列
-    save_cache(df, cache_path)
     return df
