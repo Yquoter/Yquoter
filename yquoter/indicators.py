@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from yquoter.utils import parse_date_str, load_file_to_df
 from yquoter.datasource import get_stock_data
 
-def calc_pre_date(date,n):
+def calc_pre_date(date, n):
     """
     提前n个交易日计算工具
     """

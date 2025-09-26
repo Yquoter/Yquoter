@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from typing import Optional
 from yquoter.logger import get_logger
-from yquoter.config import CACHE_ROOT  # 导入缓存根目录
+from yquoter.config import get_cache_root  # 导入缓存根目录
 
 # ---------- 日志配置 ----------
 logger = get_logger(__name__)
@@ -19,7 +19,7 @@ def get_cache_path(
     """
     根据市场、代码和时间区间生成缓存文件路径
     """
-    root = cache_root or CACHE_ROOT
+    root = cache_root or get_cache_root()
     start_fmt = start.replace("-", "")
     end_fmt = end.replace("-", "")
     folder = os.path.join(root, market.lower(), code)
@@ -59,7 +59,7 @@ def load_cache(path: str) -> Optional[pd.DataFrame]:
         logger.error(f"加载缓存文件失败: {path}，异常: {e}")
         return None
 
-def save_cache(df: pd.DataFrame, path: str):
+def save_cache(path: str, df: pd.DataFrame):
     """
     将 DataFrame 保存到缓存文件
     """

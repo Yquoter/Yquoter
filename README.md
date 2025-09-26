@@ -1,31 +1,56 @@
 # Yquoter
-Yquoter: Your universal cross-market quote fetcher. Fetch A-shares, H-shares, and US stock prices easily via one interface.
+Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shares, and US stock prices** easily via one interface.
+
+- [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
+- [![License](https://img.shields.io/github/license/Yodeesy/Yquoter?style=flat)](./LICENSE)
+
+![Yquoter Social Banner](assets/yquoter_banner.png)
 ---
-## structure
+## 📂 Project Structure
+This is a high-level overview of the Yquoter package structure:
 ```
 yquoter/
 ├── yquoter/
-│   ├── __init__.py       # 暴露接口
-│   ├── datasource.py     # 统一数据源接口
-│   ├── tushare_source.py # 仅封装 tushare 的 raw 实现
-│   ├── spider_source.py  # 自爬虫的 fallback 数据源
-│   ├── spider_core.py    # 爬虫机制
-│   ├── config.py         # 管理 token、路径
-│   ├── .env              # 管理tuShare的token
-│   ├── indicators.py     # 指标计算工具
-│   ├── logger.py         # 日志配置
-│   ├── cache.py          # 本地缓存管理
-│   └── utils.py          # 通用函数
+│   ├── __init__.py       # Exposes the main API interfaces (e.g., get_quotes)
+│   ├── datasource.py     # Unified interface for all data fetching sources
+│   ├── tushare_source.py # Encapsulates the raw implementation of Tushare
+│   ├── spider_source.py  # Fallback data source using internal web scraping
+│   ├── spider_core.py    # Core logic and mechanism for the internal spider
+│   ├── config.py         # Manages configuration settings (tokens, paths)
+│   ├── .env              # Stores sensitive environment variables (e.g., Tushare token)
+│   ├── indicators.py     # Utility for calculating technical indicators
+│   ├── logger.py         # Logging configuration and utilities
+│   ├── cache.py          # Manages local data caching mechanisms
+│   └── utils.py          # General-purpose utility functions
 │
 ├── examples/
-│   └── basic_usage.ipynb # 示例 Jupyter Notebook
+│   └── basic_usage.ipynb # Detailed usage examples in Jupyter Notebook
 │
-├── temp/                 # debug
-├── .cache/               # 缓存
-├── setup.py              # 包配置（可上传 PyPI）
-├── requirements.txt      # 依赖声明
-├── LICENSE               # Apache 2.0 开源协议
-├── README.md             # 项目说明
-├── .gitignore            # 忽略文件配置
-└── .github/workflows/ci.yml  # GitHub Actions 自动测试
+├── assets/               # Non-code assets (e.g., logos, screenshots for README)
+├── temp/                 # Temporary files (ignored by Git)
+├── .cache/               # Cache files (ignored by Git)
+├── setup.py              # Package configuration for distribution (PyPI)
+├── requirements.txt      # Declaration of project dependencies
+├── LICENSE               # Apache 2.0 Open Source License details
+├── README.md             # Project documentation (this file)
+├── .gitignore            # Files/directories to exclude from version control
+└── .github/workflows/ci.yml  # GitHub Actions workflow for Continuous Integration
 ```
+---
+## 🤝 Contribution Guide
+We welcome contributions of all forms, including bug reports, documentation improvements, feature requests, and code contributions.
+
+Before submitting a Pull Request, please ensure that you:
+
+Adhere to the project's **coding standards**.
+
+Add **necessary test cases** to cover new or modified logic.
+
+Update **relevant documentation** (docstrings, README, or examples).
+
+For major feature changes, please open an Issue first to discuss the idea with the community.
+
+---
+
+## 📜 License
+This project is licensed under the **Apache License 2.0**. See the LICENSE file for more details.

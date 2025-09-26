@@ -1,4 +1,4 @@
-from yquoter import register_source, get_stock_data
+from yquoter import register_source, get_stock_data, get_ma_n
 import pandas as pd
 
 # 定义一个自定义数据源函数
@@ -19,3 +19,5 @@ register_source("costom", costom)
 # 使用自定义数据源
 df_cn = get_stock_data("cn", "002475", "2025-09-01", "2025-09-10", freq='d', source='costom')
 print(df_cn, "\n")
+df_ma = get_ma_n()
+print(df_ma, "\n")

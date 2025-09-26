@@ -5,7 +5,6 @@ import tushare as ts
 import pandas as pd
 from typing import Optional
 from yquoter.utils import convert_code_to_tushare, parse_date_str
-from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
 
 _pro = None  # 全局 TuShare 实例
 _token = None  # 延迟保存token
@@ -16,19 +15,20 @@ def init_tushare(token: str = None):
     初始化 TuShare 接口。
 
     - 若手动传入 token，则使用之；
-    - 否则默认从环境变量 `TUSHARE_TOKEN` 读取。
+    - 否则默认调用get_tushare_token。
 
     Raises:
         ValueError: 如果未传入 token 且环境变量未设置。
     """
+    from yquoter.config import get_tushare_token
     from yquoter.datasource import register_source
 
     global _pro, _token
     if token is None:
-        token = os.environ.get("TUSHARE_TOKEN")
+        token = get_tushare_token()
 
     if not token:
-        raise ValueError("TuShare Token 未提供，请传入 token 或设置环境变量 TUSHARE_TOKEN")
+        raise ValueError("TuShare Token 未提供，请传入 token 或在 .env/环境变量中设置 TUSHARE_TOKEN")
 
     _token = token
     _pro = ts.pro_api(token)
@@ -105,10 +105,6 @@ def get_stock_daily_tushare(
     带缓存的通用 TuShare 日线获取：
     - market: 'cn','hk','us'
     """
-    cache_path = get_cache_path(market, code, start, end, klt, fqt)
-    if cache_exists(cache_path):
-        return load_cache(cache_path)
-
     df = _fetch_tushare(market, code, start, end, klt=klt, fqt=fqt)
     if df.empty:
         return df
@@ -117,5 +113,4 @@ def get_stock_daily_tushare(
     df.sort_values(df.columns[1], inplace=True)  # trade_date 列位置视 market 而定
     df.reset_index(drop=True, inplace=True)
     # TODO: 根据不同市场统一重命名列
-    save_cache(df, cache_path)
     return df

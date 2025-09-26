@@ -1,29 +1,8 @@
 import re
-import os
 import pandas as pd
-from dotenv import load_dotenv
 from yquoter.logger import get_logger
 from datetime import datetime
 from typing import Optional, Literal
-
-# 配置加载
-# -------------------------
-
-def load_config():
-    """
-    加载 .env 配置，返回一个 dict
-    """
-    load_dotenv()
-
-    config = {
-        "TUSHARE_TOKEN": os.getenv("TUSHARE_TOKEN"),
-        "CACHE_ROOT": os.getenv("CACHE_ROOT", ".cache")
-    }
-
-    if not config["TUSHARE_TOKEN"]:
-        raise ValueError("请在 .env 中设置 TUSHARE_TOKEN")
-
-    return config
 
 # ---------- 日志配置 ----------
 logger = get_logger(__name__)
