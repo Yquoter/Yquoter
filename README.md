@@ -2,6 +2,7 @@
 Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shares, and US stock prices** easily via one interface.
 
 - [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
+- [![License](https://img.shields.io/github/license/Yodeesy/Yquoter?style=flat)](./LICENSE)
 
 ![Yquoter Social Banner](assets/yquoter_banner.png)
 ---
