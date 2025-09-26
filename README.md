@@ -1,5 +1,7 @@
 # Yquoter
 Yquoter: Your universal cross-market quote fetcher. Fetch A-shares, H-shares, and US stock prices easily via one interface.
+<img width="640" height="320" alt="yquoter_github_banner" src="https://github.com/user-attachments/assets/0384fdfb-3383-4fc2-89f5-eed7fab16ae6" />
+
 ---
 ## structure
 ```
@@ -29,3 +31,15 @@ yquoter/
 ├── .gitignore            # 忽略文件配置
 └── .github/workflows/ci.yml  # GitHub Actions 自动测试
 ```
+---
+## Contribution Guide
+We welcome Issues and Pull Requests. Before submitting a PR, please ensure that you:
+
+Adhere to the project's coding standards.
+
+Add necessary test cases.
+
+Update relevant documentation.
+
+## License
+This project is licensed under the Apache License. See the LICENSE file for details.
