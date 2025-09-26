@@ -1,7 +1,5 @@
 # Yquoter
 Yquoter: Your universal cross-market quote fetcher. Fetch A-shares, H-shares, and US stock prices easily via one interface.
-<img width="640" height="320" alt="yquoter_github_banner" src="https://github.com/user-attachments/assets/0384fdfb-3383-4fc2-89f5-eed7fab16ae6" />
-
 ---
 ## structure
 ```
