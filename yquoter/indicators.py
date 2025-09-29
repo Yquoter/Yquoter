@@ -35,8 +35,9 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
     data = data.sort_values('date').reset_index(drop=True)
 
     # 调用实际指标计算函数
-    result = indicator_func(data, real_start, **kwargs).copy()
-    result['date'] = result['date'].dt.strftime('%Y%m%d')
+    result = indicator_func(data, real_start, **kwargs)
+    if isinstance(result, pd.DataFrame):
+        result['date'] = result['date'].dt.strftime('%Y%m%d')
     return result
 
 
@@ -50,7 +51,7 @@ def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
         ma_col = f"MA{n}"
         df[ma_col] = df['close'].rolling(window=n, min_periods=1).mean().round(2)
         df = df[df['date'] >= real_start]
-        return df[['date', ma_col]].copy()
+        return df[['date', ma_col]].copy().reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end, pre_days=n,
                           indicator_func=_calc_ma, n=n)
 
@@ -73,7 +74,7 @@ def get_rsi_n(market=None, code=None,start=None, end=None, n=5, df=None):
         df[rsi_col] = df[rsi_col].round(2)
         result = df[['date', rsi_col]].copy()
         df.drop(columns=['change', 'gain', 'loss', 'avg_gain', 'avg_loss', 'rs'], inplace=True)
-        return result[result['date'] >= real_start].copy()
+        return result[result['date'] >= real_start].copy().reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n,
                           indicator_func=_calc_rsi, n=n)
 
@@ -86,7 +87,7 @@ def get_boll_n (market=None, code=None, start=None, end=None, n=20, df=None):
         df['up'] = (df[ma_col] + 2 * df[std_col]).round(2)
         df['down'] = (df[ma_col] - 2 * df[std_col]).round(2)
         df = df[df['date'] >= real_start]
-        return df[['date','up', ma_col,'down']].copy()
+        return df[['date','up', ma_col,'down']].copy().reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
                           indicator_func=_calc_boll, n=n)
 
@@ -97,7 +98,7 @@ def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
         df[vol_col] = df['volume'].rolling(window=n, min_periods=1).mean().round(2)
         df[result_col] = (df['volume']/df[vol_col]).round(2)
         result = df[['date', result_col]].copy()
-        return result[result['date'] >= real_start].copy()
+        return result[result['date'] >= real_start].copy().reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
                           indicator_func=_calc_vol_ratio, n=n)
 
@@ -105,8 +106,48 @@ def get_amo(market=None, code=None, start=None, end=None, df=None):
     def _calc_amo(df,real_start,n=5):
         df['amo']=(df['volume']*df['close']).round(2)
         result = df[['date', 'amo']].copy()
-        return result[result['date'] >= real_start].copy()
+        return result[result['date'] >= real_start].copy().reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,indicator_func=_calc_amo)
+"""
+def get_volatility_n(market=None, code=None, start=None, end=None, n=5, df=None):
+    def _calc_volatility_n(df,real_start,n=5):
+        return result[result['date'] >= real_start].copy()
+    return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,indicator_func=_calc_volatility_n, n=n)
+"""
+
+def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None):
+    def _calc_max_drawdown(df,real_start,n=5):
+        df = df[df['date'] >= real_start].copy()
+        df['cum_max'] = df['close'].cummax()
+        df['drawdown'] = df['close'] - df['cum_max']
+        max_drawdown = df['drawdown'].min()
+        trough_idx = df['drawdown'].idxmin()
+        peak_idx = df.loc[:trough_idx, 'cum_max'].idxmax()
+
+        #修复检测
+        post_trough_df = df[trough_idx:].copy()
+        recovery_candidates = post_trough_df[post_trough_df['close'] >= df['close'][peak_idx]]
+        recovery_success = False
+        recovery_days = None
+        recovery_date = None
+        if not recovery_candidates.empty:
+            recovery_success = True
+            recovery_date = recovery_candidates.index[0]
+            recovery_days = (df['close'][recovery_date] - df['close'][trough_idx]).days
+
+        result = {
+            'max_drawdown': float(max_drawdown),
+            'max_drawdown_peak_date': str(df['date'][peak_idx].date()),
+            'max_drawdown_peak_price': float(df['close'][peak_idx]),
+            'max_drawdown_trough_date': str(df['date'][trough_idx].date()),
+            'max_drawdown_trough_price': float(df['close'][trough_idx]),
+            'recovery_success': bool(recovery_success),
+            'recovery_days': int(recovery_days) if recovery_days is not None else None,
+            'recovery_date': str(recovery_date.date()) if recovery_date is not None else None,
+        }
+        return result
+    return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,indicator_func=_calc_max_drawdown, n=n)
+
 #测试
 if __name__ == "__main__":
     df = get_ma_n("cn","600519","20241002","20241012",5)
@@ -119,3 +160,5 @@ if __name__ == "__main__":
     print(df)
     df = get_amo("cn","600519","20250128","20250209")
     print(df)
+    drawdown = get_max_drawdown("cn","600519","20250108","20250209")
+    print(drawdown)
