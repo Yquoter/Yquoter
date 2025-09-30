@@ -76,7 +76,7 @@ def crawl_kline_segments(
         return pd.DataFrame()
 
     # 构建 DataFrame，并将数值列转换为浮点型
-    df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "volume"])
+    df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "volume", "change", "turnover"])
     for col in df.columns[1:]:
         df[col] = pd.to_numeric(df[col], errors="coerce")  # 转换失败时设为 NaN
     return df

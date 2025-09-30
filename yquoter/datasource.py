@@ -5,17 +5,17 @@ import pandas as pd
 from datetime import datetime
 from typing import Dict, Callable, Optional, Union, List
 from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
-from yquoter.spider_source import get_stock_daily_spider
+from yquoter.spider_source import get_stock_history_spider
 from yquoter.utils import *
 
 # 全局注册表
 _SOURCE_REGISTRY: Dict[str, Callable] = {
-    "spider": get_stock_daily_spider
+    "spider": get_stock_history_spider
 }
 _DEFAULT_SOURCE = "spider"  # 优先爬虫
 
 # 统一标准列, DataFrame格式要求
-_REQUIRED_COLUMNS = ["date", "open", "high", "low", "close", "volume"]
+_REQUIRED_COLUMNS = ["date", "open", "high", "low", "close", "volume", "change", "turnover"]
 
 def _validate_dataframe(df: pd.DataFrame):
     """检查返回的 DataFrame 是否符合规范"""

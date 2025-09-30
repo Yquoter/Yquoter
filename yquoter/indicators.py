@@ -1,5 +1,5 @@
 from unittest import result
-
+import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 from yquoter.utils import parse_date_str, load_file_to_df
@@ -108,12 +108,6 @@ def get_amo(market=None, code=None, start=None, end=None, df=None):
         result = df[['date', 'amo']].copy()
         return result[result['date'] >= real_start].copy().reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,indicator_func=_calc_amo)
-"""
-def get_volatility_n(market=None, code=None, start=None, end=None, n=5, df=None):
-    def _calc_volatility_n(df,real_start,n=5):
-        return result[result['date'] >= real_start].copy()
-    return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,indicator_func=_calc_volatility_n, n=n)
-"""
 
 def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None):
     def _calc_max_drawdown(df,real_start,n=5):
@@ -148,17 +142,30 @@ def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None)
         return result
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,indicator_func=_calc_max_drawdown, n=n)
 
+def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
+    def _calc_rv_n(df,real_start,n=5):
+        #计算对数增长率
+        df["log_change"] = np.log(df['close'] / df['close'].shift(1))
+        rv_col = f"rv_n{n}"
+        #计算标准差
+        df[rv_col] = df['log_change'].rolling(window=n, min_periods=1).std() * np.sqrt(n)
+        df = df[['date',rv_col]].copy()
+        return df[df['date'] >= real_start].copy()
+    return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n, indicator_func=_calc_rv_n, n=n)
+
 #测试
 if __name__ == "__main__":
     df = get_ma_n("cn","600519","20241002","20241012",5)
     print(df)
-    df = get_rsi_n("cn","600519","20250108","20250209",5)
+    df = get_rsi_n("cn","600519","20250108","20250202",5)
     print(df)
     df = get_boll_n("cn","600519","20241002","20241012",20)
     print(df)
-    df = get_vol_ratio("cn","600519","20250108","20250209",5)
+    df = get_vol_ratio("cn","600519","20250108","20250202",5)
     print(df)
     df = get_amo("cn","600519","20250128","20250209")
     print(df)
-    drawdown = get_max_drawdown("cn","600519","20250108","20250209")
+    drawdown = get_max_drawdown("cn","600519","20250108","20250202")
     print(drawdown)
+    df = get_rv_n("cn","600519","20250108","20250119",5)
+    print(df)

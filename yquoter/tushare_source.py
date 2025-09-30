@@ -32,7 +32,7 @@ def init_tushare(token: str = None):
 
     _token = token
     _pro = ts.pro_api(token)
-    register_source("tushare", get_stock_daily_tushare)
+    register_source("tushare", get_stock_history_tushare)
 
 def get_pro():
     """返回已初始化的 TuShare 接口实例。"""
@@ -93,7 +93,7 @@ def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, f
         raise ValueError(f"不支持的 market: {market}")
     return df
 
-def get_stock_daily_tushare(
+def get_stock_history_tushare(
     market: str,
     code: str,
     start: str,
