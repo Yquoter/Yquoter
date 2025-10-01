@@ -11,7 +11,7 @@ def get_stock_history_spider(
     start: str,
     end: str,
     klt: int = 101,
-    fqt: int = 1
+    fqt: int = 1,
 ) -> pd.DataFrame:
     """统一 spider 接口，支持各市场历史数据抓取。"""
 
@@ -31,7 +31,8 @@ def parse_kline(json_data):
     for line in klines:
         parts = line.split(',')
         #后续full版函数开发建议：print parts获取字段含义
-        rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5], parts[8], parts[10]])
+        print(parts)
+        rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5], parts[6], parts[8], parts[10], parts[9], parts[7]])
     return rows
 
 
@@ -117,6 +118,7 @@ def _get_us_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.Da
 #test
 if __name__ == "__main__":
     pd.set_option('display.max_columns', None)
+    pd.set_option('display.float_format', None)
     pd.set_option('display.max_rows', None)
     pd.set_option('display.max_colwidth', 100)
     pd.set_option('display.expand_frame_repr', False)

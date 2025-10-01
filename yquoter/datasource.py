@@ -15,13 +15,23 @@ _SOURCE_REGISTRY: Dict[str, Callable] = {
 _DEFAULT_SOURCE = "spider"  # 优先爬虫
 
 # 统一标准列, DataFrame格式要求
-_REQUIRED_COLUMNS = ["date", "open", "high", "low", "close", "volume", "change", "turnover"]
-
-def _validate_dataframe(df: pd.DataFrame):
+_REQUIRED_COLUMNS_BASIC = ["date", "open", "high", "low", "close", "volume", "amount"]
+_REQUIRED_COLUMNS_FULL = ["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"]
+def _validate_dataframe(df: pd.DataFrame, mode: str) -> pd.DataFrame:
     """检查返回的 DataFrame 是否符合规范"""
-    missing = [col for col in _REQUIRED_COLUMNS if col not in df.columns]
+    missing = None
+    _REQUIRED_COLUMNS = None
+    if mode == "full":
+        missing = [col for col in _REQUIRED_COLUMNS_FULL if col not in df.columns]
+        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_FULL
+    elif mode == "basic":
+        missing = [col for col in _REQUIRED_COLUMNS_BASIC if col not in df.columns]
+        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_BASIC
     if missing:
         raise ValueError(f"数据源返回格式错误：缺少字段 {missing}, 需要包含 {_REQUIRED_COLUMNS}")
+    df = df[_REQUIRED_COLUMNS]
+    if mode == "full":
+        print("Warning:full模式下直接print可能会导致输出被折叠,可通过pd.set_option调整")
     return df
 
 # 频率映射表
@@ -67,6 +77,7 @@ def get_stock_data(
     freq: Optional[str] = None,
     klt: int = 101,
     fqt: int = 1,
+    mode: str = "basic",
     **kwargs
 ) -> pd.DataFrame:
     """
@@ -133,9 +144,7 @@ def get_stock_data(
     filtered_params = {k: v for k, v in params.items() if k in sig.parameters}
 
     df = func(**filtered_params)
-
     # 存缓存
     save_cache(cache_path, df)
-
     # 校验输出
-    return _validate_dataframe(df)
+    return _validate_dataframe(df, mode)

@@ -3,7 +3,7 @@ import os
 from dotenv import dotenv_values
 
 _config = None  # 内部缓存
-df_cache_path = None
+df_cache_path = None #最新缓存的文件的路径
 def load_config():
     """
     加载配置：

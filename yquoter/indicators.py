@@ -32,7 +32,7 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
             end = datetime.today().strftime("%Y%m%d")
             real_start = (datetime.today() - timedelta(days=90)).strftime("%Y%m%d")
             input_start = datetime.strptime(real_start, "%Y%m%d") - timedelta(days=20+pre_days)
-        df = loader(market, code, str(input_start), end)
+        df = loader(market, code, str(input_start), end, mode="full")
 
     data = df.copy()
     data['date'] = pd.to_datetime(data['date'])
@@ -57,11 +57,6 @@ def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
         df[ma_col] = df['close'].rolling(window=n, min_periods=1).mean().round(2)
         df = df[df['date'] >= real_start]
         return df[['date', ma_col]].copy().reset_index(drop=True)
-    """
-    if(market is None and code is None and start is None and end is None and df is None):
-
-        return calc_indicator(df=df,indicator_func=_calc_ma)
-    """
     return calc_indicator(df=df, market=market, code=code, start=start,end=end, pre_days=n,
                           indicator_func=_calc_ma, n=n)
 
