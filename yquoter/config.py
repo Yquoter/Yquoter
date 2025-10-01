@@ -3,7 +3,7 @@ import os
 from dotenv import dotenv_values
 
 _config = None  # 内部缓存
-
+df_cache_path = None
 def load_config():
     """
     加载配置：
@@ -19,6 +19,12 @@ def load_config():
 
     return cfg
 
+def get_newest_df_path():
+    return df_cache_path
+
+def modify_df_path(path):
+    global df_cache_path
+    df_cache_path = path
 
 def get_config():
     global _config

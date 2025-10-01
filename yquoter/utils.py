@@ -3,7 +3,7 @@ import pandas as pd
 from yquoter.logger import get_logger
 from datetime import datetime
 from typing import Optional, Literal
-
+import os
 # ---------- 日志配置 ----------
 logger = get_logger(__name__)
 
@@ -139,7 +139,7 @@ def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
         raise ValueError("数据缺少 'close' 列")
 
     # 确保日期列转成 datetime
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["date"] = pd.to_datetime(df["date"], errors="coerce",format="%Y%m%d")
     df = df.dropna(subset=["date"]).reset_index(drop=True)
 
     return df

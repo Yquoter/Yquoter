@@ -21,4 +21,6 @@ register_source("costom", costom)
 # 使用自定义数据源
 df_cn = get_stock_data("cn", "002475", "2025-09-01", "2025-09-10", freq='d', source='costom')
 print(df_cn, "\n")
+df_cn = get_ma_n()
+print(df_cn, "\n")
 

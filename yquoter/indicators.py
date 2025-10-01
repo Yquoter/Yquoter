@@ -2,6 +2,8 @@ from unittest import result
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+
+from yquoter.config import get_newest_df_path
 from yquoter.utils import parse_date_str, load_file_to_df
 from yquoter.datasource import get_stock_data
 
@@ -14,10 +16,12 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
     - indicator_func: 实际指标计算逻辑 (df -> df)
     - kwargs: 传给 indicator_func 的参数
     """
+    if df is None and market is None and code is None and start is None and end is None:
+        df = get_newest_df_path()
     real_start = "YYYYMMDD"
     if isinstance(df, str):
         df = load_file_to_df(df)
-        real_start = parse_date_str(df['date'][0])
+        real_start = df['date'].iloc[0].strftime("%Y%m%d")
     if df is None:
         input_start="YYYYMMDD"
         if start is not None:
@@ -47,11 +51,17 @@ def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
     - 输入可为 DataFrame / 文件路径 / market+code+日期区间
     - 默认取最近 3n 天数据
     """
+
     def _calc_ma(df, real_start=0, n=5):
         ma_col = f"MA{n}"
         df[ma_col] = df['close'].rolling(window=n, min_periods=1).mean().round(2)
         df = df[df['date'] >= real_start]
         return df[['date', ma_col]].copy().reset_index(drop=True)
+    """
+    if(market is None and code is None and start is None and end is None and df is None):
+
+        return calc_indicator(df=df,indicator_func=_calc_ma)
+    """
     return calc_indicator(df=df, market=market, code=code, start=start,end=end, pre_days=n,
                           indicator_func=_calc_ma, n=n)
 
