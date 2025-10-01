@@ -5,7 +5,7 @@ import time
 from yquoter.spider_core import crawl_kline_segments
 from yquoter.utils import *
 
-def get_stock_daily_spider(
+def get_stock_history_spider(
     market: str,
     code: str,
     start: str,
@@ -14,6 +14,7 @@ def get_stock_daily_spider(
     fqt: int = 1
 ) -> pd.DataFrame:
     """统一 spider 接口，支持各市场历史数据抓取。"""
+
     market = market.lower()
     if market == "cn":
         return _get_cn_spider(code, start, end, klt, fqt)
@@ -23,6 +24,15 @@ def get_stock_daily_spider(
         return _get_us_spider(code, start, end, klt, fqt)
     else:
         raise ValueError(f"未知市场：{market}")
+
+def parse_kline(json_data):
+    klines = json_data.get("data", {}).get("klines", [])
+    rows = []
+    for line in klines:
+        parts = line.split(',')
+        #后续full版函数开发建议：print parts获取字段含义
+        rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5], parts[8], parts[10]])
+    return rows
 
 
 def _get_cn_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.DataFrame:
@@ -38,7 +48,7 @@ def _get_cn_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.Da
         fqt: 复权类型（0=不复权，1=前复权，2=后复权）
 
     返回：
-        包含 ['date', 'open', 'low', 'high', 'close', 'volume'] 的 DataFrame
+        包含 ['date', 'open', 'low', 'high', 'close', 'volume', 'change', 'turnover'] 的 DataFrame
     """
 
     # 根据股票代码前缀判断是上交所还是深交所，构造东方财富 API 使用的 secid
@@ -57,21 +67,9 @@ def _get_cn_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.Da
             f"?secid={secid}"
             f"&ut=fa5fd1943c7b386f1734de82599f7dc"
             f"&fields1=f1,f2,f3,f4,f5,f6"  # 基础字段
-            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58"  # K线字段
+            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"  # K线字段
             f"&klt={klt}&fqt={fqt}&beg={beg}&end={end_}&lmt=10000&_={ts}"
         )
-
-    # 将返回的 JSON 数据解析成二维数组（行列表）
-    def parse_kline(json_data):
-        if not json_data or "data" not in json_data:
-            return []
-        klines = json_data.get("data", {}).get("klines", [])
-        rows = []
-        for line in klines:
-            parts = line.split(',')
-            # 调整顺序为：date, open, low, high, close, volume
-            rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5]])
-        return rows
 
     # 使用分页器处理跨日期段抓取、拼接成完整的 DataFrame
     return crawl_kline_segments(start, end, make_url, parse_kline)
@@ -90,17 +88,9 @@ def _get_hk_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.Da
             f"?secid={secid}"
             f"&ut=fa5fd1943c7b386f1734de82599f7dc"
             f"&fields1=f1,f2,f3,f4,f5,f6"
-            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58"
+            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
             f"&klt={klt}&fqt={fqt}&beg={beg}&end={end_}&lmt=10000&_={ts}"
         )
-
-    def parse_kline(json_data):
-        klines = json_data.get("data", {}).get("klines", [])
-        rows = []
-        for line in klines:
-            parts = line.split(',')
-            rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5]])
-        return rows
 
     return crawl_kline_segments(start, end, make_url, parse_kline)
 
@@ -119,18 +109,16 @@ def _get_us_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.Da
             f"?secid={secid}"
             f"&ut=fa5fd1943c7b386f1734de82599f7dc"
             f"&fields1=f1,f2,f3,f4,f5,f6"
-            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58"
+            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
             f"&klt={klt}&fqt={fqt}&beg={beg}&end={end_}&lmt=10000&_={ts}"
         )
 
-    def parse_kline(json_data):
-        klines = json_data.get("data", {}).get("klines", [])
-        rows = []
-        for line in klines:
-            parts = line.split(',')
-            rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5]])
-        return rows
-
     return crawl_kline_segments(start, end, make_url, parse_kline)
-
-
+#test
+if __name__ == "__main__":
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_colwidth', 100)
+    pd.set_option('display.expand_frame_repr', False)
+    df = get_stock_history_spider("cn","600519","20241002","20241012")
+    print(df)

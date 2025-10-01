@@ -10,7 +10,9 @@ def costom(market, code, start, end, klt=101, fqt=1):
         "high": [105, 115],
         "low": [95, 108],
         "close": [102, 112],
-        "volume": [1000, 1200]
+        "volume": [1000, 1200],
+        "change": [-5, 5],
+        "turnover": [0, 1],
     })
 
 # 注册数据源
@@ -19,5 +21,6 @@ register_source("costom", costom)
 # 使用自定义数据源
 df_cn = get_stock_data("cn", "002475", "2025-09-01", "2025-09-10", freq='d', source='costom')
 print(df_cn, "\n")
-df_ma = get_ma_n()
-print(df_ma, "\n")
+df_cn = get_ma_n()
+print(df_cn, "\n")
+

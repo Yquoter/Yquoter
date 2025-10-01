@@ -2,7 +2,8 @@ import os
 import pandas as pd
 from typing import Optional
 from yquoter.logger import get_logger
-from yquoter.config import get_cache_root  # 导入缓存根目录
+from yquoter.config import get_cache_root, modify_df_path  # 导入缓存根目录
+
 
 # ---------- 日志配置 ----------
 logger = get_logger(__name__)
@@ -66,6 +67,7 @@ def save_cache(path: str, df: pd.DataFrame):
     try:
         df.to_csv(path, index=False)
         logger.info(f"成功保存缓存文件: {path}")
+        modify_df_path(path)
     except Exception as e:
         logger.error(f"保存缓存文件失败: {path}，异常: {e}")
         raise
