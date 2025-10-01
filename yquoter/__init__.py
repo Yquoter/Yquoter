@@ -5,7 +5,7 @@ from yquoter.logger import setup_logging
 setup_logging(level=logging.INFO)
 
 from yquoter.datasource import register_source, get_stock_data
-from yquoter.indicators import get_ma_n
+from yquoter.indicators import *
 
 def init_tushare(token: str = None):
     from .tushare_source import init_tushare as _init
@@ -15,5 +15,11 @@ __all__ = [
     "init_tushare",
     "register_source",
     "get_stock_data",
-    "get_ma_n"
+    "get_ma_n",
+    "get_amo",
+    "get_boll_n",
+    "get_max_drawdown",
+    "get_vol_ratio",
+    "get_newest_df_path",
+    "get_rsi_n"
 ]
