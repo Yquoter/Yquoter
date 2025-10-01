@@ -30,8 +30,6 @@ def parse_kline(json_data):
     rows = []
     for line in klines:
         parts = line.split(',')
-        #后续full版函数开发建议：print parts获取字段含义
-        print(parts)
         rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5], parts[6], parts[8], parts[10], parts[9], parts[7]])
     return rows
 
