@@ -12,7 +12,7 @@ def crawl_kline_segments(
     make_url: Callable[[str, str], str],
     parse_kline: Callable[[Dict], List[List[str]]],
     sleep_seconds: float = 1.0,
-    segment_days: int = 365
+    segment_days: int = 365,
 ) -> pd.DataFrame:
     """
     通用分页 K 线数据爬虫函数，适用于按时间段构造 URL 抓取数据的情形。
@@ -24,7 +24,7 @@ def crawl_kline_segments(
     - parse_kline (Callable): 接收接口返回的 JSON 数据，返回 K 线数据的二维数组（字符串形式）
     - sleep_seconds (float): 每段请求间隔时间，防止触发反爬，默认 1 秒
     - segment_days (int): 每个请求时间段跨度的天数，默认一年（365 天）
-
+    - mode(str): df展开形式
     返回值：
     - pd.DataFrame: 包含日期、开盘、最高、最低、收盘、成交量的标准 K 线数据表
     """
@@ -48,7 +48,6 @@ def crawl_kline_segments(
 
         # 构造 URL
         url = make_url(beg_str, end_str)
-
         try:
             # 发起请求
             resp = requests.get(url, headers=headers)
@@ -67,7 +66,6 @@ def crawl_kline_segments(
 
         # 移动时间窗口
         current_dt = seg_end + timedelta(days=1)
-
         # 等待一段时间，防止被封 IP
         time.sleep(sleep_seconds)
 
@@ -76,7 +74,44 @@ def crawl_kline_segments(
         return pd.DataFrame()
 
     # 构建 DataFrame，并将数值列转换为浮点型
-    df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "volume", "change", "turnover"])
+    df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"])
     for col in df.columns[1:]:
         df[col] = pd.to_numeric(df[col], errors="coerce")  # 转换失败时设为 NaN
+
+    return df
+
+
+def crawl_realtime_data(
+    make_url: Callable,
+    parse_realtime_data: Callable[[Dict], List[List[str]]],
+    url_fields: List[str],
+    user_fields: List[str],
+    column_map: Dict[str, str],
+)->pd.DataFrame:
+    result=[]
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://quote.eastmoney.com/",
+    }
+    url = make_url()
+    try:
+        # 发起请求
+        resp = requests.get(url, headers=headers)
+        resp.raise_for_status()  # 若 HTTP 状态码异常会抛出异常
+        data = resp.json()  # 解析 JSON 格式的响应体
+        # 解析数据
+        result = parse_realtime_data(data)
+        if result:
+            print(f"成功获取数据：共 {len(result)} 行")
+        else:
+            print("无数据")
+    except Exception as e:
+        print(f"请求异常：{e}")
+    if not result:
+        print("未获取到任何数据")
+        return pd.DataFrame()
+    df = pd.DataFrame(result,columns=url_fields)
+    reverse_map = {v: k for k, v in column_map.items()}
+    df.rename(columns=reverse_map, inplace=True)
+    df = df[user_fields]
     return df

@@ -32,7 +32,7 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
             end = datetime.today().strftime("%Y%m%d")
             real_start = (datetime.today() - timedelta(days=90)).strftime("%Y%m%d")
             input_start = datetime.strptime(real_start, "%Y%m%d") - timedelta(days=20+pre_days)
-        df = loader(market, code, str(input_start), end)
+        df = loader(market, code, str(input_start), end, mode="full")
 
     data = df.copy()
     data['date'] = pd.to_datetime(data['date'])
@@ -57,11 +57,6 @@ def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
         df[ma_col] = df['close'].rolling(window=n, min_periods=1).mean().round(2)
         df = df[df['date'] >= real_start]
         return df[['date', ma_col]].copy().reset_index(drop=True)
-    """
-    if(market is None and code is None and start is None and end is None and df is None):
-
-        return calc_indicator(df=df,indicator_func=_calc_ma)
-    """
     return calc_indicator(df=df, market=market, code=code, start=start,end=end, pre_days=n,
                           indicator_func=_calc_ma, n=n)
 
@@ -112,13 +107,6 @@ def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
                           indicator_func=_calc_vol_ratio, n=n)
 
-def get_amo(market=None, code=None, start=None, end=None, df=None):
-    def _calc_amo(df,real_start,n=5):
-        df['amo']=(df['volume']*df['close']).round(2)
-        result = df[['date', 'amo']].copy()
-        return result[result['date'] >= real_start].copy().reset_index(drop=True)
-    return calc_indicator(df=df, market=market, code=code, start=start,end=end,indicator_func=_calc_amo)
-
 def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None):
     def _calc_max_drawdown(df,real_start,n=5):
         df = df[df['date'] >= real_start].copy()
@@ -156,7 +144,7 @@ def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
     def _calc_rv_n(df,real_start,n=5):
         #计算对数增长率
         df["log_change"] = np.log(df['close'] / df['close'].shift(1))
-        rv_col = f"rv_n{n}"
+        rv_col = f"rv{n}"
         #计算标准差
         df[rv_col] = df['log_change'].rolling(window=n, min_periods=1).std() * np.sqrt(n)
         df = df[['date',rv_col]].copy()
@@ -173,7 +161,7 @@ if __name__ == "__main__":
     print(df)
     df = get_vol_ratio("cn","600519","20250108","20250202",5)
     print(df)
-    df = get_amo("cn","600519","20250128","20250209")
+    df = get_stock_data("cn","600519","20250128","20250209")
     print(df)
     drawdown = get_max_drawdown("cn","600519","20250108","20250202")
     print(drawdown)
