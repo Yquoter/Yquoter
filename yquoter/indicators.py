@@ -5,14 +5,14 @@ from datetime import datetime, timedelta
 
 from yquoter.config import get_newest_df_path
 from yquoter.utils import parse_date_str, load_file_to_df
-from yquoter.datasource import get_stock_data
+from yquoter.datasource import get_stock_history
 
 def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_days=5, loader=None, indicator_func=None, **kwargs):
     """
     通用指标计算器
     - df: DataFrame 或 文件路径（字符串）
     - market/code/start/end: 如果 df=None，则调用 loader(market, code, start, end)
-    - loader: 数据获取函数（默认用 get_stock_data）
+    - loader: 数据获取函数（默认用 get_stock_history）
     - indicator_func: 实际指标计算逻辑 (df -> df)
     - kwargs: 传给 indicator_func 的参数
     """
@@ -27,7 +27,7 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
         if start is not None:
             real_start = parse_date_str(start, "%Y%m%d")
             input_start = datetime.strptime(start, '%Y%m%d') - timedelta(days=15)
-        loader = loader or get_stock_data
+        loader = loader or get_stock_history
         if start is None or end is None:
             end = datetime.today().strftime("%Y%m%d")
             real_start = (datetime.today() - timedelta(days=90)).strftime("%Y%m%d")
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     print(df)
     df = get_vol_ratio("cn","600519","20250108","20250202",5)
     print(df)
-    df = get_stock_data("cn","600519","20250128","20250209")
+    df = get_stock_history("cn","600519","20250128","20250209")
     print(df)
     drawdown = get_max_drawdown("cn","600519","20250108","20250202")
     print(drawdown)
