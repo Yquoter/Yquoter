@@ -11,13 +11,13 @@ def init_tushare(token: str = None):
     from .tushare_source import init_tushare as _init
     return _init(token)
 
+
 __all__ = [
     "init_tushare",
     "register_source",
     "get_stock_history",
     "get_stock_realtime",
     "get_ma_n",
-    "get_amo",
     "get_boll_n",
     "get_max_drawdown",
     "get_vol_ratio",

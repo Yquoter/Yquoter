@@ -22,9 +22,9 @@ def costom(market, code, start, end, klt=101, fqt=1):
 register_source("costom", costom)
 
 # 使用自定义数据源
-df_cn = get_stock_history("cn", "002475", "2025-09-01", "2025-09-10", freq='d', source='costom', mode="full")
+df_cn = get_stock_history("cn", "002475", "2025-09-01", "2025-09-10", freq='d', source='costom', fields="full")
 print(df_cn, "\n")
-df_cn = get_stock_history("cn", "002475", "2025-09-01", "2025-09-10", freq='d', source='costom', mode="basic")
+df_cn = get_stock_history("cn", "002475", "2025-09-01", "2025-09-10", freq='d', source='costom', fields="basic")
 print(df_cn, "\n")
 df_cn = get_ma_n()
 print(df_cn, "\n")

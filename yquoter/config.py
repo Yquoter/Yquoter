@@ -13,10 +13,8 @@ def load_config():
     cfg = dotenv_values(".env") or {}
     # 系统环境变量优先级更高
     cfg.update(os.environ)
-
     if "CACHE_ROOT" not in cfg:
         cfg["CACHE_ROOT"] = ".cache"
-
     return cfg
 
 def get_newest_df_path():
