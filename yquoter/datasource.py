@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 from typing import Dict, Callable, Optional, Union, List
 from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
-from yquoter.spider_source import get_stock_history_spider
+from yquoter.spider_source import get_stock_history_spider, get_stock_realtime_spider
 from yquoter.utils import *
 
 # 全局注册表
@@ -58,7 +58,7 @@ def set_default_source(name: str) -> None:
         raise ValueError(f"未知数据源：{name}，可用数据源：{list(_SOURCE_REGISTRY)}")
     _DEFAULT_SOURCE = name
 
-def get_stock_data(
+def get_stock_history(
     market: str,
     code: str,
     start: str,
@@ -139,3 +139,16 @@ def get_stock_data(
 
     # 校验输出
     return _validate_dataframe(df)
+
+def get_stock_realtime(
+        market: str,
+        code: str,
+        start: str,
+        end: str,
+        source: Optional[str] = None,
+        freq: Optional[str] = None,
+        klt: int = 101,
+        fqt: int = 1,
+        **kwargs
+) -> pd.DataFrame:
+    pass  # TODO:spider & tushare

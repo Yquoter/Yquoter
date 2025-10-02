@@ -114,7 +114,11 @@ def _get_us_spider(code: str, start: str, end: str, klt: int, fqt: int) -> pd.Da
         )
 
     return crawl_kline_segments(start, end, make_url, parse_kline)
-#test
+
+def get_stock_realtime_spider():
+    pass  # TODO!
+
+# test
 if __name__ == "__main__":
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', None)

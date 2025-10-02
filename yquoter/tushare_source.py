@@ -3,8 +3,9 @@
 import os
 import tushare as ts
 import pandas as pd
-from typing import Optional
-from yquoter.utils import convert_code_to_tushare, parse_date_str
+from typing import Optional, List
+from yquoter.utils import convert_code_to_tushare, parse_date_str, filter_fields
+#  from yquoter.logger import logger
 
 _pro = None  # 全局 TuShare 实例
 _token = None  # 延迟保存token
@@ -114,3 +115,31 @@ def get_stock_history_tushare(
     df.reset_index(drop=True, inplace=True)
     # TODO: 根据不同市场统一重命名列
     return df
+
+def get_stock_realtime_tushare(
+        market: str,
+        code: str,
+        field: List[str] = None
+) -> pd.DataFrame:
+    """
+    获取股票实时行情（受 TuShare 限制，部分市场可能退化为最近日线）。
+
+    Args:
+        market: 'cn', 'hk', 'us'
+        code: 股票代码
+
+    Returns:
+        pd.DataFrame: 实时行情，标准化字段：
+            ['datetime', 'open', 'high', 'low', 'close', 'volume']
+    """
+    pro = get_pro()
+    ts_code = convert_code_to_tushare(code, market)
+
+    if market == 'cn':
+        df = pro.rt_k(ts_code=ts_code)
+    elif market in ("hk", "us"):
+        pass
+    else:
+        raise ValueError(f"不支持的 market: {market}")
+
+    return filter_fields(df, field)
