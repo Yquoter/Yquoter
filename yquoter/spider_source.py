@@ -127,10 +127,6 @@ def get_stock_realtime_spider(
         return result
     return crawl_realtime_data(make_realtime_url, parse_realtime_data, url_fields, fields, dict_of_eastmoney)
 
-
-
-
-#test
 if __name__ == "__main__":
     pd.set_option('display.max_columns', None)
     pd.set_option('display.float_format', None)

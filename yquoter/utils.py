@@ -2,7 +2,7 @@ import re
 import pandas as pd
 from yquoter.logger import get_logger
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 import os
 # ---------- 日志配置 ----------
 logger = get_logger(__name__)
@@ -34,6 +34,8 @@ def convert_cn_share_to_tushare(code: str) -> str:
         return f"{code}.SH"
     elif code.startswith(('0', '3')):
         return f"{code}.SZ"
+    elif code.startswith('9'):
+        return f"{code}.BJ"
     raise CodeFormatError(f"无法识别的A股代码格式: {code}")
 
 def convert_hk_share_to_tushare(code: str) -> str:
@@ -143,3 +145,22 @@ def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
     df = df.dropna(subset=["date"]).reset_index(drop=True)
 
     return df
+
+def filter_fields(df: pd.DataFrame, fields: List[str]) -> pd.DataFrame:
+    """
+        Args:
+        df: 数据源返回的 DataFrame
+        fields: 用户想要的字段列表
+
+    Returns:
+        DataFrame，只包含指定的字段
+    """
+    if not fields:
+        return df
+    available = [f for f in fields if f in df.columns]
+    missing = [f for f in fields if f not in df.columns]
+
+    if missing:
+        print("")
+
+    return df[available]
