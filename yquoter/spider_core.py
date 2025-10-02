@@ -79,3 +79,39 @@ def crawl_kline_segments(
         df[col] = pd.to_numeric(df[col], errors="coerce")  # 转换失败时设为 NaN
 
     return df
+
+
+def crawl_realtime_data(
+    make_url: Callable,
+    parse_realtime_data: Callable[[Dict], List[List[str]]],
+    url_fields: List[str],
+    user_fields: List[str],
+    column_map: Dict[str, str],
+)->pd.DataFrame:
+    result=[]
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://quote.eastmoney.com/",
+    }
+    url = make_url()
+    try:
+        # 发起请求
+        resp = requests.get(url, headers=headers)
+        resp.raise_for_status()  # 若 HTTP 状态码异常会抛出异常
+        data = resp.json()  # 解析 JSON 格式的响应体
+        # 解析数据
+        result = parse_realtime_data(data)
+        if result:
+            print(f"成功获取数据：共 {len(result)} 行")
+        else:
+            print("无数据")
+    except Exception as e:
+        print(f"请求异常：{e}")
+    if not result:
+        print("未获取到任何数据")
+        return pd.DataFrame()
+    df = pd.DataFrame(result,columns=url_fields)
+    reverse_map = {v: k for k, v in column_map.items()}
+    df.rename(columns=reverse_map, inplace=True)
+    df = df[user_fields]
+    return df
