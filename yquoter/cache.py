@@ -3,7 +3,8 @@ import pandas as pd
 from typing import Optional
 from yquoter.logger import get_logger
 from yquoter.config import get_cache_root, modify_df_path  # 导入缓存根目录
-
+# 导入我们自定义的、更具体的异常类型
+from yquoter.exceptions import CacheSaveError, CacheDirectoryError
 
 # ---------- 日志配置 ----------
 logger = get_logger(__name__)
@@ -28,7 +29,10 @@ def get_cache_path(
         os.makedirs(folder, exist_ok=True)
     except Exception as e:
         logger.error(f"创建缓存目录失败: {folder}，异常: {e}")
-        raise
+        # 【修改点】抛出更具体的自定义异常，方便上层调用者精确捕获。
+        # 'from e' 会保留原始异常信息（如PermissionError），便于深度调试。
+        raise CacheDirectoryError(f"创建缓存目录失败: {folder}") from e
+
     filename = f"{start_fmt}_{end_fmt}_klt{klt}_fqt{fqt}.csv"
     path = os.path.join(folder, filename)
     logger.debug(f"生成缓存路径: {path}")
@@ -49,6 +53,10 @@ def load_cache(path: str) -> Optional[pd.DataFrame]:
     if not cache_exists(path):
         logger.info(f"缓存文件不存在，无法加载: {path}")
         return None
+    # 【注释】这里采用“静默失败”的设计模式。
+    # 对于缓存读取这类非核心、可失败的操作，加载失败时返回 None 是一个常见且合理的做法。
+    # 这样做的好处是调用方的代码可以写得很简洁 (例如: if data is None: ...)，
+    # 而无需自己处理try-except块。具体的错误细节已经通过下面的日志记录下来了。
     try:
         df = pd.read_csv(path)
         if df.empty:
@@ -70,4 +78,6 @@ def save_cache(path: str, df: pd.DataFrame):
         modify_df_path(path)
     except Exception as e:
         logger.error(f"保存缓存文件失败: {path}，异常: {e}")
-        raise
+        # 【修改点】记录日志后，向上抛出更具体的自定义异常。
+        # 保存失败通常是比较严重的问题（如权限、磁盘空间），需要让调用者知道并强制处理。
+        raise CacheSaveError(f"保存缓存文件失败: {path}") from e
