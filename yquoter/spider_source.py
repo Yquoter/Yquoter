@@ -176,7 +176,7 @@ def get_stock_realtime_spider(
         raise ValueError("代码或代码列表不可为空")
     if fields == "" or fields == []:
         #test,到时候讨论决定要以什么作为默认输出
-        fields = ["code","latest","pe_dynamic","open","high","low","pre_close","volume","main_force_net_inflow_today"]
+        fields = ["code","latest","pe_dynamic","open","high","low","pre_close"]
 
     if "code" not in fields:
         fields.insert(0, "code")

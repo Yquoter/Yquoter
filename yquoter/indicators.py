@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from yquoter.config import get_newest_df_path
 from yquoter.utils import parse_date_str, load_file_to_df
 from yquoter.datasource import get_stock_history
-
 def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_days=5, loader=None, indicator_func=None, **kwargs):
     """
     通用指标计算器
@@ -18,7 +17,6 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
     """
     if df is None and market is None and code is None and start is None and end is None:
         df = get_newest_df_path()
-    real_start = "YYYYMMDD"
     if isinstance(df, str):
         df = load_file_to_df(df)
         real_start = df['date'].iloc[0].strftime("%Y%m%d")
@@ -155,11 +153,11 @@ def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
 if __name__ == "__main__":
     df = get_ma_n("cn","600519","20241002","20241012",5)
     print(df)
-    df = get_rsi_n("cn","600519","20250108","20250202",5)
+    df = get_rsi_n("cn","600519","20250108","20250204",5)
     print(df)
     df = get_boll_n("cn","600519","20241002","20241012",20)
     print(df)
-    df = get_vol_ratio("cn","600519","20250108","20250202",5)
+    df = get_vol_ratio("cn","600519","20250108","20250206",5)
     print(df)
     df = get_stock_history("cn","600519","20250128","20250209")
     print(df)

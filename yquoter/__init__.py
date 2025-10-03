@@ -8,18 +8,17 @@ from yquoter.datasource import register_source, get_stock_history, get_stock_rea
 from yquoter.indicators import *
 from yquoter.cache import set_max_cache_entries
 
-def init_cache_manager(max_entries: int = 100):
+def init_cache_manager(max_entries: int = 4):
     """
     初始化缓存管理器
 
     参数:
         max_entries: 最大缓存文件数量，默认100
     """
-    from .cache import init_cache_manager as _init_cache, set_max_cache_entries
+    from .cache import init_cache, set_max_cache_entries
     set_max_cache_entries(max_entries)
-    _init_cache()
+    init_cache()
     return f"缓存管理器已初始化，最大缓存文件数: {max_entries}"
-
 
 # 自动初始化缓存管理器（使用默认设置）
 init_cache_manager()
