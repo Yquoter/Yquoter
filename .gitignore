@@ -27,3 +27,6 @@ Thumbs.db
 
 # 环境变量配置文件
 *.env
+
+#测试cache更新的文件
+test_cache_update.py

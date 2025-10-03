@@ -22,5 +22,6 @@ __all__ = [
     "get_max_drawdown",
     "get_vol_ratio",
     "get_newest_df_path",
-    "get_rsi_n"
+    "get_rsi_n",
+    "set_max_cache_entries"
 ]
