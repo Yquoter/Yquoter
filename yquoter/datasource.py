@@ -17,18 +17,25 @@ _DEFAULT_SOURCE = "spider"  # 优先爬虫
 logger = get_logger(__name__)
 
 # 统一标准列, DataFrame格式要求
-_REQUIRED_COLUMNS = ["date", "open", "high", "low", "close", "volume", "change", "turnover"]
-
-
-def _validate_dataframe(df: pd.DataFrame):
-    """检查返回的 DataFrame 是否符合规范"""
+_REQUIRED_COLUMNS_BASIC = ["date", "open", "high", "low", "close", "volume", "amount"]
+_REQUIRED_COLUMNS_FULL = ["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"]
+def _validate_dataframe(df: pd.DataFrame, fields: str) -> pd.DataFrame:
     if df is None or df.empty:
         raise DataFormatError("数据源返回为空或解析失败，无法进行校验。")
-
-    missing = [col for col in _REQUIRED_COLUMNS if col not in df.columns]
+    missing = None
+    _REQUIRED_COLUMNS = None
+    if fields == "full":
+        missing = [col for col in _REQUIRED_COLUMNS_FULL if col not in df.columns]
+        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_FULL
+    elif fields == "basic":
+        missing = [col for col in _REQUIRED_COLUMNS_BASIC if col not in df.columns]
+        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_BASIC
     if missing:
         # 【修改点】抛出更具体的 DataFormatError，而不是通用的 ValueError
         raise DataFormatError(f"数据源返回格式错误：缺少字段 {missing}, 需要包含 {_REQUIRED_COLUMNS}")
+    df = df[_REQUIRED_COLUMNS]
+    if fields == "full":
+        print("Warning:full模式下直接print可能会导致输出被折叠,可通过pd.set_option调整")
     return df
 
 
@@ -71,15 +78,16 @@ def set_default_source(name: str) -> None:
 
 
 def get_stock_history(
-        market: str,
-        code: str,
-        start: str,
-        end: str,
-        source: Optional[str] = None,
-        freq: Optional[str] = None,
-        klt: int = 101,
-        fqt: int = 1,
-        **kwargs
+    market: str,
+    code: str,
+    start: str,
+    end: str,
+    source: Optional[str] = None,
+    freq: Optional[str] = None,
+    klt: int = 101,
+    fqt: int = 1,
+    fields: str = "basic",
+    **kwargs
 ) -> pd.DataFrame:
     """
     统一数据接口：
@@ -168,7 +176,7 @@ def get_stock_history(
         save_cache(cache_path, df)  # 若保存失败，save_cache会抛出CacheSaveError
 
     # 4. 校验输出并返回
-    return _validate_dataframe(df)
+    return _validate_dataframe(df, fields)
 
 
 def get_stock_realtime(
@@ -183,3 +191,4 @@ def get_stock_realtime(
         **kwargs
 ) -> pd.DataFrame:
     pass  # TODO:spider & tushare
+
