@@ -114,4 +114,5 @@ def crawl_realtime_data(
     reverse_map = {v: k for k, v in column_map.items()}
     df.rename(columns=reverse_map, inplace=True)
     df = df[user_fields]
+
     return df
