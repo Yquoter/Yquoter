@@ -1,6 +1,8 @@
 # yquoter/config.py
 import os
 from dotenv import dotenv_values
+# 【修改点】导入我们自定义的异常类，用于处理配置相关的错误。
+from yquoter.exceptions import ConfigError
 
 _config = None  # 内部缓存
 df_cache_path = None #最新缓存的文件的路径
@@ -31,7 +33,16 @@ def get_config():
     return _config
 
 def get_tushare_token():
-    return get_config()["TUSHARE_TOKEN"]
+    # 【修改点】重写了此函数以提供更健壮的错误处理。
+    token = get_config().get("TUSHARE_TOKEN") # 使用 .get() 安全地获取值，避免KeyError
+    if not token:
+        # 如果 token 不存在或为空，则抛出我们自定义的、信息更明确的异常。
+        # 这比直接抛出 KeyError 对用户更友好。
+        raise ConfigError("TUSHARE_TOKEN 未在 .env 文件或系统环境变量中设置！")
+    return token
 
 def get_cache_root():
+    # 【注释】此函数已是健壮的。
+    # 使用 .get() 方法并提供默认值，可以优雅地处理 "CACHE_ROOT" 未设置的情况，
+    # 不会抛出异常，因此无需修改。
     return get_config().get("CACHE_ROOT", ".cache")
