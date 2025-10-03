@@ -11,10 +11,10 @@ logger = get_logger(__name__)
 
 # 全局缓存管理变量
 _cache_file_list = []  # 存储缓存文件路径的列表
-_MAX_CACHE_ENTRIES = 100  # 默认最大缓存条目数
+_MAX_CACHE_ENTRIES = 5  # 默认最大缓存条目数
 
 
-def init_cache_manager():
+def init_cache():
     """
     初始化缓存管理器，扫描缓存目录并加载文件列表
     """

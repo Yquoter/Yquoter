@@ -8,7 +8,7 @@ from yquoter.utils import *
 # 【修改点】导入我们新增的、更具体的异常类型
 from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError, DataFormatError
 from yquoter.logger import get_logger
-
+from yquoter.config import modify_df_path
 # 全局注册表
 _SOURCE_REGISTRY: Dict[str, Callable] = {
     "spider": get_stock_history_spider
@@ -140,7 +140,8 @@ def get_stock_history(
         # 【逻辑修正】如果缓存加载成功且不为空，应该直接校验并返回，而不是继续往下执行
         if df_cache is not None and not df_cache.empty:
             logger.info(f"从缓存命中并返回数据: {cache_path}")
-            return _validate_dataframe(df_cache)
+            modify_df_path(cache_path)
+            return _validate_dataframe(df_cache, fields)
 
     # 2. 没有缓存或缓存加载失败 -> 调用数据源
     logger.info(f"缓存未命中，从实时数据源 '{src}' 获取数据")
@@ -155,6 +156,7 @@ def get_stock_history(
         "freq": freq,
         "klt": klt,
         "fqt": fqt,
+        "fields": fields,
         **kwargs,
     }
 
@@ -167,6 +169,7 @@ def get_stock_history(
         # 这样做可以屏蔽底层数据源（爬虫、API）的各种具体异常（如网络错误、解析错误）
         # 为上层调用者提供一个统一、稳定的异常类型。
         df = func(**filtered_params)
+
     except Exception as e:
         logger.error(f"从数据源 '{src}' 获取数据失败: {e}")
         raise DataFetchError(f"从数据源 '{src}' 获取数据失败") from e
@@ -174,7 +177,7 @@ def get_stock_history(
     # 3. 存缓存
     if df is not None and not df.empty:
         save_cache(cache_path, df)  # 若保存失败，save_cache会抛出CacheSaveError
-
+        modify_df_path(cache_path)
     # 4. 校验输出并返回
     return _validate_dataframe(df, fields)
 
