@@ -7,12 +7,8 @@ import os
 # ---------- 日志配置 ----------
 logger = get_logger(__name__)
 
-# ---------- 异常 ----------
-class CodeFormatError(ValueError):
-    pass
-
-class DateFormatError(ValueError):
-    pass
+# 从我们新建的 exceptions 模块中导入异常类
+from yquoter.exceptions import CodeFormatError, DateFormatError
 
 # ---------- 股票代码工具 ----------
 
