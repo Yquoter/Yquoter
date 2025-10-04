@@ -8,6 +8,7 @@ from yquoter.utils import *
 from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError, DataFormatError
 from yquoter.logger import get_logger
 from yquoter.config import modify_df_path
+from yquoter.utils import _validate_dataframe
 
 # Global registry for data sources
 _SOURCE_REGISTRY: Dict[str, Callable] = {
@@ -15,41 +16,6 @@ _SOURCE_REGISTRY: Dict[str, Callable] = {
 }
 _DEFAULT_SOURCE = "spider"  # Spider source takes priority
 logger = get_logger(__name__)
-
-# Standardized columns for History-DataFrame format
-_REQUIRED_COLUMNS_BASIC = ["date", "open", "high", "low", "close", "volume", "amount"]
-_REQUIRED_COLUMNS_FULL = ["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"]
-def _validate_dataframe(df: pd.DataFrame, fields: str) -> pd.DataFrame:
-    """
-    Validate DataFrame structure against required columns
-
-        Args:
-            df: DataFrame to validate
-            fields: Validation mode ('basic' or 'full')
-
-        Returns:
-            Validated DataFrame (filtered to required columns)
-
-        Raises:
-            DataFormatError: If DataFrame is empty or missing required columns
-    """
-
-    if df is None or df.empty:
-        raise DataFormatError("Data source returned empty data or parsing failed; validation cannot proceed.")
-    missing = None
-    _REQUIRED_COLUMNS = None
-    if fields == "full":
-        missing = [col for col in _REQUIRED_COLUMNS_FULL if col not in df.columns]
-        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_FULL
-    elif fields == "basic":
-        missing = [col for col in _REQUIRED_COLUMNS_BASIC if col not in df.columns]
-        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_BASIC
-    if missing:
-        raise DataFormatError(f"Data source returned invalid format: Missing columns {missing}; required columns are {_REQUIRED_COLUMNS}")
-    df = df[_REQUIRED_COLUMNS]
-    if fields == "full":
-        print("Warning: Direct print in 'full' mode may cause output truncation; adjust with pd.set_option")
-    return df
 
 
 # Frequency to klt (k-line type) mapping
@@ -86,6 +52,7 @@ def register_source(name: str, func: Callable = None):
 
     if func is not None:  # Regular function call
         return decorator(func)
+    logger.info(f"Data source '{name.lower()}' registered successfully")
     return decorator  # Decorator usage
 
 
@@ -104,6 +71,7 @@ def set_default_source(name: str) -> None:
     if name not in _SOURCE_REGISTRY:
         raise DataSourceError(f"Unknown data source: {name}; available sources: {list(_SOURCE_REGISTRY)}")
     _DEFAULT_SOURCE = name
+    logger.info(f"Default data source set to: {name}")
 
 
 def get_stock_history(
@@ -147,7 +115,7 @@ def get_stock_history(
     # Parse date strings (DateFormatError thrown if format is invalid)
     start = parse_date_str(start)
     end = parse_date_str(end)
-
+    logger.info(f"Fetching data for {market}:{code} from {start} to {end}")
     start_dt = datetime.strptime(start, "%Y%m%d")
     end_dt = datetime.strptime(end, "%Y%m%d")
     delta_days = (end_dt - start_dt).days
@@ -159,7 +127,7 @@ def get_stock_history(
         print("⚠️ Time range too short; monthly K-line data may be unavailable")
 
     src = (source or _DEFAULT_SOURCE).lower()
-
+    logger.info(f"Using data source: {src}")
     # Check TuShare availability (if selected)
     if src == "tushare" and "tushare" not in _SOURCE_REGISTRY:
         raise DataSourceError(
@@ -177,6 +145,7 @@ def get_stock_history(
         if freq not in FREQ_TO_KLT:
             raise ParameterError(f"Unknown frequency: {freq}; available values: {list(FREQ_TO_KLT)}")
         klt = FREQ_TO_KLT[freq]
+        logger.info(f"Frequency converted to klt: {klt}")
 
     # --- Cache & Data Fetch Logic ---
 
@@ -212,6 +181,7 @@ def get_stock_history(
 
     try:
         # Fetch data
+        logger.info(f"Calling data source function with parameters: market={market}, code={code}, klt={klt}")
         df = func(**filtered_params)
 
     except Exception as e:
@@ -220,7 +190,9 @@ def get_stock_history(
 
     # 3. Save to cache if data is valid
     if df is not None and not df.empty:
+        logger.info(f"Successfully fetched {len(df)} records from {src}")
         save_cache(cache_path, df)  # CacheSaveError thrown if save fails
+        logger.info(f"Data cached to: {cache_path}")
         modify_df_path(cache_path)
 
     # 4. Validate and return data

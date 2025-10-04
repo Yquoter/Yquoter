@@ -5,6 +5,9 @@ import requests
 from datetime import datetime, timedelta
 import pandas as pd
 from typing import Callable, Optional, Dict, List
+from yquoter.logger import get_logger
+
+logger = get_logger()
 
 def crawl_kline_segments(
     start_date: str,
@@ -59,11 +62,11 @@ def crawl_kline_segments(
             rows = parse_kline(data)
             if rows:
                 all_data.extend(rows)
-                print(f"Successfully fetched data: {beg_str} to {end_str}, total {len(rows)} rows")
+                logger.info(f"Successfully fetched data: {beg_str} to {end_str}, total {len(rows)} rows")
             else:
-                print(f"No data available: {beg_str} to {end_str}")
+                logger.info(f"No data found for segment {beg_str} to {end_str}")
         except Exception as e:
-            print(f"Request error: {e}")
+            logger.error(f"Request error: {e}")
 
         # Move time window to next segment
         current_dt = seg_end + timedelta(days=1)
@@ -71,14 +74,14 @@ def crawl_kline_segments(
         time.sleep(sleep_seconds)
 
     if not all_data:
-        print("No data fetched")
+        logger.warning("K-line crawl completed with no data")
         return pd.DataFrame()
 
     # Build DataFrame and convert numeric columns to float type
     df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"])
     for col in df.columns[1:]:
         df[col] = pd.to_numeric(df[col], errors="coerce")  # 转换失败时设为 NaN
-
+    logger.info(f"K-line crawl completed. Total records: {len(all_data)}")
     return df
 
 
@@ -103,7 +106,7 @@ def crawl_realtime_data(
             Real-time data DataFrame with user-specified columns
     """
     result=[]
-
+    logger.info("Starting real-time data crawl")
     # Set request headers to avoid being identified as a crawler
     headers = {
         "User-Agent": "Mozilla/5.0",
@@ -120,13 +123,13 @@ def crawl_realtime_data(
         # Parse real-time data
         result = parse_realtime_data(data)
         if result:
-            print(f"Successfully fetched real-time data: total {len(result)} rows")
+            logger.info(f"Fetched {len(result)} records of real-time data")
         else:
-            print("No real-time data available")
+            logger.warning("No real-time data available")
     except Exception as e:
-        print(f"Real-time request error: {e}")
+        logger.error(f"Error fetching real-time data: {e}")
     if not result:
-        print("No real-time data fetched")
+        logger.warning("Real-time data crawl completed with no data")
         return pd.DataFrame()
 
     # Build DataFrame and map columns to user-specified names
@@ -134,5 +137,5 @@ def crawl_realtime_data(
     reverse_map = {v: k for k, v in column_map.items()}
     df.rename(columns=reverse_map, inplace=True)
     df = df[user_fields]
-
+    logger.info("Real-time data crawl completed successfully")
     return df

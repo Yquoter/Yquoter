@@ -5,8 +5,45 @@ from datetime import datetime
 from typing import Optional, Literal, List
 import os
 from yquoter.exceptions import CodeFormatError, DateFormatError
+from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError, DataFormatError
 # ---------- Log Configuration ----------
 logger = get_logger(__name__)
+
+
+
+# Standardized columns for History-DataFrame format
+_REQUIRED_COLUMNS_BASIC = ["date", "open", "high", "low", "close", "volume", "amount"]
+_REQUIRED_COLUMNS_FULL = ["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"]
+def _validate_dataframe(df: pd.DataFrame, fields: str) -> pd.DataFrame:
+    """
+    Validate DataFrame structure against required columns
+
+        Args:
+            df: DataFrame to validate
+            fields: Validation mode ('basic' or 'full')
+
+        Returns:
+            Validated DataFrame (filtered to required columns)
+
+        Raises:
+            DataFormatError: If DataFrame is empty or missing required columns
+    """
+    if df is None or df.empty:
+        raise DataFormatError("Data source returned empty data or parsing failed; validation cannot proceed.")
+    missing = None
+    _REQUIRED_COLUMNS = None
+    if fields == "full":
+        missing = [col for col in _REQUIRED_COLUMNS_FULL if col not in df.columns]
+        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_FULL
+    elif fields == "basic":
+        missing = [col for col in _REQUIRED_COLUMNS_BASIC if col not in df.columns]
+        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_BASIC
+    if missing:
+        logger.error(f"Missing required columns: {missing}")
+        raise DataFormatError(f"Data source returned invalid format: Missing columns {missing}; required columns are {_REQUIRED_COLUMNS}")
+    df = df[_REQUIRED_COLUMNS]
+    logger.info(f"Data validation passed for {fields} fields")
+    return df
 
 
 # ---------- Stock Code Tools ----------
@@ -40,9 +77,11 @@ def convert_code_to_tushare(
         Raises:
             CodeFormatError: If code format is unrecognized or market is unknown
     """
+    logger.info(f"Converting {code} to TuShare format")
     market.strip().lower()
     code = normalize_code(code)
     if has_market_suffix(code):
+        logger.info(f"{code} is already in TuShare format")
         return code
     if market == 'cn':
         if code.startswith('6'):
@@ -51,13 +90,18 @@ def convert_code_to_tushare(
             code = f"{code}.SZ"
         elif code.startswith('9'):
             code = f"{code}.BJ"
-        raise CodeFormatError(f"Unrecognized A-share code format: {code}")
+        else:
+            logger.error(f"Unrecognized A-share code format: {code}")
+            raise CodeFormatError(f"Unrecognized A-share code format: {code}")
     elif market == 'hk':
         code_padded = code.zfill(5)
         code = f"{code_padded}.HK"
+        logger.info(f"Converted to TuShare format: {code}")
     elif market == 'us':
         code = f"{code}.US"
+        logger.info(f"Converted to TuShare format: {code}")
     else:
+        logger.error(f"Unknown market type: {code}")
         raise CodeFormatError(f"Unknown market type: {market}")
     return code
 
@@ -92,7 +136,7 @@ def parse_date_str(
         try:
             dt = datetime.strptime(date_str, fmt)
             formatted = dt.strftime(fmt_out)
-            logger.debug(f"Successfully parsed date: {date_str} -> {formatted}")
+            logger.info(f"Successfully parsed date: {date_str} -> {formatted}")
             return formatted
         except ValueError:
             # Try next format if current one fails
@@ -120,6 +164,7 @@ def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
             ValueError: If file format is unsupported or required columns are missing
     """
     if not os.path.exists(path):
+        logger.error(f"File not found: {path}")
         raise FileNotFoundError(f"File not found: {path}")
 
     ext = os.path.splitext(path)[-1].lower()
@@ -133,19 +178,19 @@ def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
     elif ext == ".parquet":
         df = pd.read_parquet(path, **kwargs)
     else:
+        logger.error(f"Unsupported file format: {ext}")
         raise ValueError(f"Unsupported file format: {ext}")
 
-    # Validate required columns
-    if "date" not in df.columns:
-        raise ValueError("Data is missing required 'date' column")
-    if "close" not in df.columns:
-        raise ValueError("Data is missing required 'close' column")
+    if not df.empty:
+        logger.info(f"Loaded file: {path}")
+    else:
+        logger.warning(f"File loaded with no data: {path}")
 
     # Standardize date column
     df["date"] = pd.to_datetime(df["date"], errors="coerce",format="%Y%m%d")
     df = df.dropna(subset=["date"]).reset_index(drop=True)
 
-    return df
+    return _validate_dataframe(df, fields="full")
 
 def filter_fields(df: pd.DataFrame, fields: List[str]) -> pd.DataFrame:
     """
