@@ -167,3 +167,4 @@ def filter_fields(df: pd.DataFrame, fields: List[str]) -> pd.DataFrame:
         print("")
 
     return df[available]
+

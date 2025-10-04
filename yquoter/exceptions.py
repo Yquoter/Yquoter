@@ -51,6 +51,12 @@ class ParameterError(YquoterError, ValueError):
     """Raised when the parameters provided to the API are invalid."""
     pass
 
+class PathNotFoundError(YquoterError, FileNotFoundError):
+    """Raised when a required file or directory path does not exist.
+    Inherits from FileNotFoundError for standard exception compatibility.
+    """
+    pass
+
 class DataFetchError(YquoterError):
     """Raised when fetching data from an external data source fails."""
     pass
