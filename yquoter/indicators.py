@@ -122,8 +122,9 @@ def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None)
         recovery_date = None
         if not recovery_candidates.empty:
             recovery_success = True
-            recovery_date = recovery_candidates.index[0]
-            recovery_days = (df['close'][recovery_date] - df['close'][trough_idx]).days
+            recovery_date_data = recovery_candidates.loc[recovery_candidates['date'].idxmin()]
+            recovery_days = (recovery_date_data['date'] - df['date'][trough_idx]).days
+            recovery_date = recovery_date_data['date']
 
         result = {
             'max_drawdown': float(max_drawdown),
@@ -148,6 +149,4 @@ def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
         df = df[['date',rv_col]].copy()
         return df[df['date'] >= real_start].copy()
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n, indicator_func=_calc_rv_n, n=n)
-
-
 
