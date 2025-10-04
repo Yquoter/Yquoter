@@ -22,50 +22,33 @@ def has_market_suffix(code: str) -> bool:
     """
     return bool(re.match(r'^[\w\d]+\.([A-Z]{2,3})$', code))
 
-def convert_cn_share_to_tushare(code: str) -> str:
-    code = normalize_code(code)
-    if has_market_suffix(code):
-        return code
-    if code.startswith('6'):
-        return f"{code}.SH"
-    elif code.startswith(('0', '3')):
-        return f"{code}.SZ"
-    elif code.startswith('9'):
-        return f"{code}.BJ"
-    raise CodeFormatError(f"无法识别的A股代码格式: {code}")
-
-def convert_hk_share_to_tushare(code: str) -> str:
-    code = normalize_code(code)
-    if has_market_suffix(code):
-        return code
-    # 港股一般代码为数字，补全到5位，不足左补0
-    code_padded = code.zfill(5)
-    return f"{code_padded}.HK"
-
-def convert_us_share_to_tushare(code: str) -> str:
-    code = normalize_code(code)
-    if has_market_suffix(code):
-        return code
-    # 美股代码一般全大写字母，无特殊处理
-    return f"{code}.US"
-
 def convert_code_to_tushare(
     code: str, 
-    market: Literal['cn', 'hk', 'us']
+    market: str
 ) -> str:
     """
     根据市场类型转换股票代码为TuShare标准格式
     """
-    market = market.lower()
+    market.strip().lower()
+    code = normalize_code(code)
+    if has_market_suffix(code):
+        return code
     if market == 'cn':
-        return convert_cn_share_to_tushare(code)
+        if code.startswith('6'):
+            code = f"{code}.SH"
+        elif code.startswith(('0', '3')):
+            code = f"{code}.SZ"
+        elif code.startswith('9'):
+            code = f"{code}.BJ"
+        raise CodeFormatError(f"无法识别的A股代码格式: {code}")
     elif market == 'hk':
-        return convert_hk_share_to_tushare(code)
+        code_padded = code.zfill(5)
+        code = f"{code_padded}.HK"
     elif market == 'us':
-        return convert_us_share_to_tushare(code)
+        code = f"{code}.US"
     else:
         raise CodeFormatError(f"未知市场类型：{market}")
-
+    return code
 # ---------- 日期处理工具 ----------
 
 def parse_date_str(
