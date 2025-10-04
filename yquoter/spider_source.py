@@ -12,46 +12,77 @@ def get_stock_history_spider(
     klt: int = 101,
     fqt: int = 1,
 ) -> pd.DataFrame:
-    """统一 spider 接口，支持各市场历史数据抓取。"""
+    """
+    Unified spider interface for fetching historical stock data across markets (Eastmoney source)
+
+        Args:
+            market: Market identifier ('cn' for China, 'hk' for Hong Kong, 'us' for US)
+            code: Stock code
+            start: Start date for data fetching (format: "YYYYMMDD")
+            end: End date for data fetching (format: "YYYYMMDD")
+            klt: K-line type code (default: 101 for 1min; 1=daily, 2=weekly, etc.)
+            fqt: Forward/factor adjustment type (default: 1 for adjusted data)
+
+        Returns:
+            DataFrame containing historical K-line data
+    """
     secid = get_secid_of_eastmoney(market,code)
     def make_url(beg: str, end_: str) -> str:
-        ts = int(time.time() * 1000)  # 当前时间戳用于防止缓存
+        """Construct Eastmoney API URL for historical K-line data"""
+        ts = int(time.time() * 1000)  # Timestamp to avoid caching
         return (
             f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
             f"?secid={secid}"
             f"&ut=fa5fd1943c7b386f1734de82599f7dc"
-            f"&fields1=f1,f2,f3,f4,f5,f6"  # 基础字段
-            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"  # K线字段
+            f"&fields1=f1,f2,f3,f4,f5,f6"  # Basic fields
+            f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"  # K-line specific fields
             f"&klt={klt}&fqt={fqt}&beg={beg}&end={end_}&lmt=10000&_={ts}"
         )
     def parse_kline(json_data):
+        """Parse Eastmoney K-line JSON response into structured 2D list"""
         klines = json_data.get("data", {}).get("klines", [])
         rows = []
+        # Map parsed parts to standard columns: [date, open, high, low, close, volume, amount, change%, turnover%, change, amplitude%]
         for line in klines:
             parts = line.split(',')
             rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5], parts[6], parts[8], parts[10],
                         parts[9], parts[7]])
         return rows
     return crawl_kline_segments(start, end, make_url, parse_kline)
-###############################技术面####################################
+
 def get_secid_of_eastmoney(market: str,code: str):
+    """
+    Generate Eastmoney-specific 'secid' (security ID) based on market and stock code
+
+        Args:
+            market: Market identifier ('cn', 'hk', 'us')
+            code: Raw stock code
+
+        Returns:
+            Eastmoney-standard secid string
+
+        Raises:
+            CodeFormatError: If A-share code format is unrecognized
+            ValueError: If market is unknown
+    """
     market = market.lower().strip()
     if market == "cn":
+        # Classify A-share secid by code prefix (Shanghai/Shenzhen Exchange)
         if code.startswith(("600", "601", "603", "605")):
-            secid = f"1.{code}"  # 上交所
+            secid = f"1.{code}"  # Shanghai Stock Exchange
         elif code.startswith(("000", "001", "002", "003", "300", "301")):
-            secid = f"0.{code}"  # 深交所
+            secid = f"0.{code}"  # Shenzhen Stock Exchange
         else:
-            raise CodeFormatError("未知A股代码，无法判断市场")
+            raise CodeFormatError("Unrecognized A-share code; cannot determine exchange")
     elif market == "hk":
-        secid = f"116.{code.zfill(5)}"  # 确保代码五位数，前补零
+        secid = f"116.{code.zfill(5)}"  # HKEX: Pad code to 5 digits with leading zeros
     elif market == "us":
-        secid = f"105.{code.upper()}"  # 美股代码大写标准化
+        secid = f"105.{code.upper()}"  # US stocks: Standardize code to uppercase
     else:
-        raise ValueError(f"未知市场：{market}")
+        raise ValueError(f"Unknown market: {market}")
     return secid
 
-#此处修改完还要修改初始化部分
+# Eastmoney field mapping: User-friendly name -> Eastmoney internal field code
 dict_of_eastmoney = {
     "latest": "f2",
     "change%": "f3",
@@ -153,12 +184,24 @@ dict_of_eastmoney = {
 
 
 def map_fields_of_eastmoney(fields: list[str])->list[str]:
+    """
+    Map user-friendly field names to Eastmoney internal field codes
+
+        Args:
+            fields: List of user-friendly field names (e.g., ["latest", "change%"])
+
+        Returns:
+            List of corresponding Eastmoney field codes (e.g., ["f2", "f3"])
+
+        Raises:
+            ValueError: If any user-friendly field name is invalid (not in dict_of_eastmoney)
+    """
     result = []
     for field in fields:
         if field in dict_of_eastmoney:
             result.append(dict_of_eastmoney[field])
         else:
-            raise ValueError(f"无效的字段:{field}")
+            raise ValueError(f"Invalid field: {field}")
     return result
 
 def get_stock_realtime_spider(
@@ -166,16 +209,30 @@ def get_stock_realtime_spider(
     codes: Union[str, list[str]] = [],
     fields: Union[str,list[str]] = [],
 ) -> pd.DataFrame:
+    """
+    Spider interface for fetching real-time stock data from Eastmoney
+
+        Args:
+            market: Market identifier ('cn', 'hk', 'us')
+            codes: Single stock code or list of codes (cannot be empty)
+            fields: Single field name or list of fields (defaults to ["code","latest","pe_dynamic","open","high","low","pre_close"] if empty)
+
+        Returns:
+            DataFrame containing real-time stock data with user-specified fields
+
+        Raises:
+            ValueError: If codes/fields are empty or invalid
+    """
+    # Convert single string inputs to lists for consistency
     if isinstance(codes, str):
         codes = [codes]
     if isinstance(fields, str):
         fields = [fields]
 
-    # 清洗用户输入的数据并正确初始化
-    if codes == "" or codes == []:
+    # Validate and clean input
+    if not codes: # Check if codes list is empty
         raise ValueError("代码或代码列表不可为空")
-    if fields == "" or fields == []:
-        #test,到时候讨论决定要以什么作为默认输出
+    if not fields:# Set default fields if none provided (to be finalized via discussion)
         fields = ["code","latest","pe_dynamic","open","high","low","pre_close"]
 
     if "code" not in fields:
@@ -188,14 +245,15 @@ def get_stock_realtime_spider(
         return int(field[1:])
     url_fields.sort(key=get_fields_number)
 
+    # Generate Eastmoney secids for all input codes
     secids = []
     for percode in codes:
         persecid = get_secid_of_eastmoney(market,percode)
         secids.append(persecid)
 
     def make_realtime_url() -> str:
+        """Construct Eastmoney API URL for real-time data"""
         ts = int(time.time() * 1000)
-        # 构建URL
         return (
             f"https://push2.eastmoney.com/api/qt/ulist.np/get"
             f"?OSVersion=14.3"
@@ -210,9 +268,11 @@ def get_stock_realtime_spider(
             f"&_={ts}"
         )
     def parse_realtime_data(json_data):
+        """Parse Eastmoney real-time JSON response into structured 2D list"""
         realtime_data = json_data.get("data", {}).get("diff", [])
         result = []
         for single_data in realtime_data:
+            # Extract values in the order of sorted url_fields
             rows = []
             for value in single_data.values():
                 rows.append(value)

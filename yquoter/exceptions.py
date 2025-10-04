@@ -1,66 +1,68 @@
 """
-本模块定义了 yquoter 项目中所有自定义的异常类型。
+This module defines all custom exception types for the yquoter project.
 """
 
 class YquoterError(Exception):
     """
-    项目自定义的基础异常类。
-    项目中所有其他的自定义异常都应继承自此类，
-    这样用户可以只捕获这一个基础异常来处理所有已知的项目错误。
+    Base custom exception class for the project.
+    All other custom exceptions in the project should inherit from this class,
+    allowing users to catch only this base exception to handle all known project errors.
     """
     pass
 
 class CodeFormatError(YquoterError, ValueError):
     """
-    当股票代码的格式无法被识别或处理时抛出。
-    继承自 ValueError 以保持部分语义兼容性。
+    Raised when the stock code format cannot be recognized or processed.
+    Inherits from ValueError to maintain partial semantic compatibility.
     """
     pass
 
 class DateFormatError(YquoterError, ValueError):
     """
-    当日期字符串的格式无法被识别或处理时抛出。
-    继承自 ValueError 以保持部分语义兼容性。
+    Raised when the date string format cannot be recognized or processed.
+    Inherits from ValueError to maintain partial semantic compatibility.
     """
     pass
 
 class CacheError(YquoterError):
-    """与缓存操作相关的基础异常。"""
+    """Base exception related to cache operations."""
     pass
 
 class CacheSaveError(CacheError):
-    """当保存缓存失败时抛出。"""
+    """Raised when saving cache fails."""
     pass
 
 class CacheDirectoryError(CacheError):
-    """当创建缓存目录失败时抛出。"""
+    """Raised when creating a cache directory fails."""
     pass
 
 class ConfigError(YquoterError):
-    """当配置项缺失或格式错误时抛出。"""
+    """Raised when a configuration item is missing or has an invalid format."""
     pass
 
 
 class DataSourceError(YquoterError):
-    """与数据源相关的错误，如数据源不存在或未初始化。"""
+    """
+    Errors related to data sources, such as non-existent or uninitialized data sources.
+    """
     pass
 
 class ParameterError(YquoterError, ValueError):
-    """当提供给API的参数无效时抛出。"""
+    """Raised when the parameters provided to the API are invalid."""
     pass
 
 class DataFetchError(YquoterError):
-    """当从外部数据源获取数据失败时抛出。"""
+    """Raised when fetching data from an external data source fails."""
     pass
 
 class DataFormatError(YquoterError):
-    """当获取到的数据格式不符合要求时抛出。"""
+    """Raised when the format of fetched data does not meet requirements."""
     pass
 
 class IndicatorCalculationError(YquoterError):
-    """在计算技术指标时发生错误。"""
+    """Raised when an error occurs during technical indicator calculation."""
     pass
-# 将来可以根据需要在这里添加更多异常，例如：
+# Add more exceptions here as needed in the future, e.g.:
 # class DataNotFoundError(YquoterError):
-#     """当请求的数据不存在时抛出。"""
+#     """Raised when the requested data does not exist."""
 #     pass

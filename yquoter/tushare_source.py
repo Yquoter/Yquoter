@@ -5,21 +5,24 @@ import tushare as ts
 import pandas as pd
 from typing import Optional, List
 from yquoter.utils import convert_code_to_tushare, parse_date_str, filter_fields
-#  from yquoter.logger import logger
 
-_pro = None  # 全局 TuShare 实例
-_token = None  # 延迟保存token
+
+_pro = None  # Global TuShare instance
+_token = None  # Delayed token storage
 
 
 def init_tushare(token: str = None):
     """
-    初始化 TuShare 接口。
+    Initialize TuShare interface.
 
-    - 若手动传入 token，则使用之；
-    - 否则默认调用get_tushare_token。
+        - Uses provided token if available
+        - Otherwise retrieves token via get_tushare_token()
 
-    Raises:
-        ValueError: 如果未传入 token 且环境变量未设置。
+        Args:
+            token: Optional TuShare API token
+
+        Raises:
+            ValueError: If no token is provided and not set in environment variables
     """
     from yquoter.config import get_tushare_token
     from yquoter.datasource import register_source
@@ -29,21 +32,30 @@ def init_tushare(token: str = None):
         token = get_tushare_token()
 
     if not token:
-        raise ValueError("TuShare Token 未提供，请传入 token 或在 .env/环境变量中设置 TUSHARE_TOKEN")
+        raise ValueError("TuShare Token not provided. Please pass token or set TUSHARE_TOKEN in .env/environment variables")
 
     _token = token
     _pro = ts.pro_api(token)
+    # Register TuShare as an available data source
     register_source("tushare", get_stock_history_tushare)
 
 def get_pro():
-    """返回已初始化的 TuShare 接口实例。"""
+    """
+    Get initialized TuShare API instance.
+
+        Returns:
+            Initialized tushare.pro_api instance
+
+        Raises:
+            ValueError: If TuShare is not initialized and no token is available
+    """
     global _pro, _token
     if _pro:
         return _pro
     if not _token:
         token = os.environ.get("TUSHARE_TOKEN")
         if not token:
-            raise ValueError("TuShare 未初始化，请调用 init_tushare 或设置环境变量 TUSHARE_TOKEN")
+            raise ValueError("TuShare not initialized. Please call init_tushare or set TUSHARE_TOKEN environment variable")
         _token = token
         _pro = ts.pro_api(_token)
     return _pro
@@ -51,18 +63,34 @@ def get_pro():
 
 def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, fqt: int=1) -> pd.DataFrame:
     """
-    通用内部函数：调用 TuShare API 拉取日线数据（不同市场对应不同接口名）
+    Internal helper function: Fetch historical data via TuShare API (different endpoints for different markets)
+
+        Args:
+            market: Market identifier ('cn', 'hk', 'us')
+            code: Stock code
+            start: Start date in 'YYYYMMDD' format
+            end: End date in 'YYYYMMDD' format
+            klt: K-line type code (101=daily, 102=weekly, 103=monthly)
+            fqt: Adjustment type (0=no adjustment, 1=qfq, 2=hfq)
+
+        Returns:
+            DataFrame containing historical data
+
+        Raises:
+            ValueError: If market is not supported
     """
     pro = get_pro()
     ts_code = convert_code_to_tushare(code, market)
     def _klt_to_freq(klt: int) -> str:
+        """Convert klt code to TuShare frequency string"""
         return {
-            101: 'D',  # 日线
-            102: 'W',  # 周线
-            103: 'M',  # 月线
+            101: 'D',  # Daily
+            102: 'W',  # Weekly
+            103: 'M',  # Monthly
         }.get(klt, 'D')
 
     def _fqt_to_adj(fqt: int) -> Optional[str]:
+        """Convert fqt code to TuShare adjustment string"""
         return {
             0: None,
             1: 'qfq',
@@ -91,7 +119,7 @@ def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, f
             end_date=end
         )
     else:
-        raise ValueError(f"不支持的 market: {market}")
+        raise ValueError(f"Unsupported market: {market}")
     return df
 
 def get_stock_history_tushare(
@@ -103,17 +131,27 @@ def get_stock_history_tushare(
     fqt: int = 1
 ) -> pd.DataFrame:
     """
-    带缓存的通用 TuShare 日线获取：
-    - market: 'cn','hk','us'
+    Get historical stock data from TuShare with caching support.
+
+        Args:
+            market: Market identifier ('cn', 'hk', 'us')
+            code: Stock code
+            start: Start date in 'YYYYMMDD' format
+            end: End date in 'YYYYMMDD' format
+            klt: K-line type code (101=daily, 102=weekly, 103=monthly)
+            fqt: Adjustment type (0=no adjustment, 1=qfq, 2=hfq)
+
+        Returns:
+            DataFrame containing standardized historical data
     """
     df = _fetch_tushare(market, code, start, end, klt=klt, fqt=fqt)
     if df.empty:
         return df
 
-    # 通用清洗（temp）
-    df.sort_values(df.columns[1], inplace=True)  # trade_date 列位置视 market 而定
+    # General data cleaning
+    df.sort_values(df.columns[1], inplace=True)  # Sort by date column (position varies by market)
     df.reset_index(drop=True, inplace=True)
-    # TODO: 根据不同市场统一重命名列
+    # TODO: Unify column names across different markets
     return df
 
 def get_stock_realtime_tushare(
@@ -122,15 +160,19 @@ def get_stock_realtime_tushare(
         field: List[str] = None
 ) -> pd.DataFrame:
     """
-    获取股票实时行情（受 TuShare 限制，部分市场可能退化为最近日线）。
+    Get real-time stock quotes (due to TuShare limitations, some markets may return latest daily data).
 
-    Args:
-        market: 'cn', 'hk', 'us'
-        code: 股票代码
+        Args:
+            market: Market identifier ('cn', 'hk', 'us')
+            code: Stock code
+            field: Optional list of fields to filter results
 
-    Returns:
-        pd.DataFrame: 实时行情，标准化字段：
-            ['datetime', 'open', 'high', 'low', 'close', 'volume']
+        Returns:
+            DataFrame with real-time quotes, standardized fields:
+                ['datetime', 'open', 'high', 'low', 'close', 'volume']
+
+        Raises:
+            DataSourceError: If market is not supported or implementation is missing
     """
     pro = get_pro()
     ts_code = convert_code_to_tushare(code, market)
@@ -140,6 +182,6 @@ def get_stock_realtime_tushare(
     elif market in ("hk", "us"):
         pass
     else:
-        raise ValueError(f"不支持的 market: {market}")
+        raise ValueError(f"Unsupported market: {market}")
 
     return filter_fields(df, field)

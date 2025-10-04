@@ -8,35 +8,53 @@ from yquoter.utils import parse_date_str, load_file_to_df
 from yquoter.datasource import get_stock_history
 def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_days=5, loader=None, indicator_func=None, **kwargs):
     """
-    通用指标计算器
-    - df: DataFrame 或 文件路径（字符串）
-    - market/code/start/end: 如果 df=None，则调用 loader(market, code, start, end)
-    - loader: 数据获取函数（默认用 get_stock_history）
-    - indicator_func: 实际指标计算逻辑 (df -> df)
-    - kwargs: 传给 indicator_func 的参数
+    Generic indicator calculator
+
+        Args:
+            df: DataFrame or file path (string) containing stock data
+            market: Market identifier (required if df is None)
+            code: Stock code (required if df is None)
+            start: Start date for data fetching (required if df is None)
+            end: End date for data fetching (required if df is None)
+            pre_days: Number of days to fetch beyond start date for calculation
+            loader: Function to load data (defaults to get_stock_history)
+            indicator_func: Actual indicator calculation function (df -> df)
+            **kwargs: Additional parameters passed to indicator_func
+
+        Returns:
+            Result of indicator calculation (typically DataFrame or dict)
     """
+
+    # Use most recent cached data if no parameters provided
     if df is None and market is None and code is None and start is None and end is None:
         df = get_newest_df_path()
+
+    # Load data from file path if provided
     if isinstance(df, str):
         df = load_file_to_df(df)
         real_start = df['date'].iloc[0].strftime("%Y%m%d")
+
+    # Fetch data using loader if df still not available
     if df is None:
         input_start="YYYYMMDD"
         if start is not None:
             real_start = parse_date_str(start, "%Y%m%d")
             input_start = datetime.strptime(start, '%Y%m%d') - timedelta(days=15)
         loader = loader or get_stock_history
+
+        # Set default date range if not provided
         if start is None or end is None:
             end = datetime.today().strftime("%Y%m%d")
             real_start = (datetime.today() - timedelta(days=90)).strftime("%Y%m%d")
             input_start = datetime.strptime(real_start, "%Y%m%d") - timedelta(days=20+pre_days)
         df = loader(market, code, str(input_start), end, mode="full")
 
+    # Prepare data for calculation
     data = df.copy()
     data['date'] = pd.to_datetime(data['date'])
     data = data.sort_values('date').reset_index(drop=True)
 
-    # 调用实际指标计算函数
+    # Calculate and format result
     result = indicator_func(data, real_start, **kwargs)
     if isinstance(result, pd.DataFrame):
         result['date'] = result['date'].dt.strftime('%Y%m%d')
@@ -45,9 +63,18 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
 
 def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
     """
-    计算 MA(n) 日均线
-    - 输入可为 DataFrame / 文件路径 / market+code+日期区间
-    - 默认取最近 3n 天数据
+    Calculate MA(n) moving average
+
+        Args:
+            market: Market identifier
+            code: Stock code
+            start: Start date
+            end: End date
+            n: Number of periods for MA calculation (default: 5)
+            df: Optional DataFrame with stock data
+
+        Returns:
+            DataFrame containing dates and corresponding MA(n) values
     """
 
     def _calc_ma(df, real_start=0, n=5):
@@ -60,18 +87,29 @@ def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
 
 def get_rsi_n(market=None, code=None,start=None, end=None, n=5, df=None):
     """
-    计算n日相对强弱指数
+    Calculate n-period Relative Strength Index
+
+        Args:
+            market: Market identifier
+            code: Stock code
+            start: Start date
+            end: End date
+            n: Number of periods for RSI calculation (default: 5)
+            df: Optional DataFrame with stock data
+
+        Returns:
+            DataFrame containing dates and corresponding RSI(n) values
     """
     def _calc_rsi(df, real_start, n=5):
-        df['change'] = df['close'].diff()  # 今日收盘价-昨日收盘价
+        df['change'] = df['close'].diff()  # Current close - previous close
         df['gain'] = df['change'].where(df['change'] > 0, 0)
         df['loss'] = -df['change'].where(df['change'] < 0, 0)
         df['avg_gain'] = df['gain'].rolling(window=n, min_periods=1).mean()
         df['avg_loss'] = df['loss'].rolling(window=n, min_periods=1).mean()
 
-        #计算相对强弱RS
+        # Calculate Relative Strength (RS)
         df['rs'] = df['avg_gain'] / df['avg_loss'].replace(0, 0.0001)  # 避免除以0
-        #计算RSI
+        # Calculate RSI
         rsi_col = f"RSI{n}"
         df[rsi_col] = 100 - (100 / (1 + df['rs']))
         df[rsi_col] = df[rsi_col].round(2)
@@ -82,19 +120,50 @@ def get_rsi_n(market=None, code=None,start=None, end=None, n=5, df=None):
                           indicator_func=_calc_rsi, n=n)
 
 def get_boll_n (market=None, code=None, start=None, end=None, n=20, df=None):
+    """
+    Calculate Bollinger Bands with n-period window
+
+        Args:
+            market: Market identifier
+            code: Stock code
+            start: Start date
+            end: End date
+            n: Number of periods for calculation (default: 20)
+            df: Optional DataFrame with stock data
+
+        Returns:
+            DataFrame containing dates, upper band, middle band (MA), and lower band
+    """
     def _calc_boll(df,real_start,n=20):
+
         ma_col = f"mid{n}"
         df[ma_col] = df['close'].rolling(window=n, min_periods=1).mean().round(2)
         std_col = f"std{n}"
         df[std_col] = df['close'].rolling(window=n, min_periods=1).std().round(2)
+
         df['up'] = (df[ma_col] + 2 * df[std_col]).round(2)
         df['down'] = (df[ma_col] - 2 * df[std_col]).round(2)
+
         df = df[df['date'] >= real_start]
         return df[['date','up', ma_col,'down']].copy().reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
                           indicator_func=_calc_boll, n=n)
 
 def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
+    """
+    Calculate volume ratio against n-period average volume
+
+        Args:
+            market: Market identifier
+            code: Stock code
+            start: Start date
+            end: End date
+            n: Number of periods for average calculation (default: 20)
+            df: Optional DataFrame with stock data
+
+        Returns:
+            DataFrame containing dates and corresponding volume ratios
+    """
     def _calc_vol_ratio(df,real_start,n=5):
         vol_col = f"vol{n}"
         result_col = f"vol_ratio{n}"
@@ -106,6 +175,21 @@ def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
                           indicator_func=_calc_vol_ratio, n=n)
 
 def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None):
+    """
+    Calculate maximum drawdown and recovery metrics
+
+        Args:
+            market: Market identifier
+            code: Stock code
+            start: Start date
+            end: End date
+            n: Lookback period (default: 5)
+            df: Optional DataFrame with stock data
+
+        Returns:
+            Dictionary containing max drawdown value and related dates/metrics
+    """
+
     def _calc_max_drawdown(df,real_start,n=5):
         df = df[df['date'] >= real_start].copy()
         df['cum_max'] = df['close'].cummax()
@@ -114,7 +198,7 @@ def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None)
         trough_idx = df['drawdown'].idxmin()
         peak_idx = df.loc[:trough_idx, 'cum_max'].idxmax()
 
-        #修复检测
+        # Check recovery status
         post_trough_df = df[trough_idx:].copy()
         recovery_candidates = post_trough_df[post_trough_df['close'] >= df['close'][peak_idx]]
         recovery_success = False
@@ -140,11 +224,25 @@ def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,indicator_func=_calc_max_drawdown, n=n)
 
 def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
+    """
+    Calculate n-period rolling volatility
+
+        Args:
+            market: Market identifier
+            code: Stock code
+            start: Start date
+            end: End date
+            n: Number of periods for calculation (default: 5)
+            df: Optional DataFrame with stock data
+
+        Returns:
+            DataFrame containing dates and corresponding rolling volatility values
+    """
     def _calc_rv_n(df,real_start,n=5):
-        #计算对数增长率
+        # Calculate logarithmic returns
         df["log_change"] = np.log(df['close'] / df['close'].shift(1))
         rv_col = f"rv{n}"
-        #计算标准差
+        # Calculate SD ( standard deviation )
         df[rv_col] = df['log_change'].rolling(window=n, min_periods=1).std() * np.sqrt(n)
         df = df[['date',rv_col]].copy()
         return df[df['date'] >= real_start].copy()

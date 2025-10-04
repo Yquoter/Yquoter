@@ -11,69 +11,70 @@ def crawl_kline_segments(
     end_date: str,
     make_url: Callable[[str, str], str],
     parse_kline: Callable[[Dict], List[List[str]]],
-    sleep_seconds: float = 1.0,
+    sleep_seconds: float = 1.03,
     segment_days: int = 365,
 ) -> pd.DataFrame:
     """
-    通用分页 K 线数据爬虫函数，适用于按时间段构造 URL 抓取数据的情形。
+    Generic paginated K-line data crawler, for scenarios where URLs are built by time segments.
 
-    参数说明：
-    - start_date (str): 起始日期（格式为 "YYYYMMDD"）
-    - end_date (str): 截止日期（格式为 "YYYYMMDD"）
-    - make_url (Callable): 接收两个日期字符串（beg, end），返回构造好的请求 URL 的函数
-    - parse_kline (Callable): 接收接口返回的 JSON 数据，返回 K 线数据的二维数组（字符串形式）
-    - sleep_seconds (float): 每段请求间隔时间，防止触发反爬，默认 1 秒
-    - segment_days (int): 每个请求时间段跨度的天数，默认一年（365 天）
-    - mode(str): df展开形式
-    返回值：
-    - pd.DataFrame: 包含日期、开盘、最高、最低、收盘、成交量的标准 K 线数据表
+        Args:
+            start_date: Start date (format: "YYYYMMDD")
+            end_date: End date (format: "YYYYMMDD")
+            make_url: Function that takes two date strings (beg, end) and returns a constructed request URL
+            parse_kline: Function that takes API response JSON data and returns a 2D list of K-line data (in string format)
+            sleep_seconds: Interval between each segment request (to avoid anti-crawling), default 1 second
+            segment_days: Number of days per request time segment, default 1 year (365 days)
+
+        Returns:
+            Standard K-line DataFrame with columns: date, open, high, low, close, volume, amount, change%, turnover%, change, amplitude%
     """
-    # 将输入日期字符串转换为 datetime 对象
+    # Convert input date strings to datetime objects
     start_dt = datetime.strptime(start_date, "%Y%m%d")
     end_dt = datetime.strptime(end_date, "%Y%m%d")
     current_dt = start_dt
     all_data = []
 
-    # 设置请求头，避免被识别为爬虫
+    # Set request headers to avoid being identified as a crawler
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Referer": "https://quote.eastmoney.com/",
     }
 
-    # 循环请求，每次获取一个时间段的数据
+    # Loop to fetch data segment by segment
     while current_dt <= end_dt:
+        # Calculate end date for current segment (not exceeding overall end date)
         seg_end = min(current_dt + timedelta(days=segment_days), end_dt)
         beg_str = current_dt.strftime('%Y%m%d')
         end_str = seg_end.strftime('%Y%m%d')
 
-        # 构造 URL
+        # Build request URL
         url = make_url(beg_str, end_str)
         try:
-            # 发起请求
+            # Send request
             resp = requests.get(url, headers=headers)
-            resp.raise_for_status()  # 若 HTTP 状态码异常会抛出异常
-            data = resp.json()       # 解析 JSON 格式的响应体
+            resp.raise_for_status()  # Raise exception for HTTP status code errors
+            data = resp.json()       # Parse JSON response body
 
-            # 使用外部提供的函数解析数据
+            # Parse data
             rows = parse_kline(data)
             if rows:
                 all_data.extend(rows)
-                print(f"成功获取数据：{beg_str} 至 {end_str}，共 {len(rows)} 行")
+                print(f"Successfully fetched data: {beg_str} to {end_str}, total {len(rows)} rows")
             else:
-                print(f"无数据：{beg_str} 至 {end_str}")
+                print(f"No data available: {beg_str} to {end_str}")
         except Exception as e:
-            print(f"请求异常：{e}")
+            print(f"Request error: {e}")
 
-        # 移动时间窗口
+        # Move time window to next segment
         current_dt = seg_end + timedelta(days=1)
-        # 等待一段时间，防止被封 IP
+        # Wait to prevent IP blocking
         time.sleep(sleep_seconds)
 
     if not all_data:
-        print("未获取到任何数据")
+        print("No data fetched")
         return pd.DataFrame()
 
-    # 构建 DataFrame，并将数值列转换为浮点型
+    # Build DataFrame and convert numeric columns to float type
     df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"])
     for col in df.columns[1:]:
         df[col] = pd.to_numeric(df[col], errors="coerce")  # 转换失败时设为 NaN
@@ -88,28 +89,47 @@ def crawl_realtime_data(
     user_fields: List[str],
     column_map: Dict[str, str],
 )->pd.DataFrame:
+    """
+    Crawler for real-time stock data
+
+        Args:
+            make_url: Function that returns a constructed real-time data request URL
+            parse_realtime_data: Function that takes API response JSON data and returns a 2D list of real-time data
+            url_fields: List of column names from the API response (to map raw data to DataFrame)
+            user_fields: List of final column names required by the user (to filter and reorder DataFrame)
+            column_map: Dictionary for column name mapping (key: user column name, value: API response column name)
+
+        Returns:
+            Real-time data DataFrame with user-specified columns
+    """
     result=[]
+
+    # Set request headers to avoid being identified as a crawler
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Referer": "https://quote.eastmoney.com/",
     }
+    # Build request URL
     url = make_url()
+
     try:
-        # 发起请求
+        # Send request
         resp = requests.get(url, headers=headers)
-        resp.raise_for_status()  # 若 HTTP 状态码异常会抛出异常
-        data = resp.json()  # 解析 JSON 格式的响应体
-        # 解析数据
+        resp.raise_for_status()  # Raise exception for HTTP status code errors
+        data = resp.json()  # Parse JSON response body
+        # Parse real-time data
         result = parse_realtime_data(data)
         if result:
-            print(f"成功获取数据：共 {len(result)} 行")
+            print(f"Successfully fetched real-time data: total {len(result)} rows")
         else:
-            print("无数据")
+            print("No real-time data available")
     except Exception as e:
-        print(f"请求异常：{e}")
+        print(f"Real-time request error: {e}")
     if not result:
-        print("未获取到任何数据")
+        print("No real-time data fetched")
         return pd.DataFrame()
+
+    # Build DataFrame and map columns to user-specified names
     df = pd.DataFrame(result,columns=url_fields)
     reverse_map = {v: k for k, v in column_map.items()}
     df.rename(columns=reverse_map, inplace=True)

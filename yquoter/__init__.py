@@ -2,6 +2,8 @@
 
 import logging
 from yquoter.logger import setup_logging
+
+# Configure logging to INFO level
 setup_logging(level=logging.INFO)
 
 from yquoter.datasource import register_source, get_stock_history, get_stock_realtime
@@ -10,25 +12,26 @@ from yquoter.cache import set_max_cache_entries
 
 def init_cache_manager(max_entries: int = 50):
     """
-    初始化缓存管理器
+    Initialize cache manager
 
-    参数:
-        max_entries: 最大缓存文件数量，默认50
+    Args:
+        max_entries: Max number of cached files, default 50
     """
     from .cache import init_cache, set_max_cache_entries
     set_max_cache_entries(max_entries)
     init_cache()
-    return f"缓存管理器已初始化，最大缓存文件数: {max_entries}"
+    return f"Cache manager initialized, max cache entries: {max_entries}"
 
-# 自动初始化缓存管理器（使用默认设置）
+# Auto-initialize cache manager with default settings
 init_cache_manager()
 
 
 def init_tushare(token: str = None):
+    """Initialize tushare data source"""
     from .tushare_source import init_tushare as _init
     return _init(token)
 
-
+# Public API exports
 __all__ = [
     "init_tushare",
     "register_source",
