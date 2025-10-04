@@ -3,8 +3,8 @@
 import logging
 from yquoter.logger import setup_logging
 
-# Configure logging to INFO level
-setup_logging(level=logging.INFO)
+
+setup_logging(level=logging.WARNING)
 
 from yquoter.datasource import register_source, get_stock_history, get_stock_realtime
 from yquoter.indicators import *

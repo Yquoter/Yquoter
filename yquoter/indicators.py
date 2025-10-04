@@ -2,10 +2,13 @@ from unittest import result
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-
 from yquoter.config import get_newest_df_path
 from yquoter.utils import parse_date_str, load_file_to_df
 from yquoter.datasource import get_stock_history
+from yquoter.logger import get_logger
+
+logger = get_logger()
+
 def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_days=5, loader=None, indicator_func=None, **kwargs):
     """
     Generic indicator calculator
@@ -28,11 +31,13 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
     # Use most recent cached data if no parameters provided
     if df is None and market is None and code is None and start is None and end is None:
         df = get_newest_df_path()
+        logger.info("Using most recent cached data as no parameters provided")
 
     # Load data from file path if provided
     if isinstance(df, str):
         df = load_file_to_df(df)
         real_start = df['date'].iloc[0].strftime("%Y%m%d")
+        logger.info(f"Loading data from file: {df}")
 
     # Fetch data using loader if df still not available
     if df is None:
@@ -48,6 +53,7 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
             real_start = (datetime.today() - timedelta(days=90)).strftime("%Y%m%d")
             input_start = datetime.strptime(real_start, "%Y%m%d") - timedelta(days=20+pre_days)
         df = loader(market, code, str(input_start), end, mode="full")
+        logger.info(f"Fetching data via {loader.__name__} for {market}:{code}")
 
     # Prepare data for calculation
     data = df.copy()
@@ -78,9 +84,11 @@ def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
     """
 
     def _calc_ma(df, real_start=0, n=5):
+        logger.info(f"Calculating MA{n} indicator")
         ma_col = f"MA{n}"
         df[ma_col] = df['close'].rolling(window=n, min_periods=1).mean().round(2)
         df = df[df['date'] >= real_start]
+        logger.info(f"MA{n} calculation completed for {len(df)} records")
         return df[['date', ma_col]].copy().reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end, pre_days=n,
                           indicator_func=_calc_ma, n=n)
@@ -101,6 +109,7 @@ def get_rsi_n(market=None, code=None,start=None, end=None, n=5, df=None):
             DataFrame containing dates and corresponding RSI(n) values
     """
     def _calc_rsi(df, real_start, n=5):
+        logger.info(f"Calculating RSI{n} indicator")
         df['change'] = df['close'].diff()  # Current close - previous close
         df['gain'] = df['change'].where(df['change'] > 0, 0)
         df['loss'] = -df['change'].where(df['change'] < 0, 0)
@@ -115,7 +124,9 @@ def get_rsi_n(market=None, code=None,start=None, end=None, n=5, df=None):
         df[rsi_col] = df[rsi_col].round(2)
         result = df[['date', rsi_col]].copy()
         df.drop(columns=['change', 'gain', 'loss', 'avg_gain', 'avg_loss', 'rs'], inplace=True)
-        return result[result['date'] >= real_start].copy().reset_index(drop=True)
+        result = result[result['date'] >= real_start].copy().reset_index(drop=True)
+        logger.info(f"RSI{n} calculation completed for {len(result)} records")
+        return result
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n,
                           indicator_func=_calc_rsi, n=n)
 
@@ -135,7 +146,7 @@ def get_boll_n (market=None, code=None, start=None, end=None, n=20, df=None):
             DataFrame containing dates, upper band, middle band (MA), and lower band
     """
     def _calc_boll(df,real_start,n=20):
-
+        logger.info(f"Calculating Bollinger Bands with {n}-period window")
         ma_col = f"mid{n}"
         df[ma_col] = df['close'].rolling(window=n, min_periods=1).mean().round(2)
         std_col = f"std{n}"
@@ -145,6 +156,7 @@ def get_boll_n (market=None, code=None, start=None, end=None, n=20, df=None):
         df['down'] = (df[ma_col] - 2 * df[std_col]).round(2)
 
         df = df[df['date'] >= real_start]
+        logger.info(f"Bollinger Bands calculation completed for {len(df)} records")
         return df[['date','up', ma_col,'down']].copy().reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
                           indicator_func=_calc_boll, n=n)
@@ -165,12 +177,15 @@ def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
             DataFrame containing dates and corresponding volume ratios
     """
     def _calc_vol_ratio(df,real_start,n=5):
+        logger.info(f"Calculating volume ratio with {n}-period average")
         vol_col = f"vol{n}"
         result_col = f"vol_ratio{n}"
         df[vol_col] = df['volume'].rolling(window=n, min_periods=1).mean().round(2)
         df[result_col] = (df['volume']/df[vol_col]).round(2)
         result = df[['date', result_col]].copy()
-        return result[result['date'] >= real_start].copy().reset_index(drop=True)
+        result = result[result['date'] >= real_start].copy().reset_index(drop=True)
+        logger.info(f"Volume ratio calculation completed for {len(result)} records")
+        return result
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
                           indicator_func=_calc_vol_ratio, n=n)
 
@@ -191,6 +206,7 @@ def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None)
     """
 
     def _calc_max_drawdown(df,real_start,n=5):
+        logger.info(f"Calculating max drawdown with {n}-period lookback")
         df = df[df['date'] >= real_start].copy()
         df['cum_max'] = df['close'].cummax()
         df['drawdown'] = df['close'] - df['cum_max']
@@ -220,6 +236,7 @@ def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None)
             'recovery_days': int(recovery_days) if recovery_days is not None else None,
             'recovery_date': str(recovery_date.date()) if recovery_date is not None else None,
         }
+        logger.info(f"Max drawdown calculation completed.")
         return result
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,indicator_func=_calc_max_drawdown, n=n)
 
@@ -239,12 +256,15 @@ def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
             DataFrame containing dates and corresponding rolling volatility values
     """
     def _calc_rv_n(df,real_start,n=5):
+        logger.info(f"Calculating {n}-period rolling volatility")
         # Calculate logarithmic returns
         df["log_change"] = np.log(df['close'] / df['close'].shift(1))
         rv_col = f"rv{n}"
         # Calculate SD ( standard deviation )
         df[rv_col] = df['log_change'].rolling(window=n, min_periods=1).std() * np.sqrt(n)
         df = df[['date',rv_col]].copy()
-        return df[df['date'] >= real_start].copy()
+        result = df[df['date'] >= real_start].copy().reset_index(drop=True)
+        logger.info(f"Rolling volatility calculation completed for {len(result)} records")
+        return result
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n, indicator_func=_calc_rv_n, n=n)
 

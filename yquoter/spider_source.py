@@ -26,6 +26,8 @@ def get_stock_history_spider(
         Returns:
             DataFrame containing historical K-line data
     """
+    logger.info(f"Starting historical data fetch by spider: {market}:{code}")
+
     secid = get_secid_of_eastmoney(market,code)
     def make_url(beg: str, end_: str) -> str:
         """Construct Eastmoney API URL for historical K-line data"""
@@ -79,7 +81,9 @@ def get_secid_of_eastmoney(market: str,code: str):
     elif market == "us":
         secid = f"105.{code.upper()}"  # US stocks: Standardize code to uppercase
     else:
+        logger.error(f"Unrecognized market: {market}")
         raise ValueError(f"Unknown market: {market}")
+    logger.info(f"Generated Eastmoney secid: {secid}")
     return secid
 
 # Eastmoney field mapping: User-friendly name -> Eastmoney internal field code
@@ -201,7 +205,9 @@ def map_fields_of_eastmoney(fields: list[str])->list[str]:
         if field in dict_of_eastmoney:
             result.append(dict_of_eastmoney[field])
         else:
+            logger.error(f"Field {field} is not in dict_of_eastmoney")
             raise ValueError(f"Invalid field: {field}")
+    logger.info(f"Mapped {len(result)} fields to EastMoney")
     return result
 
 def get_stock_realtime_spider(
@@ -223,6 +229,7 @@ def get_stock_realtime_spider(
         Raises:
             ValueError: If codes/fields are empty or invalid
     """
+    logger.info(f"Fetching real-time stock data from spider")
     # Convert single string inputs to lists for consistency
     if isinstance(codes, str):
         codes = [codes]
@@ -231,8 +238,10 @@ def get_stock_realtime_spider(
 
     # Validate and clean input
     if not codes: # Check if codes list is empty
+        logger.error("No codes provided")
         raise ValueError("代码或代码列表不可为空")
     if not fields:# Set default fields if none provided (to be finalized via discussion)
+        logger.info("No fields provided, initial fields will be used.")
         fields = ["code","latest","pe_dynamic","open","high","low","pre_close"]
 
     if "code" not in fields:

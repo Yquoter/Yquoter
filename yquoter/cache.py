@@ -18,7 +18,7 @@ def init_cache():
     """
     global _cache_file_list
     cache_root = get_cache_root()
-
+    logger.info(f"Starting cache manager initialization, using root directory: {cache_root}")
     # Clear existing list
     _cache_file_list = []
 
@@ -45,9 +45,9 @@ def _add_cache_file_list(path: str):
     Add new cache file to management list and perform cleanup (internal function)
     """
     global _cache_file_list
-
+    logger.info(f"Adding cache file to management system: {path}")
     if not os.path.exists(path):
-        logger.warning(f"Attempted to add non-existent cache file: {path}")
+        logger.error(f"Cannot add non-existent cache file: {path}")
         return
 
     mtime = os.path.getmtime(path)
@@ -56,10 +56,12 @@ def _add_cache_file_list(path: str):
     for i, (existing_mtime, existing_path) in enumerate(_cache_file_list):
         if existing_path == path:
             _cache_file_list[i] = (mtime, path)
+            logger.info(f"Updated existing cache entry: {path} (new modification time recorded)")
             break
     else:
         # Add if not exists
         _cache_file_list.append((mtime, path))
+        logger.info(f"Added new cache entry: {path} to management list")
 
     # Sort by modification time
     _cache_file_list.sort(key=lambda x: x[0])
@@ -73,13 +75,15 @@ def _cleanup_old_cache():
     Clean up old cache files exceeding quantity limit
     """
     global _cache_file_list
-
+    logger.info(f"Starting cache cleanup check - max allowed: {_MAX_CACHE_ENTRIES}")
     # Calculate number of files to delete
     if len(_cache_file_list) <= _MAX_CACHE_ENTRIES:
+        logger.info("No cache cleanup needed (current entries under limit)")
         return
 
     files_to_delete = len(_cache_file_list) - _MAX_CACHE_ENTRIES
     deleted_count = 0
+    logger.info(f"Cache cleanup required - need to delete {files_to_delete} oldest file(s)")
 
     # Delete oldest files
     for _ in range(files_to_delete):
@@ -104,10 +108,12 @@ def set_max_cache_entries(max_entries: int):
     Set maximum cache entries and perform cleanup
     """
     global _MAX_CACHE_ENTRIES
+    logger.info(f"Received request to set maximum cache entries to: {max_entries}")
     if max_entries < 1:
+        logger.error(f"Invalid maximum cache entries value: {max_entries} (must be greater than 0)")
         raise ParameterError("Maximum cache entries must be greater than 0")
     _MAX_CACHE_ENTRIES = max_entries
-    logger.info(f"Set maximum cache entries to: {max_entries}")
+    logger.info(f"Successfully updated maximum cache entries to: {max_entries}")
 
     # Perform immediate cleanup
     _cleanup_old_cache()
@@ -125,6 +131,7 @@ def get_cache_path(
     """
     Generate cache file path based on market, code and time range
     """
+    logger.info(f"Generating cache path - market: {market}, stock code: {code}, time range: {start} to {end}")
     root = cache_root or get_cache_root()
     start_fmt = start.replace("-", "")
     end_fmt = end.replace("-", "")
@@ -146,7 +153,7 @@ def cache_exists(path: str) -> bool:
     Check if cache file exists at specified path
     """
     exists = os.path.isfile(path)
-    logger.debug(f"Cache file {'exists' if exists else 'does not exist'}: {path}")
+    logger.info(f"Cache file check - path: {path}, exists: {'Yes' if exists else 'No'}")
     return exists
 
 
@@ -154,8 +161,9 @@ def load_cache(path: str) -> Optional[pd.DataFrame]:
     """
     Read data from cache file into DataFrame, return None on failure
     """
+    logger.info(f"Starting to load cache file: {path}")
     if not cache_exists(path):
-        logger.info(f"Cache file does not exist, cannot load: {path}")
+        logger.warning(f"Cache file does not exist, cannot load: {path}")
         return None
         # Silent failure design pattern for load cache operations
     try:
@@ -175,6 +183,7 @@ def save_cache(path: str, df: pd.DataFrame):
     """
     Save DataFrame to cache file
     """
+    logger.info(f"Starting to save cache file: {path}")
     try:
         df.to_csv(path, index=False)
         logger.info(f"Successfully saved cache file: {path}")

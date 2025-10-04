@@ -5,8 +5,8 @@ import tushare as ts
 import pandas as pd
 from typing import Optional, List
 from yquoter.utils import convert_code_to_tushare, parse_date_str, filter_fields
-
-
+from yquoter.logger import get_logger
+logger = get_logger()
 _pro = None  # Global TuShare instance
 _token = None  # Delayed token storage
 
@@ -24,6 +24,7 @@ def init_tushare(token: str = None):
         Raises:
             ValueError: If no token is provided and not set in environment variables
     """
+    logger.info(f"Initializing TuShare with token: {token}")
     from yquoter.config import get_tushare_token
     from yquoter.datasource import register_source
 
@@ -32,6 +33,7 @@ def init_tushare(token: str = None):
         token = get_tushare_token()
 
     if not token:
+        logger.error("No token provided")
         raise ValueError("TuShare Token not provided. Please pass token or set TUSHARE_TOKEN in .env/environment variables")
 
     _token = token
@@ -55,9 +57,11 @@ def get_pro():
     if not _token:
         token = os.environ.get("TUSHARE_TOKEN")
         if not token:
+            logger.error("TuShare not initialized.")
             raise ValueError("TuShare not initialized. Please call init_tushare or set TUSHARE_TOKEN environment variable")
         _token = token
         _pro = ts.pro_api(_token)
+    logger.info(f"get_pro successfully.")
     return _pro
 
 
@@ -119,6 +123,7 @@ def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, f
             end_date=end
         )
     else:
+        logger.error(f"Unsupported market: {market}")
         raise ValueError(f"Unsupported market: {market}")
     return df
 
@@ -144,6 +149,7 @@ def get_stock_history_tushare(
         Returns:
             DataFrame containing standardized historical data
     """
+    logger.info(f"Getting historical stock data from TuShare : {code}")
     df = _fetch_tushare(market, code, start, end, klt=klt, fqt=fqt)
     if df.empty:
         return df
