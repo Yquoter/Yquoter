@@ -4,21 +4,22 @@ from yquoter.logger import get_logger
 from datetime import datetime
 from typing import Optional, Literal, List
 import os
-# ---------- 日志配置 ----------
+from yquoter.exceptions import CodeFormatError, DateFormatError
+# ---------- Log Configuration ----------
 logger = get_logger(__name__)
 
-# 从我们新建的 exceptions 模块中导入异常类
-from yquoter.exceptions import CodeFormatError, DateFormatError
 
-# ---------- 股票代码工具 ----------
+# ---------- Stock Code Tools ----------
 
 def normalize_code(code: str) -> str:
-    """去除空白并转大写"""
+    """
+    Normalize stock code by removing whitespace and converting to uppercase
+    """
     return code.strip().upper()
 
 def has_market_suffix(code: str) -> bool:
     """
-    判断代码是否带有市场后缀，例如 '600519.SH'、'00700.HK'
+    Check if stock code contains market suffix
     """
     return bool(re.match(r'^[\w\d]+\.([A-Z]{2,3})$', code))
 
@@ -27,7 +28,17 @@ def convert_code_to_tushare(
     market: str
 ) -> str:
     """
-    根据市场类型转换股票代码为TuShare标准格式
+    Convert stock code to TuShare standard format based on market type
+
+        Args:
+            code: Original stock code
+            market: Market identifier ('cn', 'hk', 'us')
+
+        Returns:
+            TuShare-formatted stock code with market suffix
+
+        Raises:
+            CodeFormatError: If code format is unrecognized or market is unknown
     """
     market.strip().lower()
     code = normalize_code(code)
@@ -40,39 +51,40 @@ def convert_code_to_tushare(
             code = f"{code}.SZ"
         elif code.startswith('9'):
             code = f"{code}.BJ"
-        raise CodeFormatError(f"无法识别的A股代码格式: {code}")
+        raise CodeFormatError(f"Unrecognized A-share code format: {code}")
     elif market == 'hk':
         code_padded = code.zfill(5)
         code = f"{code_padded}.HK"
     elif market == 'us':
         code = f"{code}.US"
     else:
-        raise CodeFormatError(f"未知市场类型：{market}")
+        raise CodeFormatError(f"Unknown market type: {market}")
     return code
-# ---------- 日期处理工具 ----------
+
+# ---------- Date Processing Tools ----------
 
 def parse_date_str(
     date_str: str, 
     fmt_out: str = "%Y%m%d"
 ) -> str:
     """
-    解析多种常见日期字符串，输出指定格式字符串。
+    Parse various common date string formats into specified output format
 
-    支持输入格式示例：
-    - '2025-07-09'
-    - '2025/07/09'
-    - '20250709'
-    - '2025-07-09 23:00:00'
+        Supported input formats:
+        - '2025-07-09'
+        - '2025/07/09'
+        - '20250709'
+        - '2025-07-09 23:00:00'
 
-    Args:
-        date_str: 输入的日期字符串
-        fmt_out: 输出格式，默认 'YYYYMMDD'
+        Args:
+            date_str: Input date string to parse
+            fmt_out: Desired output format (default: '%Y%m%d')
 
-    Returns:
-        格式化后的日期字符串
+        Returns:
+            Formatted date string in specified output format
 
-    Raises:
-        DateFormatError: 无法识别日期格式时抛出
+        Raises:
+            DateFormatError: If date format cannot be recognized
     """
     date_str = date_str.strip()
     fmts_in = ["%Y-%m-%d", "%Y/%m/%d", "%Y%m%d", "%Y-%m-%d %H:%M:%S"]
@@ -80,25 +92,35 @@ def parse_date_str(
         try:
             dt = datetime.strptime(date_str, fmt)
             formatted = dt.strftime(fmt_out)
-            logger.debug(f"成功解析日期: {date_str} -> {formatted}")
+            logger.debug(f"Successfully parsed date: {date_str} -> {formatted}")
             return formatted
         except ValueError:
+            # Try next format if current one fails
             continue
-    logger.error(f"无法识别的日期格式: {date_str}")
-    raise DateFormatError(f"无法识别的日期格式: {date_str}")
+    logger.error(f"Unrecognized date format: {date_str}")
+    raise DateFormatError(f"Unrecognized date format: {date_str}")
 
 
 def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
     """
-    根据文件后缀自动加载为 DataFrame
-    支持 csv / xlsx / json / parquet
-    额外参数通过 kwargs 传给对应的 pandas 读取函数
+    Automatically load file into DataFrame based on file extension
 
-    返回：
-        pd.DataFrame，包含至少 ['date', 'close'] 列
+        Supports: csv / xlsx / json / parquet
+        Additional parameters are passed to corresponding pandas read functions
+
+        Args:
+            path: Path to the file to load
+           ** kwargs: Additional parameters for pandas read functions
+
+        Returns:
+            DataFrame containing at least ['date', 'close'] columns
+
+        Raises:
+            FileNotFoundError: If specified file does not exist
+            ValueError: If file format is unsupported or required columns are missing
     """
     if not os.path.exists(path):
-        raise FileNotFoundError(f"文件不存在: {path}")
+        raise FileNotFoundError(f"File not found: {path}")
 
     ext = os.path.splitext(path)[-1].lower()
 
@@ -111,15 +133,15 @@ def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
     elif ext == ".parquet":
         df = pd.read_parquet(path, **kwargs)
     else:
-        raise ValueError(f"不支持的文件格式: {ext}")
+        raise ValueError(f"Unsupported file format: {ext}")
 
-    # 标准化字段
+    # Validate required columns
     if "date" not in df.columns:
-        raise ValueError("数据缺少 'date' 列")
+        raise ValueError("Data is missing required 'date' column")
     if "close" not in df.columns:
-        raise ValueError("数据缺少 'close' 列")
+        raise ValueError("Data is missing required 'close' column")
 
-    # 确保日期列转成 datetime
+    # Standardize date column
     df["date"] = pd.to_datetime(df["date"], errors="coerce",format="%Y%m%d")
     df = df.dropna(subset=["date"]).reset_index(drop=True)
 
@@ -127,12 +149,14 @@ def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
 
 def filter_fields(df: pd.DataFrame, fields: List[str]) -> pd.DataFrame:
     """
-        Args:
-        df: 数据源返回的 DataFrame
-        fields: 用户想要的字段列表
+    Filter DataFrame to contain only specified fields
 
-    Returns:
-        DataFrame，只包含指定的字段
+        Args:
+            df: Source DataFrame from data source
+            fields: List of fields that user wants to keep
+
+        Returns:
+            DataFrame containing only the specified fields
     """
     if not fields:
         return df
