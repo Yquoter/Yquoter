@@ -5,7 +5,16 @@ from dotenv import dotenv_values
 from yquoter.exceptions import ConfigError
 
 _config = None  # 内部缓存
+
 df_cache_path = "" #最新缓存的文件的路径
+
+def get_newest_df_path():
+    return df_cache_path
+
+def modify_df_path(path):
+    global df_cache_path
+    df_cache_path = path
+
 def load_config():
     """
     加载配置：
@@ -17,14 +26,11 @@ def load_config():
     cfg.update(os.environ)
     if "CACHE_ROOT" not in cfg:
         cfg["CACHE_ROOT"] = ".cache"
+    if "LOG_ROOT" not in cfg:
+        cfg["LOG_ROOT"] = ".log"
     return cfg
 
-def get_newest_df_path():
-    return df_cache_path
 
-def modify_df_path(path):
-    global df_cache_path
-    df_cache_path = path
 
 def get_config():
     global _config
@@ -46,3 +52,6 @@ def get_cache_root():
     # 使用 .get() 方法并提供默认值，可以优雅地处理 "CACHE_ROOT" 未设置的情况，
     # 不会抛出异常，因此无需修改。
     return get_config().get("CACHE_ROOT", ".cache")
+
+def get_log_root():
+    return get_config().get("LOG_ROOT", ".log")
