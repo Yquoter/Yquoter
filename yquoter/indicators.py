@@ -149,19 +149,5 @@ def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
         return df[df['date'] >= real_start].copy()
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n, indicator_func=_calc_rv_n, n=n)
 
-#测试
-if __name__ == "__main__":
-    df = get_ma_n("cn","600519","20241002","20241012",5)
-    print(df)
-    df = get_rsi_n("cn","600519","20250108","20250204",5)
-    print(df)
-    df = get_boll_n("cn","600519","20241002","20241012",20)
-    print(df)
-    df = get_vol_ratio("cn","600519","20250108","20250206",5)
-    print(df)
-    df = get_stock_history("cn","600519","20250128","20250209")
-    print(df)
-    drawdown = get_max_drawdown("cn","600519","20250108","20250202")
-    print(drawdown)
-    df = get_rv_n("cn","600519","20250108","20250119",5)
-    print(df)
+
+

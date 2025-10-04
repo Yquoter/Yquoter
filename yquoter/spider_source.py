@@ -220,13 +220,3 @@ def get_stock_realtime_spider(
         return result
     return crawl_realtime_data(make_realtime_url, parse_realtime_data, url_fields, fields, dict_of_eastmoney)
 
-if __name__ == "__main__":
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.float_format', None)
-    pd.set_option('display.max_rows', None)
-    pd.set_option('display.max_colwidth', 100)
-    pd.set_option('display.expand_frame_repr', False)
-    df = get_stock_history_spider("cn","600519","20241002","20241012")
-    print(df)
-    df = get_stock_realtime_spider("hk",codes=["00700","02583"])
-    print(df)
