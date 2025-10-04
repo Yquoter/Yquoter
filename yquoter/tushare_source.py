@@ -1,12 +1,17 @@
 # yquoter/tushare_source.py
 
 import os
+import datetime
 import tushare as ts
 import pandas as pd
 from typing import Optional, List
-from yquoter.utils import convert_code_to_tushare, parse_date_str, filter_fields
+from yquoter.exceptions import CodeFormatError, ConfigError
 from yquoter.logger import get_logger
-logger = get_logger()
+from yquoter.config import STANDARD_FIELDS, TUSHARE_REALTIME_MAPPING
+from yquoter.utils import convert_code_to_tushare, parse_date_str, filter_fields
+
+logger = get_logger(__name__)
+
 _pro = None  # Global TuShare instance
 _token = None  # Delayed token storage
 
@@ -34,7 +39,7 @@ def init_tushare(token: str = None):
 
     if not token:
         logger.error("No token provided")
-        raise ValueError("TuShare Token not provided. Please pass token or set TUSHARE_TOKEN in .env/environment variables")
+        raise ConfigError("TuShare Token not provided. Please pass token or set TUSHARE_TOKEN in .env/environment variables")
 
     _token = token
     _pro = ts.pro_api(token)
@@ -58,7 +63,7 @@ def get_pro():
         token = os.environ.get("TUSHARE_TOKEN")
         if not token:
             logger.error("TuShare not initialized.")
-            raise ValueError("TuShare not initialized. Please call init_tushare or set TUSHARE_TOKEN environment variable")
+            raise ConfigError("TuShare not initialized. Please call init_tushare or set TUSHARE_TOKEN environment variable")
         _token = token
         _pro = ts.pro_api(_token)
     logger.info(f"get_pro successfully.")
@@ -124,7 +129,7 @@ def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, f
         )
     else:
         logger.error(f"Unsupported market: {market}")
-        raise ValueError(f"Unsupported market: {market}")
+        raise CodeFormatError(f"Unsupported market: {market}")
     return df
 
 def get_stock_history_tushare(
@@ -175,19 +180,43 @@ def get_stock_realtime_tushare(
 
         Returns:
             DataFrame with real-time quotes, standardized fields:
-                ['datetime', 'open', 'high', 'low', 'close', 'volume']
+                ['code', 'name', 'datetime', 'pre_close', 'high', 'open', 'high', 'low', 'close', 'vol', 'amount']
 
         Raises:
             DataSourceError: If market is not supported or implementation is missing
     """
     pro = get_pro()
     ts_code = convert_code_to_tushare(code, market)
+    df = pd.DataFrame()
 
     if market == 'cn':
         df = pro.rt_k(ts_code=ts_code)
     elif market in ("hk", "us"):
-        pass
+        logger.warning(
+            "Realtime data for market '%s' (code: %s) is not implemented via the Tushare source. "
+            "Returning empty DataFrame.",
+            market, code
+        )
     else:
-        raise ValueError(f"Unsupported market: {market}")
+        raise CodeFormatError(f"Unsupported market: {market}")
 
-    return filter_fields(df, field)
+    df.rename(columns=TUSHARE_REALTIME_MAPPING, inplace=True)
+
+    if df.empty:
+        fields_to_filter = field if field is not None else STANDARD_FIELDS
+        return pd.DataFrame(columns=fields_to_filter)
+
+    current_date = datetime.now().strftime('%Y%m%d')
+
+    loc = 0
+    if 'code' in df.columns:
+        loc = df.columns.get_loc('code') + 1
+    elif 'name' in df.columns:
+        loc = df.columns.get_loc('name') + 1
+
+    df.insert(loc=loc, column='datetime', value=current_date)
+
+    fields_to_filter = field if field is not None else STANDARD_FIELDS
+
+
+    return filter_fields(df, fields_to_filter)

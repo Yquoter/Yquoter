@@ -1,0 +1,27 @@
+# configs/mapping.yaml
+
+# Yquoter 标准字段列表，方便统一校验
+YQUOTER_STANDARD_FIELDS:
+  - code
+  - name
+  - datatime
+  - pre_close
+  - open
+  - high
+  - low
+  - close
+  - vol
+  - amount
+
+# Tushare 实时行情接口 (rt_k) 字段映射
+TUSHARE_REALTIME_MAPPING:
+  # Tushare 原始字段: Yquoter 标准字段
+  ts_code: code
+
+
+# EastMoney 爬虫 K 线接口字段映射
+EASTMONEY_KLINE_MAPPING:
+  # 爬虫返回的默认列名: Yquoter 标准字段
+  f1: open
+  f2: high
+  # ... 其他字段 ...
