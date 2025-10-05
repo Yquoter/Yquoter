@@ -44,7 +44,7 @@ def get_stock_history_spider(
         """Parse Eastmoney K-line JSON response into structured 2D list"""
         klines = json_data.get("data", {}).get("klines", [])
         rows = []
-        # Map parsed parts to standard columns: [date, open, high, low, close, volume, amount, change%, turnover%, change, amplitude%]
+        # Map parsed parts to standard columns: [date, open, high, low, close, vol, amount, change%, turnover%, change, amplitude%]
         for line in klines:
             parts = line.split(',')
             rows.append([parts[0], parts[1], parts[3], parts[4], parts[2], parts[5], parts[6], parts[8], parts[10],
@@ -91,7 +91,7 @@ dict_of_eastmoney = {
     "latest": "f2",
     "change%": "f3",
     "change": "f4",
-    "volume": "f5",
+    "vol": "f5",
     "amount": "f6",
     "amplitude": "f7",
     "turnover%": "f8",

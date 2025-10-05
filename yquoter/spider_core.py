@@ -78,7 +78,7 @@ def crawl_kline_segments(
         return pd.DataFrame()
 
     # Build DataFrame and convert numeric columns to float type
-    df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"])
+    df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "vol", "amount", "change%", "turnover%", "change", "amplitude%"])
     for col in df.columns[1:]:
         df[col] = pd.to_numeric(df[col], errors="coerce")  # 转换失败时设为 NaN
     logger.info(f"K-line crawl completed. Total records: {len(all_data)}")
