@@ -1,7 +1,7 @@
 # yquoter/spider_source.py
 import pandas as pd
 import time
-from yquoter.spider_core import crawl_kline_segments,crawl_realtime_data
+from yquoter.spider_core import crawl_kline_segments, crawl_realtime_data, crawl_structured_data
 from yquoter.utils import *
 from typing import Union, List
 def get_stock_history_spider(
@@ -70,7 +70,7 @@ def get_secid_of_eastmoney(market: str,code: str):
     market = market.lower().strip()
     if market == "cn":
         # Classify A-share secid by code prefix (Shanghai/Shenzhen Exchange)
-        if code.startswith(("600", "601", "603", "605")):
+        if code.startswith(("600", "601", "603", "605", "688")):
             secid = f"1.{code}"  # Shanghai Stock Exchange
         elif code.startswith(("000", "001", "002", "003", "300", "301")):
             secid = f"0.{code}"  # Shenzhen Stock Exchange
@@ -239,10 +239,10 @@ def get_stock_realtime_spider(
     # Validate and clean input
     if not codes: # Check if codes list is empty
         logger.error("No codes provided")
-        raise ValueError("代码或代码列表不可为空")
+        raise ValueError("Code(s) can't be none.")
     if not fields:# Set default fields if none provided (to be finalized via discussion)
         logger.info("No fields provided, initial fields will be used.")
-        fields = ["code","latest","pe_dynamic","open","high","low","pre_close"]
+        fields = ["code", "latest", "pe_dynamic", "open", "high", "low", "pre_close"]
 
     if "code" not in fields:
         fields.insert(0, "code")
@@ -292,20 +292,185 @@ def get_stock_realtime_spider(
 def get_stock_financials_spider(
         market: str,
         code: str,
-        period: str
-):
-    pass  # TODO!
+        end_day: str,
+        report_type: str = 'CWBB',  # Default to Consolidated Financial Statements
+        limit: int = 12,  # Last 12 periods
+) -> pd.DataFrame:
+    """
+    Spider interface for fetching stock financial statements (Eastmoney source)
+
+        Args:
+            market: Market identifier ('cn', 'hk', 'us')
+            code: Stock code
+            end_day: The end date for the last report period
+            report_type: Report type, e.g., 'CWBB' (Consolidated), 'LRB' (Profit)
+            limit: Number of latest reports to fetch
+
+        Returns:
+            DataFrame containing standardized financial data
+    """
+    if market in ("hk", "us"):
+        logger.warning(f"Data for market '{market}' is not yet implemented via Spider. Returning empty DataFrame.")
+        return pd.DataFrame()
+    elif market == "cn":
+        logger.info(f"Fetching financials data for {market}:{code}, end_day: {end_day}, type: {report_type}")
+        secid = get_secid_of_eastmoney(market, code)
+
+        # This API typically returns the last N report periods
+        def make_financials_url() -> str:
+            return (
+                f"https://datacenter-web.eastmoney.com/api/data/v1/get"
+                f"?reportName=RPT_F10_FIN_STATEMENT"
+                f"&columns=REPORT_DATE,SECURITY_CODE,BASIC_EPS,TOTAL_ASSET,TOTAL_LIABILITY,NET_PROFIT"
+                f"&filter=(SECURITY_CODE='{code}')(REPORT_TYPE='{report_type}')"
+                f"&sortTypes=-1&sortFills=REPORT_DATE"
+                f"&pageNumber=1&pageSize={limit}"
+                f"&_={int(time.time() * 1000)}"
+            )
+
+        # Example columns for a general financial statement
+        financial_cols = ['REPORT_DATE', 'SECURITY_CODE', 'BASIC_EPS', 'TOTAL_ASSET', 'TOTAL_LIABILITY', 'NET_PROFIT']
+
+        def parse_financials(json_data):
+            """Parse Eastmoney F10 Financial JSON"""
+            data = json_data.get("result", {}).get("data", [])
+            rows = []
+            for item in data:
+                # Match data fields to our expected order in financial_cols
+                rows.append([
+                    item.get('REPORT_DATE', ''),
+                    item.get('SECURITY_CODE', ''),
+                    item.get('BASIC_EPS', 0),
+                    item.get('TOTAL_ASSET', 0),
+                    item.get('TOTAL_LIABILITY', 0),
+                    item.get('NET_PROFIT', 0)
+                ])
+            return rows
+
+        # Return the structured data using the general crawler
+        return crawl_structured_data(make_financials_url, parse_financials, financial_cols)
+
 
 def get_stock_profile_spider(
         market: str,
         code: str,
-):
-    pass  # TODO!
+) -> pd.DataFrame():  # TODO!Not yet!
+    """
+    Spider interface for fetching stock fundamental profile (Eastmoney source)
+
+        Args:
+            market: Market identifier ('cn', 'hk', 'us')
+            code: Stock code
+
+        Returns:
+            DataFrame containing key profile data (e.g., industry, main business, listing date)
+    """
+    if market in ("hk", "us"):
+        logger.warning(f"Data for market '{market}' is not yet implemented via Spider. Returning empty DataFrame.")
+        return pd.DataFrame()
+    elif market == "cn":
+        logger.info(f"Fetching profile data for {market}:{code}")
+        secid = get_secid_of_eastmoney(market, code)
+
+        # Eastmoney F10 Basic Profile API (Simplified Example)
+        def make_profile_url() -> str:
+            # Note: Profile often requires HTML parsing, but we look for a structured API
+            return (
+                f"https://emh5.eastmoney.com/api/F10/CompanyProfile/GetCompanyProfile?code={secid}"  # Example API
+            )
+
+        # Example columns for profile data
+        profile_cols = ['CODE', 'NAME', 'INDUSTRY', 'MAIN_BUSINESS', 'LISTING_DATE']
+
+        def parse_profile(json_data):
+            data = json_data.get('data', {})
+            info = data.get('jbzl', {})
+            if not info:
+                logger.warning("No 'jbzl' field found in profile response.")
+                return []
+
+            rows = [[
+                info.get('SECUCODE', code),
+                info.get('SECURITY_NAME_ABBR', ''),
+                info.get('INDUSTRY', ''),
+                info.get('BUSINESS_SCOPE', ''),
+                info.get('LISTING_DATE', '')
+            ]]
+            return rows
+
+        # Return the structured data using the general crawler
+        return crawl_structured_data(make_profile_url, parse_profile, profile_cols)
 
 def get_stock_factors_spider(
         market: str,
         code: str,
         trade_date: str
-):
-    pass  # TODO!
+) -> pd.DataFrame():  # TODO!Not yet!
+    """
+    Spider interface for fetching stock fundamental factors (Eastmoney source)
+
+        Args:
+            market: Market identifier ('cn', 'hk', 'us')
+            code: Stock code
+            trade_date: The date for the factor snapshot (format: "YYYYMMDD")
+
+        Returns:
+            DataFrame containing standardized factors (e.g., PB, PE_TTM, Total Market Cap)
+    """
+    if market in ("hk", "us"):
+        logger.warning(f"Data for market '{market}' is not yet implemented via Spider. Returning empty DataFrame.")
+        return pd.DataFrame()
+    elif market == "cn":
+        logger.info(f"Fetching factors data for {market}:{code} on date: {trade_date}")
+        secid = get_secid_of_eastmoney(market, code)
+
+        # Eastmoney API for historical valuations (PE/PB/PS)
+        def make_factors_url() -> str:
+            return (
+                f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
+                f"?secid={secid}"
+                f"&fields1=f1,f2,f3,f4,f5,f6"
+                f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f169,f170"  # Include TTM_PE (f169) and TTM_PB (f170)
+                f"&klt=1&fqt=1&beg={trade_date}&end={trade_date}&lmt=1&_={int(time.time() * 1000)}"
+            )
+
+        # Factors columns often come directly from the K-line data in Eastmoney,
+        # but we will extract specific valuation metrics.
+        factor_cols = ['TRADE_DATE', 'PE_TTM', 'PB', 'TOTAL_MARKET_CAP']
+
+        def parse_factors(json_data):
+            """Parse K-line API response to get factors for a single day"""
+            klines = json_data.get("data", {}).get("klines", [])
+            rows = []
+            if klines:
+                # The line contains many comma-separated values;
+                # we assume the custom fields (f169, f170) are included at the end.
+                line = klines[0].split(',')
+
+                # This mapping is *very* fragile and depends on the fieds2 parameter order!
+                # We assume f169 (PE_TTM) is the 13th element, f170 (PB) is the 14th element,
+                # and Total Market Cap (f20) is not directly in the K-line API.
+
+                # To get market cap, you'd usually need a separate API or rely on the real-time dict
+                # Since K-line API is the closest, we'll try to extract what's there:
+                rows.append([
+                    line[0],  # Date
+                    line[-2],  # Assuming PE_TTM is the second to last field (f169)
+                    line[-1],  # Assuming PB is the last field (f170)
+                    0  # Placeholder for Market Cap (Needs dedicated API)
+                ])
+            return rows
+
+        # Return the structured data using the general crawler
+        return crawl_structured_data(make_factors_url, parse_factors, factor_cols)
+
+
+if __name__ == "__main__":
+    df_1 = get_stock_factors_spider(market="cn", code="688256", trade_date="20250312")
+    print(df_1)
+    df_2 = get_stock_profile_spider(market="cn", code="688256")
+    print(df_2)
+    df_3 = get_stock_financials_spider("cn", "688256", "20250820")
+    print(df_3)
+
 

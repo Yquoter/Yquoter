@@ -1,32 +1,32 @@
-# Python 编译缓存
+# Python Cache
 __pycache__/
 *.py[cod]
 *$py.class
 
-# 虚拟环境文件夹
+# virtual environment
 venv/
 env/
 .env/
 
-# 日志文件
+# log
 *.log
 
-# Jupyter Notebook 检查点
+# Jupyter Notebook Check Point
 .ipynb_checkpoints/
 
-# 缓存文件夹
+# Cache
 .cache/
 
-# IDE 和编辑器配置
+# IDE & Setting
 .vscode/
 .idea/
 
-# 系统文件
+# System
 Thumbs.db
 .DS_Store
 
-# 环境变量配置文件
+# Environment Variable Setting
 *.env
 
-#测试cache更新的文件
-test_cache_update.py
+# test
+.temp/

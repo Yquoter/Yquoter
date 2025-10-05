@@ -139,3 +139,72 @@ def crawl_realtime_data(
     df = df[user_fields]
     logger.info("Real-time data crawl completed successfully")
     return df
+
+
+def crawl_structured_data(
+        make_url: Callable[[], str],
+        parse_data: Callable[[Dict], List[List]],
+        final_columns: List[str],
+        sleep_seconds: float = 0.5,
+) -> pd.DataFrame:
+    """
+    Generic crawler for fetching non-time-series, structured data (e.g., Financials, Profile, Factors).
+
+        Args:
+            make_url: Function that returns the constructed request URL.
+            parse_data: Function that takes API response JSON data and returns a 2D list of data.
+            final_columns: List of column names for the final DataFrame.
+            sleep_seconds: Interval before the request (to avoid anti-crawling).
+
+        Returns:
+            DataFrame containing the structured data.
+    """
+    all_data = []
+
+    # Set request headers
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://quote.eastmoney.com/",
+    }
+
+    # Introduce a small delay before fetching, mirroring other functions
+    time.sleep(sleep_seconds)
+
+    # Build request URL
+    url = make_url()
+    logger.info(f"Starting structured data crawl from URL: {url[:80]}...")
+
+    try:
+        # Send request
+        resp = requests.get(url, headers=headers)
+        resp.raise_for_status()  # Raise exception for HTTP status code errors
+        data = resp.json()  # Parse JSON response body
+
+        # Parse data
+        rows = parse_data(data)
+        if rows:
+            all_data.extend(rows)
+            logger.info(f"Successfully fetched structured data, total {len(rows)} row(s)")
+        else:
+            logger.warning("No structured data found in the response")
+
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTP Error {resp.status_code} when fetching structured data: {e}")
+    except Exception as e:
+        logger.error(f"Request/Parsing error for structured data: {e}")
+
+    if not all_data:
+        logger.warning("Structured data crawl completed with no data")
+        return pd.DataFrame(columns=final_columns)  # Return empty DataFrame with correct columns
+
+    # Build DataFrame
+    df = pd.DataFrame(all_data, columns=final_columns)
+
+    # Attempt to convert relevant columns to numeric type (e.g., for financials/factors)
+    # Simple heuristic: try to convert columns that are not 'date' or 'code'-like
+    for col in df.columns:
+        if 'DATE' not in col.upper() and 'CODE' not in col.upper() and 'NAME' not in col.upper():
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    logger.info(f"Structured data crawl completed. Total records: {len(all_data)}")
+    return df
