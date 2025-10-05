@@ -4,16 +4,16 @@ from yquoter.logger import get_logger
 from datetime import datetime
 from typing import Optional, Literal, List
 import os
+import sys
 from yquoter.exceptions import CodeFormatError, DateFormatError
 from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError, DataFormatError
+
 # ---------- Log Configuration ----------
 logger = get_logger(__name__)
 
-
-
 # Standardized columns for History-DataFrame format
-_REQUIRED_COLUMNS_BASIC = ["date", "open", "high", "low", "close", "volume", "amount"]
-_REQUIRED_COLUMNS_FULL = ["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"]
+_REQUIRED_COLUMNS_BASIC = ["date", "open", "high", "low", "close", "vol", "amount"]
+_REQUIRED_COLUMNS_FULL = ["date", "open", "high", "low", "close", "vol", "amount", "change%", "turnover%", "change", "amplitude%"]
 def _validate_dataframe(df: pd.DataFrame, fields: str) -> pd.DataFrame:
     """
     Validate DataFrame structure against required columns
@@ -212,4 +212,7 @@ def filter_fields(df: pd.DataFrame, fields: List[str]) -> pd.DataFrame:
         print("")
 
     return df[available]
-
+def _is_interactive_session() -> bool:
+    """Checks if the code is running in an interactive terminal session."""
+    # Check if stdin is a TTY and not running in a continuous integration environment (e.g., GitHub Actions)
+    return sys.stdin.isatty() and not os.environ.get('CI')

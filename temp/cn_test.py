@@ -25,7 +25,7 @@ def costom(market, code, start, end, klt=101, fqt=1):
 
 
 # 注册数据源
-register_source("costom", costom)
+register_source("costom", "history", costom)
 
 #df输出格式设置
 pd.set_option('display.max_columns', None)

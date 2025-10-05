@@ -6,7 +6,7 @@ from yquoter.logger import setup_logging
 
 setup_logging(level=logging.WARNING)
 
-from yquoter.datasource import register_source, get_stock_history, get_stock_realtime
+from yquoter.datasource import register_source, register_tushare_module, get_stock_history, get_stock_realtime, get_stock_financials, get_stock_profile, get_stock_factors
 from yquoter.indicators import *
 from yquoter.cache import set_max_cache_entries
 
@@ -35,8 +35,12 @@ def init_tushare(token: str = None):
 __all__ = [
     "init_tushare",
     "register_source",
+    "register_tushare_module",
     "get_stock_history",
     "get_stock_realtime",
+    "get_stock_factors",
+    "get_stock_profile",
+    "get_stock_financials",
     "get_ma_n",
     "get_boll_n",
     "get_max_drawdown",
