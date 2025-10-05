@@ -6,14 +6,13 @@ from typing import Optional, Literal, List
 import os
 from yquoter.exceptions import CodeFormatError, DateFormatError
 from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError, DataFormatError
+
 # ---------- Log Configuration ----------
 logger = get_logger(__name__)
 
-
-
 # Standardized columns for History-DataFrame format
-_REQUIRED_COLUMNS_BASIC = ["date", "open", "high", "low", "close", "volume", "amount"]
-_REQUIRED_COLUMNS_FULL = ["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"]
+_REQUIRED_COLUMNS_BASIC = ["date", "open", "high", "low", "close", "vol", "amount"]
+_REQUIRED_COLUMNS_FULL = ["date", "open", "high", "low", "close", "vol", "amount", "change%", "turnover%", "change", "amplitude%"]
 def _validate_dataframe(df: pd.DataFrame, fields: str) -> pd.DataFrame:
     """
     Validate DataFrame structure against required columns

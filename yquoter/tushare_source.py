@@ -5,7 +5,7 @@ import datetime
 import tushare as ts
 import pandas as pd
 from typing import Optional, List
-from yquoter.exceptions import CodeFormatError, ConfigError
+from yquoter.exceptions import CodeFormatError, ConfigError, DataFetchError, DataSourceError
 from yquoter.logger import get_logger
 from yquoter.config import STANDARD_FIELDS, TUSHARE_REALTIME_MAPPING
 from yquoter.utils import convert_code_to_tushare, parse_date_str, filter_fields
@@ -155,7 +155,13 @@ def get_stock_history_tushare(
             DataFrame containing standardized historical data
     """
     logger.info(f"Getting historical stock data from TuShare : {code}")
-    df = _fetch_tushare(market, code, start, end, klt=klt, fqt=fqt)
+    try:
+        df = _fetch_tushare(market, code, start, end, klt=klt, fqt=fqt)
+    except DataFetchError as e:
+        logger.error("Tushare API failed for code %s (market %s). Check token/permissions. Error: %s",
+                     code, market, e)
+        df = pd.DataFrame()
+
     if df.empty:
         return df
 
@@ -190,7 +196,12 @@ def get_stock_realtime_tushare(
     df = pd.DataFrame()
 
     if market == 'cn':
-        df = pro.rt_k(ts_code=ts_code)
+        try:
+            df = pro.rt_k(ts_code=ts_code)
+        except DataFetchError as e:
+            logger.error("Tushare API failed for code %s (market %s). Check token/permissions. Error: %s",
+                         code, market, e)
+
     elif market in ("hk", "us"):
         logger.warning(
             "Realtime data for market '%s' (code: %s) is not implemented via the Tushare source. "

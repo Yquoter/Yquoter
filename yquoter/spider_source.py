@@ -187,7 +187,7 @@ dict_of_eastmoney = {
     }
 
 
-def map_fields_of_eastmoney(fields: list[str])->list[str]:
+def map_fields_of_eastmoney(fields: list[str]) -> list[str]:
     """
     Map user-friendly field names to Eastmoney internal field codes
 
@@ -213,7 +213,7 @@ def map_fields_of_eastmoney(fields: list[str])->list[str]:
 def get_stock_realtime_spider(
     market: str,
     codes: Union[str, list[str]] = [],
-    fields: Union[str,list[str]] = [],
+    fields: Union[str, list[str]] = [],
 ) -> pd.DataFrame:
     """
     Spider interface for fetching real-time stock data from Eastmoney
@@ -288,4 +288,24 @@ def get_stock_realtime_spider(
             result.append(rows)
         return result
     return crawl_realtime_data(make_realtime_url, parse_realtime_data, url_fields, fields, dict_of_eastmoney)
+
+def get_stock_financials_spider(
+        market: str,
+        code: str,
+        period: str
+):
+    pass  # TODO!
+
+def get_stock_profile_spider(
+        market: str,
+        code: str,
+):
+    pass  # TODO!
+
+def get_stock_factors_spider(
+        market: str,
+        code: str,
+        trade_date: str
+):
+    pass  # TODO!
 
