@@ -7,13 +7,10 @@ import os
 import sys
 from yquoter.exceptions import CodeFormatError, DateFormatError
 from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError, DataFormatError
-
-# ---------- Log Configuration ----------
+from yquoter.config import HISTORY_STANDARD_FIELDS_FULL, HISTORY_STANDARD_FIELDS_BASIC
 logger = get_logger(__name__)
 
 # Standardized columns for History-DataFrame format
-_REQUIRED_COLUMNS_BASIC = ["date", "open", "high", "low", "close", "vol", "amount"]
-_REQUIRED_COLUMNS_FULL = ["date", "open", "high", "low", "close", "vol", "amount", "change%", "turnover%", "change", "amplitude%"]
 def _validate_dataframe(df: pd.DataFrame, fields: str) -> pd.DataFrame:
     """
     Validate DataFrame structure against required columns
@@ -33,11 +30,11 @@ def _validate_dataframe(df: pd.DataFrame, fields: str) -> pd.DataFrame:
     missing = None
     _REQUIRED_COLUMNS = None
     if fields == "full":
-        missing = [col for col in _REQUIRED_COLUMNS_FULL if col not in df.columns]
-        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_FULL
+        missing = [col for col in HISTORY_STANDARD_FIELDS_FULL if col not in df.columns]
+        _REQUIRED_COLUMNS = HISTORY_STANDARD_FIELDS_FULL
     elif fields == "basic":
-        missing = [col for col in _REQUIRED_COLUMNS_BASIC if col not in df.columns]
-        _REQUIRED_COLUMNS = _REQUIRED_COLUMNS_BASIC
+        missing = [col for col in HISTORY_STANDARD_FIELDS_BASIC if col not in df.columns]
+        _REQUIRED_COLUMNS = HISTORY_STANDARD_FIELDS_BASIC
     if missing:
         logger.error(f"Missing required columns: {missing}")
         raise DataFormatError(f"Data source returned invalid format: Missing columns {missing}; required columns are {_REQUIRED_COLUMNS}")

@@ -130,11 +130,18 @@ def load_mapping_config() -> Dict[str, Any]:
 # Expose the global configuration dictionary right after definition
 MAPPING_CONFIG: Dict[str, Any] = load_mapping_config()
 
-# Standard fields defined by Yquoter (used for filtering/validation)
-STANDARD_FIELDS: List[str] = MAPPING_CONFIG.get('YQUOTER_STANDARD_FIELDS', [])
+# Standard realtime data fields defined by Yquoter (used for filtering/validation)
+REALTIME_STANDARD_FIELDS: List[str] = MAPPING_CONFIG.get('YQUOTER_REALTIME_STANDARD_FIELDS', [])
+
+# Standard history data fields defined by Yquoter (used for filtering/validation)
+HISTORY_STANDARD_FIELDS_FULL: List[str] = MAPPING_CONFIG.get('YQUOTER_HISTORY_STANDARD_FIELDS_FULL', [])
+HISTORY_STANDARD_FIELDS_BASIC: List[str] = MAPPING_CONFIG.get('YQUOTER_HISTORY_STANDARD_FIELDS_BASIC', [])
 
 # Mapping for Tushare's rt_k (realtime) interface
 TUSHARE_REALTIME_MAPPING: Dict[str, str] = MAPPING_CONFIG.get('TUSHARE_REALTIME_MAPPING', {})
 
 # Mapping for EastMoney K-line spider
 EASTMONEY_KLINE_MAPPING: Dict[str, str] = MAPPING_CONFIG.get('EASTMONEY_KLINE_MAPPING', {})
+
+
+EASTMONEY_REALTIME_MAPPING: Dict[str, str] = MAPPING_CONFIG.get('EASTMONEY_REALTIME_MAPPING', {})

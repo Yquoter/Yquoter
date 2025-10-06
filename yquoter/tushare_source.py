@@ -7,7 +7,7 @@ import pandas as pd
 from typing import Optional, List
 from yquoter.exceptions import CodeFormatError, ConfigError, DataFetchError, DataSourceError
 from yquoter.logger import get_logger
-from yquoter.config import STANDARD_FIELDS, TUSHARE_REALTIME_MAPPING
+from yquoter.config import REALTIME_STANDARD_FIELDS, TUSHARE_REALTIME_MAPPING
 from yquoter.utils import convert_code_to_tushare, parse_date_str, filter_fields
 
 logger = get_logger(__name__)
@@ -214,7 +214,7 @@ def get_stock_realtime_tushare(
     df.rename(columns=TUSHARE_REALTIME_MAPPING, inplace=True)
 
     if df.empty:
-        fields_to_filter = field if field is not None else STANDARD_FIELDS
+        fields_to_filter = field if field is not None else REALTIME_STANDARD_FIELDS
         return pd.DataFrame(columns=fields_to_filter)
 
     current_date = datetime.now().strftime('%Y%m%d')
@@ -227,7 +227,7 @@ def get_stock_realtime_tushare(
 
     df.insert(loc=loc, column='datetime', value=current_date)
 
-    fields_to_filter = field if field is not None else STANDARD_FIELDS
+    fields_to_filter = field if field is not None else REALTIME_STANDARD_FIELDS
 
 
     return filter_fields(df, fields_to_filter)
