@@ -78,19 +78,18 @@ def crawl_kline_segments(
         return pd.DataFrame()
 
     # Build DataFrame and convert numeric columns to float type
-    df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "volume", "amount", "change%", "turnover%", "change", "amplitude%"])
+    df = pd.DataFrame(all_data, columns=["date", "open", "high", "low", "close", "vol", "amount", "change%", "turnover%", "change", "amplitude%"])
     for col in df.columns[1:]:
         df[col] = pd.to_numeric(df[col], errors="coerce")  # 转换失败时设为 NaN
     logger.info(f"K-line crawl completed. Total records: {len(all_data)}")
     return df
 
-
+from yquoter.config import EASTMONEY_REALTIME_MAPPING
 def crawl_realtime_data(
     make_url: Callable,
     parse_realtime_data: Callable[[Dict], List[List[str]]],
     url_fields: List[str],
     user_fields: List[str],
-    column_map: Dict[str, str],
 )->pd.DataFrame:
     """
     Crawler for real-time stock data
@@ -134,8 +133,7 @@ def crawl_realtime_data(
 
     # Build DataFrame and map columns to user-specified names
     df = pd.DataFrame(result,columns=url_fields)
-    reverse_map = {v: k for k, v in column_map.items()}
-    df.rename(columns=reverse_map, inplace=True)
+    df.rename(columns=EASTMONEY_REALTIME_MAPPING, inplace=True)
     df = df[user_fields]
     logger.info("Real-time data crawl completed successfully")
     return df

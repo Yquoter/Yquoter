@@ -163,7 +163,7 @@ def get_boll_n (market=None, code=None, start=None, end=None, n=20, df=None):
 
 def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
     """
-    Calculate volume ratio against n-period average volume
+    Calculate vol ratio against n-period average volume
 
         Args:
             market: Market identifier
@@ -180,8 +180,8 @@ def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
         logger.info(f"Calculating volume ratio with {n}-period average")
         vol_col = f"vol{n}"
         result_col = f"vol_ratio{n}"
-        df[vol_col] = df['volume'].rolling(window=n, min_periods=1).mean().round(2)
-        df[result_col] = (df['volume']/df[vol_col]).round(2)
+        df[vol_col] = df['vol'].rolling(window=n, min_periods=1).mean().round(2)
+        df[result_col] = (df['vol']/df[vol_col]).round(2)
         result = df[['date', result_col]].copy()
         result = result[result['date'] >= real_start].copy().reset_index(drop=True)
         logger.info(f"Volume ratio calculation completed for {len(result)} records")

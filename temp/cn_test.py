@@ -15,7 +15,7 @@ def costom(market, code, start, end, klt=101, fqt=1):
         "high": [105, 115],
         "low": [95, 108],
         "close": [102, 112],
-        "volume": [1000, 1200],
+        "vol": [1000, 1200],
         "amount": [1000, 1200],
         "change%": [-5, 5],
         "turnover%": [0, 1],
