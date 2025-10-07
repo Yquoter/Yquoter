@@ -117,6 +117,7 @@ EASTMONEY_REALTIME_MAPPING:
   f350: limit_up_price
   f351: limit_down_price
   f352: average_price
+  f999: datetime # invalid parameter
 
 # Mapping for Financials_Easymoney
 FINANCIAL_REPORT_MAP:

@@ -4,7 +4,7 @@ import time
 from yquoter.utils import *
 from typing import Union, List
 from yquoter.spider_core import *
-from yquoter.config import EASTMONEY_REALTIME_MAPPING, EASYMONEY_FINANCIALS_MAPPING
+from yquoter.config import EASTMONEY_REALTIME_MAPPING, EASYMONEY_FINANCIALS_MAPPING, REALTIME_STANDARD_FIELDS
 
 # Eastmoney field mapping: User-friendly name -> Eastmoney internal field code
 dict_of_eastmoney = {v: k for k, v in EASTMONEY_REALTIME_MAPPING.items()}
@@ -188,12 +188,13 @@ def get_stock_realtime_spider(
         raise ValueError("Code(s) can't be none.")
     if not fields:# Set default fields if none provided (to be finalized via discussion)
         logger.info("No fields provided, initial fields will be used.")
-        fields = ["code", "latest", "pe_dynamic", "open", "high", "low", "pre_close"]
-
+        fields = REALTIME_STANDARD_FIELDS
     if "code" not in fields:
         fields.insert(0, "code")
-    #if "name" not in fields:
-    #   fields.insert(1, "name")
+    if "name" not in fields:
+        fields.insert(1, "name")
+    if 'datetime' not in fields:
+        fields.insert(2, "datetime")
 
     url_fields = map_fields_of_eastmoney(fields)
     def get_fields_number(field: str) -> int:
@@ -231,6 +232,8 @@ def get_stock_realtime_spider(
             rows = []
             for value in single_data.values():
                 rows.append(value)
+            current_date = datetime.now().strftime('%Y%m%d')
+            rows.append(current_date)
             result.append(rows)
         return result
     return crawl_realtime_data(make_realtime_url, parse_realtime_data, url_fields, fields)
