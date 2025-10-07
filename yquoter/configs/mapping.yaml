@@ -117,3 +117,40 @@ EASTMONEY_REALTIME_MAPPING:
   f350: limit_up_price
   f351: limit_down_price
   f352: average_price
+
+# Mapping for Financials_Easymoney
+FINANCIAL_REPORT_MAP:
+  # Default
+  CWBB:
+    report_name: RPT_LICO_FN_CPD
+    sort_fill: BASIC_EPS
+    columns: "ALL"
+    output_cols: ['REPORTDATE', 'SECURITY_CODE', 'BASIC_EPS', 'NET_PROFIT', 'TOTAL_REVENUE']
+
+  # Income Statement
+  LRB:
+    report_name: RPT_DMSK_FN_INCOME
+    sort_fill: PARENT_NETPROFIT
+    columns: "ALL"
+    output_cols: ['REPORTDATE', 'SECURITY_CODE', 'TOTAL_OPERATE_INCOME', 'PARENT_NETPROFIT', 'NET_PROFIT']
+
+  # Balance Sheet
+  ZCFZB:
+    report_name: RPT_DMSK_FN_BALANCE
+    sort_fill: MONETARYFUNDS
+    columns: "ALL"
+    output_cols: ['REPORTDATE', 'SECURITY_CODE', 'TOTAL_ASSET', 'TOTAL_LIABILITY', 'TOTAL_EQUITY']
+
+  # Cash Flow Statement
+  XJLLB:
+    report_name: RPT_DMSK_FN_CASHFLOW
+    sort_fill: CCE_ADD
+    columns: "ALL"
+    output_cols: ['REPORTDATE', 'SECURITY_CODE', 'NET_CASH_FLOWS_OPER_ACT', 'CCE_ADD']
+
+  # Performance Report
+  YJBB:
+    report_name: RPT_LICO_FN_CPD
+    sort_fill: BASIC_EPS
+    columns: "ALL"
+    output_cols: ['REPORTDATE', 'SECURITY_CODE', 'BASIC_EPS', 'NET_PROFIT', 'TOTAL_REVENUE']

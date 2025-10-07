@@ -23,7 +23,7 @@ yquoter/
 │   ├── cache.py                # Manages local data caching mechanisms
 │   ├── utils.py                # General-purpose utility functions
 │   └── configs/
-│       ├── mapping.yaml        # Mapping for Realtime Data
+│       ├── mapping.yaml        # Mapping for Data & configs
 │       └── standard.yaml       # Yquoter's data standard
 │
 ├── examples/

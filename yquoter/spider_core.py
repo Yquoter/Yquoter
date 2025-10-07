@@ -109,7 +109,7 @@ def crawl_realtime_data(
     # Set request headers to avoid being identified as a crawler
     headers = {
         "User-Agent": "Mozilla/5.0",
-        "Referer": "https://quote.eastmoney.com/",
+        "Referer": "https://emweb.securities.eastmoney.com/",
     }
     # Build request URL
     url = make_url()

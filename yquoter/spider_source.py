@@ -1,9 +1,13 @@
 # yquoter/spider_source.py
 import pandas as pd
 import time
-from yquoter.spider_core import *
 from yquoter.utils import *
 from typing import Union, List
+from yquoter.spider_core import *
+from yquoter.config import EASTMONEY_REALTIME_MAPPING, EASYMONEY_FINANCIALS_MAPPING
+
+# Eastmoney field mapping: User-friendly name -> Eastmoney internal field code
+dict_of_eastmoney = {v: k for k, v in EASTMONEY_REALTIME_MAPPING.items()}
 def get_stock_history_spider(
     market: str,
     code: str,
@@ -85,10 +89,6 @@ def get_secid_of_eastmoney(market: str,code: str):
         raise ValueError(f"Unknown market: {market}")
     logger.info(f"Generated Eastmoney secid: {secid}")
     return secid
-
-# Eastmoney field mapping: User-friendly name -> Eastmoney internal field code
-from yquoter.config import EASTMONEY_REALTIME_MAPPING
-dict_of_eastmoney = {v: k for k, v in EASTMONEY_REALTIME_MAPPING.items()}
 
 def map_fields_of_eastmoney(fields: list[str]) -> list[str]:
     """
@@ -255,6 +255,10 @@ def get_stock_financials_spider(
         Returns:
             DataFrame containing standardized financial data
     """
+    key = report_type.upper()
+    report_info = EASYMONEY_FINANCIALS_MAPPING.get(key, EASYMONEY_FINANCIALS_MAPPING['CWBB'])
+    output_cols = report_info.get('output_cols', ['REPORT_DATE', 'SECURITY_CODE'])
+
     if market in ("hk", "us"):
         logger.warning(f"Data for market '{market}' is not yet implemented via Spider. Returning empty DataFrame.")
         return pd.DataFrame()
@@ -264,41 +268,44 @@ def get_stock_financials_spider(
 
         # This API typically returns the last N report periods
         def make_financials_url() -> str:
-            return (
-                f"https://datacenter-web.eastmoney.com/api/data/v1/get"
-                f"?reportName=RPT_F10_FIN_STATEMENT"
-                f"&columns=REPORT_DATE,SECURITY_CODE,BASIC_EPS,TOTAL_ASSET,TOTAL_LIABILITY,NET_PROFIT"
-                f"&filter=(SECURITY_CODE='{code}')(REPORT_TYPE='{report_type}')"
-                f"&sortTypes=-1&sortFills=REPORT_DATE"
-                f"&pageNumber=1&pageSize={limit}"
-                f"&_={int(time.time() * 1000)}"
+            ts = int(time.time() * 1000)
+
+            report_name = report_info['report_name']
+            sort_fill = report_info['sort_fill']
+            columns = report_info['columns']
+
+            filter_string = (
+                f"(SECURITY_CODE=\"{code}\")"
             )
 
-        url = make_financials_url()
-        logger.debug(f"Generated URL: {url}")
-        return url
-
-        # Example columns for a general financial statement
-        financial_cols = ['REPORT_DATE', 'SECURITY_CODE', 'BASIC_EPS', 'TOTAL_ASSET', 'TOTAL_LIABILITY', 'NET_PROFIT']
+            return (
+                f"https://datacenter-web.eastmoney.com/api/data/v1/get"
+                f"?reportName={report_name}"  
+                f"&columns={columns}"
+                f"&filter={filter_string}"
+                f"&sortTypes=-1&sortFills={sort_fill}"  
+                f"&pageNumber=1&pageSize={limit}"
+                f"&_={ts}"
+            )
 
         def parse_financials(json_data):
             """Parse Eastmoney F10 Financial JSON"""
             data = json_data.get("result", {}).get("data", [])
             rows = []
             for item in data:
+                row = []
                 # Match data fields to our expected order in financial_cols
-                rows.append([
-                    item.get('REPORT_DATE', ''),
-                    item.get('SECURITY_CODE', ''),
-                    item.get('BASIC_EPS', 0),
-                    item.get('TOTAL_ASSET', 0),
-                    item.get('TOTAL_LIABILITY', 0),
-                    item.get('NET_PROFIT', 0)
-                ])
+                for std_col in output_cols:
+                    if std_col in item:
+                        value = item.get(std_col, "")
+                    else:
+                        value = item.get(std_col, 0.0)
+                    row.append(value)
+                rows.append(row)
             return rows
 
         # Return the structured data using the general crawler
-        return crawl_structured_data(make_financials_url, parse_financials, financial_cols, datasource="easymoney")
+        return crawl_structured_data(make_financials_url, parse_financials, output_cols, datasource="easymoney")
 
 
 def get_stock_profile_spider(
@@ -319,45 +326,67 @@ def get_stock_profile_spider(
         logger.warning(f"Data for market '{market}' is not yet implemented via Spider. Returning empty DataFrame.")
         return pd.DataFrame()
     elif market == "cn":
+        full_code = f"{code}.SH" if code.startswith(('6', '9')) else f"{code}.SZ"
+
         logger.info(f"Fetching profile data for {market}:{code}")
         secid = get_secid_of_eastmoney(market, code)
 
-        # Eastmoney F9 Basic Profile API (Simplified Example)
-        def make_profile_url() -> str:
-            ts = int(time.time() * 1000)
-            # Market ID: 1 for Shanghai (including KCB), 2 for Shenzhen (including CYB)
-            market_id = '1' if code.startswith(('6', '8')) else '2'
+        # --- Part 1 ---
+        def make_url_basic() -> str:
+            return f"https://emweb.securities.eastmoney.com/PC_HSF10/CoreConception/Page/GetBasicData?code={full_code}"
 
-            return (
-                f"https://f9.eastmoney.com/api/json/f9info/getcompanyinfo"
-                f"?type=web&code={code}&market={market_id}&_={ts}"
-            )
+        basic_cols = ['CODE', 'NAME', 'LISTING_DATE']
 
-        url = make_profile_url()
-        logger.debug(f"Generated URL: {url}")
-        return url
-
-        # Example columns for profile data
-        profile_cols = ['CODE', 'NAME', 'INDUSTRY', 'MAIN_BUSINESS', 'LISTING_DATE']
-
-        def parse_profile(json_data):
-            data = json_data.get('data', {})
-            info = data.get('jbzl', {})
+        def parse_basic(json_data):
+            info = json_data.get('jbzl', {})
             if not info:
-                logger.warning("No 'jbzl' field found in profile response.")
                 return []
-
-            rows = [[
-                info.get('SECUCODE', code),
+            row = [
+                info.get('SECUCODE', full_code),
                 info.get('SECURITY_NAME_ABBR', ''),
-                info.get('INDUSTRY', ''),
-                info.get('BUSINESS_SCOPE', ''),
-                info.get('LISTING_DATE', '')
-            ]]
-            return rows
+                info.get('LISTING_DATE', '').split('T')[0]
+            ]
+            return [row]
 
-        # Return the structured data using the general crawler
-        return crawl_structured_data(make_profile_url, parse_profile, profile_cols, datasource="easymoney")
+        df_basic = crawl_structured_data(make_url_basic, parse_basic, basic_cols, "easymoney_basic")
+
+        # return an empty DataFrame if fail to get basic
+        if df_basic.empty:
+            logger.warning(f"Failed to fetch basic data for {code}, returning empty DataFrame.")
+            return pd.DataFrame()
+
+        # --- Part 2 ---
+        def make_url_business() -> str:
+            return f"https://emweb.securities.eastmoney.com/PC_HSF10/BusinessAnalysis/Api/GetZyYw?stockCode={full_code}"
+
+        business_cols = ['CODE', 'INDUSTRY', 'MAIN_BUSINESS']
+
+        def parse_business(json_data):
+            if not json_data or not isinstance(json_data, list):
+                return []
+            info = json_data[0]
+            row = [
+                full_code,
+                info.get('INDUSTRY', ''),
+                info.get('BUSINESS_SCOPE', '')
+            ]
+            return [row]
+
+        df_business = crawl_structured_data(make_url_business, parse_business, business_cols, "easymoney_business")
+
+        # --- Part 3 ---
+        if df_business.empty:
+            logger.warning(f"Failed to fetch business data for {code}. Some fields will be empty.")
+            final_df = df_basic
+            final_df['INDUSTRY'] = ''
+            final_df['MAIN_BUSINESS'] = ''
+        else:
+            # Merge data based on df_basic
+            final_df = pd.merge(df_basic, df_business, on='CODE', how='left')
+
+        # Ensure the final cols are right
+        final_cols = ['CODE', 'NAME', 'INDUSTRY', 'MAIN_BUSINESS', 'LISTING_DATE']
+        return final_df.reindex(columns=final_cols).fillna('')
 
 def get_stock_factors_spider(
         market: str,
@@ -389,12 +418,8 @@ def get_stock_factors_spider(
                 f"?secid={secid}"
                 f"&fields1=f1,f2,f3,f4,f5,f6"
                 f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f169,f170"  # Include TTM_PE (f169) and TTM_PB (f170)
-                f"&klt=1&fqt=1&beg={trade_date}&end={trade_date}&lmt=1&_={int(time.time() * 1000)}"
+                f"&klt=101&fqt=1&beg={trade_date}&end={trade_date}&lmt=1&_={int(time.time() * 1000)}"
             )
-
-        url = make_factors_url()
-        logger.debug(f"Generated URL: {url}")
-        return url
 
         # Factors columns often come directly from the K-line data in Eastmoney,
         # but we will extract specific valuation metrics.
@@ -432,7 +457,5 @@ if __name__ == "__main__":
     print(df_1)
     df_2 = get_stock_profile_spider(market="cn", code="688256")
     print(df_2)
-    df_3 = get_stock_financials_spider("cn", "688256", "20250820")
+    df_3 = get_stock_financials_spider("cn", "688256", "20250820", "LRB")
     print(df_3)
-
-

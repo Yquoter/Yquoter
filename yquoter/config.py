@@ -135,5 +135,8 @@ TUSHARE_REALTIME_MAPPING: Dict[str, str] = MAPPING_CONFIG.get('TUSHARE_REALTIME_
 # Mapping for EastMoney K-line spider
 EASTMONEY_KLINE_MAPPING: Dict[str, str] = MAPPING_CONFIG.get('EASTMONEY_KLINE_MAPPING', {})
 
-
+# Mapping for EastMoney Realtime spider
 EASTMONEY_REALTIME_MAPPING: Dict[str, str] = MAPPING_CONFIG.get('EASTMONEY_REALTIME_MAPPING', {})
+
+# Mapping for EastMoney Financials spider
+EASYMONEY_FINANCIALS_MAPPING: Dict[str, Any] = MAPPING_CONFIG.get('FINANCIAL_REPORT_MAP', {})
