@@ -139,10 +139,37 @@ def crawl_realtime_data(
     return df
 
 
+def _get_request_headers(datasource: str) -> Dict[str, str]:
+    """Dynamically set headers based on the data source."""
+
+    # Standard fallback headers
+    base_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive"
+    }
+
+    if datasource.lower() == 'eastmoney':
+        # Specific headers for Eastmoney to mimic browser access
+        base_headers["Referer"] = "https://quote.eastmoney.com/"
+    elif datasource.lower() == 'xueqiu':
+        # Specific headers for Xueqiu
+        base_headers["Referer"] = "https://xueqiu.com/"
+        # Note: Xueqiu often requires cookies. For a robust solution,
+        # you might need to handle session/cookie management here.
+    elif datasource.lower() == 'sina':
+        # Specific headers for Sina
+        base_headers["Referer"] = "https://finance.sina.com.cn/"
+
+    return base_headers
+
+
 def crawl_structured_data(
         make_url: Callable[[], str],
         parse_data: Callable[[Dict], List[List]],
         final_columns: List[str],
+        datasource: str,
         sleep_seconds: float = 0.5,
 ) -> pd.DataFrame:
     """
@@ -152,6 +179,7 @@ def crawl_structured_data(
             make_url: Function that returns the constructed request URL.
             parse_data: Function that takes API response JSON data and returns a 2D list of data.
             final_columns: List of column names for the final DataFrame.
+            datasource: The source name (e.g., 'eastmoney', 'xueqiu') used to set appropriate headers.
             sleep_seconds: Interval before the request (to avoid anti-crawling).
 
         Returns:
@@ -159,24 +187,22 @@ def crawl_structured_data(
     """
     all_data = []
 
-    # Set request headers
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Referer": "https://quote.eastmoney.com/",
-    }
+    # Dynamically set request headers based on the datasource
+    headers = _get_request_headers(datasource)
 
     # Introduce a small delay before fetching, mirroring other functions
     time.sleep(sleep_seconds)
 
     # Build request URL
     url = make_url()
-    logger.info(f"Starting structured data crawl from URL: {url[:80]}...")
+    logger.info(f"Starting structured data crawl from {datasource} URL: {url[:80]}...")
 
     try:
         # Send request
         resp = requests.get(url, headers=headers)
         resp.raise_for_status()  # Raise exception for HTTP status code errors
         data = resp.json()  # Parse JSON response body
+        # ... (rest of the try block remains the same)
 
         # Parse data
         rows = parse_data(data)
@@ -187,22 +213,23 @@ def crawl_structured_data(
             logger.warning("No structured data found in the response")
 
     except requests.exceptions.HTTPError as e:
-        logger.error(f"HTTP Error {resp.status_code} when fetching structured data: {e}")
+        # Ensure we check if resp is defined before accessing status_code
+        status_code = resp.status_code if 'resp' in locals() else 'N/A'
+        logger.error(f"HTTP Error {status_code} from {datasource}: {e}")
     except Exception as e:
-        logger.error(f"Request/Parsing error for structured data: {e}")
+        logger.error(f"Request/Parsing error for structured data from {datasource}: {e}")
 
     if not all_data:
-        logger.warning("Structured data crawl completed with no data")
-        return pd.DataFrame(columns=final_columns)  # Return empty DataFrame with correct columns
+        logger.warning(f"Structured data crawl from {datasource} completed with no data")
+        return pd.DataFrame(columns=final_columns)
 
     # Build DataFrame
     df = pd.DataFrame(all_data, columns=final_columns)
 
     # Attempt to convert relevant columns to numeric type (e.g., for financials/factors)
-    # Simple heuristic: try to convert columns that are not 'date' or 'code'-like
     for col in df.columns:
         if 'DATE' not in col.upper() and 'CODE' not in col.upper() and 'NAME' not in col.upper():
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    logger.info(f"Structured data crawl completed. Total records: {len(all_data)}")
+    logger.info(f"Structured data crawl from {datasource} completed. Total records: {len(all_data)}")
     return df

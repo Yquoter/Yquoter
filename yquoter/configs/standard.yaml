@@ -1,0 +1,36 @@
+# configs/standard.yaml
+# Data Standard
+
+YQUOTER_HISTORY_STANDARD_FIELDS_BASIC:
+  - date
+  - open
+  - high
+  - low
+  - close
+  - vol
+  - amount
+
+YQUOTER_HISTORY_STANDARD_FIELDS_FULL:
+  - date
+  - open
+  - high
+  - low
+  - close
+  - vol
+  - amount
+  - change%
+  - turnover%
+  - change
+  - amplitude%
+
+YQUOTER_REALTIME_STANDARD_FIELDS:
+  - code
+  - name
+  - datetime
+  - pre_close
+  - open
+  - high
+  - low
+  - close
+  - vol
+  - amount

@@ -1,46 +1,11 @@
 # configs/mapping.yaml
 
-# Yquoter 标准字段列表，方便统一校验
-YQUOTER_REALTIME_STANDARD_FIELDS:
-  - code
-  - name
-  - datatime
-  - pre_close
-  - open
-  - high
-  - low
-  - close
-  - vol
-  - amount
-
-YQUOTER_HISTORY_STANDARD_FIELDS_FULL:
-  - date
-  - open
-  - high
-  - low
-  - close
-  - vol
-  - amount
-  - change%
-  - turnover%
-  - change
-  - amplitude%
-
-YQUOTER_HISTORY_STANDARD_FIELDS_BASIC:
-  - date
-  - open
-  - high
-  - low
-  - close
-  - vol
-  - amount
-
-# Tushare 实时行情接口 (rt_k) 字段映射
+# Mapping For Tushare Realtime API (rt_k)
 TUSHARE_REALTIME_MAPPING:
-  # Tushare 原始字段: Yquoter 标准字段
+  # Tushare Origin: Yquoter Standard
   ts_code: code
 
-# EastMoney 爬虫 K 线接口字段映射
+# Mapping For EastMoney Spider K-Line API
 EASTMONEY_KLINE_MAPPING:
   f51: date
   f52: open
@@ -54,6 +19,7 @@ EASTMONEY_KLINE_MAPPING:
   f60: change
   f61: turnover%
 
+# Mapping For EastMoney Spider Realtime API
 EASTMONEY_REALTIME_MAPPING:
   f2: latest
   f3: change%

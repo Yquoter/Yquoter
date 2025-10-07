@@ -12,7 +12,6 @@ This is a high-level overview of the Yquoter package structure:
 yquoter/
 ├── yquoter/
 │   ├── __init__.py             # Exposes the main API interfaces (e.g., get_quotes)
-│   ├── configs/mapping.yaml    # Mapping for Realtime Data
 │   ├── datasource.py           # Unified interface for all data fetching sources
 │   ├── tushare_source.py       # Encapsulates the raw implementation of Tushare
 │   ├── spider_source.py        # Fallback data source using internal web scraping
@@ -22,7 +21,10 @@ yquoter/
 │   ├── indicators.py           # Utility for calculating technical indicators
 │   ├── logger.py               # Logging configuration and utilities
 │   ├── cache.py                # Manages local data caching mechanisms
-│   └── utils.py                # General-purpose utility functions
+│   ├── utils.py                # General-purpose utility functions
+│   └── configs/
+│       ├── mapping.yaml        # Mapping for Realtime Data
+│       └── standard.yaml       # Yquoter's data standard
 │
 ├── examples/
 │   └── basic_usage.ipynb # Detailed usage examples in Jupyter Notebook

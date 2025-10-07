@@ -2,9 +2,9 @@
 import os
 import sys
 import yaml
-from importlib import resources
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 from dotenv import dotenv_values
+from importlib import resources
 from yquoter.logger import get_logger
 from yquoter.exceptions import ConfigError, PathNotFoundError
 
@@ -25,7 +25,7 @@ def modify_df_path(path):
     df_cache_path = path
     logger.info(f"Updated newest cached file path to: {path}")
 
-def load_config():
+def load_config_env():
     """
     Load configuration:
     1. Read from .env file
@@ -49,7 +49,7 @@ def get_config():
     global _config
     if _config is None:
         logger.info("Configuration not initialized, loading now")
-        _config = load_config()
+        _config = load_config_env()
     logger.info("Configuration retrieved successfully")
     return _config
 
@@ -75,67 +75,59 @@ def get_log_root():
     logger.info(f"Log root directory retrieved: {log_root}")
     return log_root
 
-
-def load_mapping_config() -> Dict[str, Any]:
+def _load_yaml_config(resource_name: str) -> Dict[str, Any]:
     """
-    Loads all field mapping configurations from the 'mapping.yaml' file.
-
-    Uses importlib.resources to reliably locate and read the resource file
-    after the package has been installed (zip-safe).
-
-    Raises:
-        RuntimeError: If the 'mapping.yaml' file cannot be found or read.
-        ValueError: If the YAML file contains invalid format.
-        yaml.YAMLError: If the YAML content is malformed.
-
-    Returns:
-        Dict[str, Any]: A dictionary containing all mapping configurations.
+    Internal utility to load a YAML configuration file from the package resources.
     """
-
-    # The mapping.yaml is expected to be placed in the same directory as the package's
     package_name = 'yquoter.configs'
-    resource_name = 'mapping.yaml'
 
     try:
-        # Use importlib.resources.files to locate the resource relative to the package
         config_path = resources.files(package_name) / resource_name
-
         config_data = config_path.read_text(encoding='utf-8')
 
     except FileNotFoundError as e:
-        # This occurs if the file is missing from the installed package or source tree
         error_msg = f"Core configuration file '{resource_name}' not found within the '{package_name}' package."
-        logger.error("Core configuration file 'mapping.yaml' not found: %s", e)
+        logger.error(error_msg)
         raise RuntimeError(error_msg) from e
 
     except ImportError as e:
-        # This occurs if the package name itself is incorrect or cannot be imported
         logger.error("Cannot access package resource: %s", e)
         raise RuntimeError(f"Failed to access package '{package_name}' resources.") from e
 
-    # Safely load the YAML content
     try:
         config = yaml.safe_load(config_data)
 
     except yaml.YAMLError as e:
         logger.error("Failed to parse YAML content in %s: %s", resource_name, e)
-        raise ConfigError(f"Mapping configuration file is malformed.") from e
+        raise ConfigError(f"Configuration file '{resource_name}' is malformed.") from e
 
     if not isinstance(config, dict):
-        raise ConfigError(f"Mapping configuration file has an invalid root format. Expected a dictionary.")
+        raise ConfigError(f"Configuration file '{resource_name}' has an invalid root format. Expected a dictionary.")
 
     return config
 
+def load_mapping_config() -> Dict[str, Any]:
+    """
+    Loads all field mapping configurations from the 'mapping.yaml' file.
+    """
+    return _load_yaml_config('mapping.yaml')
+
+def load_standard_config() -> Dict[str, Any]:
+    """
+    Loads all standard field definitions from the 'standard.yaml' file.
+    """
+    return _load_yaml_config('standard.yaml')
 
 # Expose the global configuration dictionary right after definition
 MAPPING_CONFIG: Dict[str, Any] = load_mapping_config()
+STANDARD_CONFIG: Dict[str, Any] = load_standard_config()
 
 # Standard realtime data fields defined by Yquoter (used for filtering/validation)
-REALTIME_STANDARD_FIELDS: List[str] = MAPPING_CONFIG.get('YQUOTER_REALTIME_STANDARD_FIELDS', [])
+REALTIME_STANDARD_FIELDS: List[str] = STANDARD_CONFIG.get('YQUOTER_REALTIME_STANDARD_FIELDS', [])
 
 # Standard history data fields defined by Yquoter (used for filtering/validation)
-HISTORY_STANDARD_FIELDS_FULL: List[str] = MAPPING_CONFIG.get('YQUOTER_HISTORY_STANDARD_FIELDS_FULL', [])
-HISTORY_STANDARD_FIELDS_BASIC: List[str] = MAPPING_CONFIG.get('YQUOTER_HISTORY_STANDARD_FIELDS_BASIC', [])
+HISTORY_STANDARD_FIELDS_FULL: List[str] = STANDARD_CONFIG.get('YQUOTER_HISTORY_STANDARD_FIELDS_FULL', [])
+HISTORY_STANDARD_FIELDS_BASIC: List[str] = STANDARD_CONFIG.get('YQUOTER_HISTORY_STANDARD_FIELDS_BASIC', [])
 
 # Mapping for Tushare's rt_k (realtime) interface
 TUSHARE_REALTIME_MAPPING: Dict[str, str] = MAPPING_CONFIG.get('TUSHARE_REALTIME_MAPPING', {})

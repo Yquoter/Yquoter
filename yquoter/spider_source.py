@@ -1,7 +1,7 @@
 # yquoter/spider_source.py
 import pandas as pd
 import time
-from yquoter.spider_core import crawl_kline_segments, crawl_realtime_data, crawl_structured_data
+from yquoter.spider_core import *
 from yquoter.utils import *
 from typing import Union, List
 def get_stock_history_spider(
@@ -112,6 +112,49 @@ def map_fields_of_eastmoney(fields: list[str]) -> list[str]:
             raise ValueError(f"Invalid field: {field}")
     logger.info(f"Mapped {len(result)} fields to EastMoney")
     return result
+
+
+def get_xueqiu_symbol(market: str, code: str) -> str:
+    """
+    Generates the Xueqiu-specific 'symbol' based on the market and stock code.
+
+    Args:
+        market: Market identifier ('cn', 'hk', 'us').
+        code: Raw stock code.
+
+    Returns:
+        Xueqiu-standard symbol string (e.g., 'SH600000', 'HK00700', 'BABA').
+
+    Raises:
+        CodeFormatError: If the A-share code format is unrecognized.
+        ValueError: If the market identifier is unknown.
+    """
+    market = market.lower().strip()
+    code = code.strip()
+
+    if market == "cn":
+        if code.startswith(("600", "601", "603", "605", "688")):
+            symbol = f"SH{code}"
+        elif code.startswith(("000", "001", "002", "300", "301")):
+            symbol = f"SZ{code}"
+        elif code.startswith(("8")):
+            symbol = f"BJ{code}"
+        else:
+            logger.error(f"Unrecognized CN A-share code prefix: {code}")
+            raise CodeFormatError(f"Unrecognized A-share code: {code}; cannot determine exchange for Xueqiu.")
+
+    elif market == "hk":
+        symbol = f"HK{code.zfill(5)}"
+
+    elif market == "us":
+        symbol = code.upper()
+
+    else:
+        logger.error(f"Unrecognized market: {market}")
+        raise ValueError(f"Unknown market identifier for Xueqiu: {market}")
+
+    logger.info(f"Generated Xueqiu symbol: {symbol}")
+    return symbol
 
 def get_stock_realtime_spider(
     market: str,
@@ -231,6 +274,10 @@ def get_stock_financials_spider(
                 f"&_={int(time.time() * 1000)}"
             )
 
+        url = make_financials_url()
+        logger.debug(f"Generated URL: {url}")
+        return url
+
         # Example columns for a general financial statement
         financial_cols = ['REPORT_DATE', 'SECURITY_CODE', 'BASIC_EPS', 'TOTAL_ASSET', 'TOTAL_LIABILITY', 'NET_PROFIT']
 
@@ -251,7 +298,7 @@ def get_stock_financials_spider(
             return rows
 
         # Return the structured data using the general crawler
-        return crawl_structured_data(make_financials_url, parse_financials, financial_cols)
+        return crawl_structured_data(make_financials_url, parse_financials, financial_cols, datasource="easymoney")
 
 
 def get_stock_profile_spider(
@@ -275,12 +322,20 @@ def get_stock_profile_spider(
         logger.info(f"Fetching profile data for {market}:{code}")
         secid = get_secid_of_eastmoney(market, code)
 
-        # Eastmoney F10 Basic Profile API (Simplified Example)
+        # Eastmoney F9 Basic Profile API (Simplified Example)
         def make_profile_url() -> str:
-            # Note: Profile often requires HTML parsing, but we look for a structured API
+            ts = int(time.time() * 1000)
+            # Market ID: 1 for Shanghai (including KCB), 2 for Shenzhen (including CYB)
+            market_id = '1' if code.startswith(('6', '8')) else '2'
+
             return (
-                f"https://emh5.eastmoney.com/api/F10/CompanyProfile/GetCompanyProfile?code={secid}"  # Example API
+                f"https://f9.eastmoney.com/api/json/f9info/getcompanyinfo"
+                f"?type=web&code={code}&market={market_id}&_={ts}"
             )
+
+        url = make_profile_url()
+        logger.debug(f"Generated URL: {url}")
+        return url
 
         # Example columns for profile data
         profile_cols = ['CODE', 'NAME', 'INDUSTRY', 'MAIN_BUSINESS', 'LISTING_DATE']
@@ -302,13 +357,13 @@ def get_stock_profile_spider(
             return rows
 
         # Return the structured data using the general crawler
-        return crawl_structured_data(make_profile_url, parse_profile, profile_cols)
+        return crawl_structured_data(make_profile_url, parse_profile, profile_cols, datasource="easymoney")
 
 def get_stock_factors_spider(
         market: str,
         code: str,
         trade_date: str
-) -> pd.DataFrame():  # TODO!Not yet!
+) -> pd.DataFrame():
     """
     Spider interface for fetching stock fundamental factors (Eastmoney source)
 
@@ -336,6 +391,10 @@ def get_stock_factors_spider(
                 f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f169,f170"  # Include TTM_PE (f169) and TTM_PB (f170)
                 f"&klt=1&fqt=1&beg={trade_date}&end={trade_date}&lmt=1&_={int(time.time() * 1000)}"
             )
+
+        url = make_factors_url()
+        logger.debug(f"Generated URL: {url}")
+        return url
 
         # Factors columns often come directly from the K-line data in Eastmoney,
         # but we will extract specific valuation metrics.
@@ -365,7 +424,7 @@ def get_stock_factors_spider(
             return rows
 
         # Return the structured data using the general crawler
-        return crawl_structured_data(make_factors_url, parse_factors, factor_cols)
+        return crawl_structured_data(make_factors_url, parse_factors, factor_cols, datasource="easymoney")
 
 
 if __name__ == "__main__":
