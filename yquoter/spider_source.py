@@ -436,9 +436,9 @@ def get_stock_profile_spider(
     return df_basic.reindex(columns=final_cols).fillna('')
 
 def get_stock_factors_spider(
-        market: str,
-        code: str,
-        trade_date: str
+    market: str,
+    code: str,
+    trade_date: str,
 ) -> pd.DataFrame():
     """
     Spider interface for fetching stock fundamental factors (Eastmoney source)
@@ -451,53 +451,50 @@ def get_stock_factors_spider(
         Returns:
             DataFrame containing standardized factors (e.g., PB, PE_TTM, Total Market Cap)
     """
-    if market in ("hk", "us"):
-        logger.warning(f"Data for market '{market}' is not yet implemented via Spider. Returning empty DataFrame.")
+    date = time.strftime("%Y-%m-%d", time.strptime(trade_date, "%Y%m%d"))
+    if market != "cn":
+        logger.warning(f"Unsupported market {market}, returning empty DataFrame.")
         return pd.DataFrame()
-    elif market == "cn":
-        logger.info(f"Fetching factors data for {market}:{code} on date: {trade_date}")
-        secid = get_secid_of_eastmoney(market, code)
 
-        # Eastmoney API for historical valuations (PE/PB/PS)
-        def make_factors_url() -> str:
-            return (
-                f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
-                f"?secid={secid}"
-                f"&fields1=f1,f2,f3,f4,f5,f6,f20"
-                f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f84,f169,f170"  # Include TTM_PE (f169) and TTM_PB (f170)
-                f"&klt=101&fqt=1&beg={trade_date}&end={trade_date}&lmt=1&_={int(time.time() * 1000)}"
-            )
+    def make_factors_url() -> str:
+        base_url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
+        params = [
+            f"sortColumns=SECURITY_CODE",
+            f"sortTypes=1",
+            f"reportName=RPT_VALUEANALYSIS_DET",
+            f"columns=ALL",
+            f"quoteColumns=",
+            f"source=WEB",
+            f"client=WEB",
+            f"filter=(TRADE_DATE%3D%27{date}%27)((SECURITY_CODE%3D\"{code}\"))"
+        ]
+        query_string = "&".join(params)
+        full_url = f"{base_url}?{query_string}"
+        return full_url
+    factor_cols = ['TRADE_DATE', 'SECURITY_CODE', 'PE_TTM', 'PE_LAR', 'PB_MRQ', 'PEG_CAR', 'PS_TTM', 'PCF_OCF_TTM', 'PCF_OCF_LAR']
 
-        print(make_factors_url())
+    def parse_factors(json_data):
+        """Parse K-line API response to get factors for a single day"""
+        datas = json_data.get('result', {}).get('data', [])
+        data = {}
+        for item in datas:
+            if item["SECURITY_CODE"] == code:
+                data = item
+        if not data:
+            return []
+        row = [
+            trade_date,
+            code,
+            data.get('PE_TTM'),
+            data.get('PE_LAR'),
+            data.get('PB_MRQ'),
+            data.get('PEG_CAR'),
+            data.get('PS_TTM'),
+            data.get('PCF_OCF_TTM'),
+            data.get('PCF_OCF_LAR'),
+        ]
+        return [row]
 
-        factor_cols = ['TRADE_DATE', 'SECURITY_CODE', 'PE_TTM', 'PB', 'TOTAL_MV', 'TURNOVER_RATE']
 
-        def parse_factors(json_data):
-            """Parse K-line API response to get factors for a single day"""
-            klines = json_data.get("data", {}).get("klines", [])
-            rows = []
-            if klines:
-                # The line contains many comma-separated values;
-                # we assume the custom fields (f169, f170) are included at the end.
-                line = klines[0].split(',')
-
-                # This mapping is *very* fragile and depends on the fieds2 parameter order!
-                # We assume f169 (PE_TTM) is the 13th element, f170 (PB) is the 14th element,
-                # and Total Market Cap (f20) is not directly in the K-line API.
-
-                # To get market cap, you'd usually need a separate API or rely on the real-time dict
-                # Since K-line API is the closest, we'll try to extract what's there:
-                rows.append([
-                    line[0],  # Date
-                    line[-2],  # Assuming PE_TTM is the second to last field (f169)
-                    line[-1],  # Assuming PB is the last field (f170)
-                    0  # Placeholder for Market Cap (Needs dedicated API)
-                ])
-            return rows
-
-        # Return the structured data using the general crawler
-        return crawl_structured_data(make_factors_url, parse_factors, factor_cols, datasource="easymoney")
-
-if __name__ == "__main__":
-    df = get_stock_factors_spider("cn", "600519", "2023-08-04")
-    print(df)
+    # Return the structured data using the general crawler
+    return crawl_structured_data(make_factors_url, parse_factors, factor_cols, datasource="easymoney")
