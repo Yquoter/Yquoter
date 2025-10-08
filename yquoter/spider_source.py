@@ -325,72 +325,111 @@ def get_stock_profile_spider(
         Returns:
             DataFrame containing key profile data (e.g., industry, main business, listing date)
     """
-    if market in ("hk", "us"):
-        logger.warning(f"Data for market '{market}' is not yet implemented via Spider. Returning empty DataFrame.")
-        return pd.DataFrame()
+    if market == "hk":
+        full_code =f"{code}.HK"
     elif market == "cn":
-        full_code = f"{code}.SH" if code.startswith(('6', '9')) else f"{code}.SZ"
+        full_code = f"SH{code}" if code.startswith(('6', '9')) else f"SZ{code}"
+    elif market == "us":
+        full_code = f"{code}.O"
+    else:
+        logger.error(f"Unknown market '{market}'")
+        raise ValueError(f"Invalid market '{market}'")
 
-        logger.info(f"Fetching profile data for {market}:{code}")
-        secid = get_secid_of_eastmoney(market, code)
+    logger.info(f"Fetching profile data for {market}:{code}")
+    # --- Part 1 ---
+    def make_url_basic() -> str:
+        if market == "cn":
+            return f"https://emweb.securities.eastmoney.com/PC_HSF10/CompanySurvey/PageAjax?code={full_code}&type=web"
+        if market == "hk":
+            base_url = "https://datacenter.eastmoney.com/securities/api/data/v1/get"
+            params = [
+                f"reportName=RPT_HKF10_INFO_ORGPROFILE;RPT_HKF10_INFO_SECURITYINFO",
+                f"columns=SECUCODE,SECURITY_CODE,ORG_NAME,ORG_EN_ABBR,BELONG_INDUSTRY,FOUND_DATE,CHAIRMAN,SECRETARY,ACCOUNT_FIRM,REG_ADDRESS,ADDRESS,YEAR_SETTLE_DAY,EMP_NUM,ORG_TEL,ORG_FAX,ORG_EMAIL,ORG_WEB,ORG_PROFILE,REG_PLACE,@SECUCODE;@SECUCODE,LISTING_DATE",
+                f"quoteColumns=",
+                f"filter=(SECUCODE=\"{full_code}\")",
+                f"pageNumber=1",
+                f"pageSize=200",
+                f"sortTypes=",
+                f"sortColumns=",
+                f"source=F10",
+                f"client=PC",
+                f"v=04949759694385859"
+            ]
+            query_string = "&".join(params)
+            full_url = f"{base_url}?{query_string}"
+            return full_url
+        if market == "us":
+            base_url = "https://datacenter.eastmoney.com/securities/api/data/v1/get"
+            params = [
+                f"reportName=RPT_USF10_INFO_SECURITYINFO;RPT_USF10_INFO_ORGPROFILE",
+                f"columns=SECUCODE,SECURITY_CODE,SECURITY_TYPE,LISTING_DATE,TRADE_MARKET,ISSUE_PRICE,ISSUE_NUM,@SECUCODE;@SECUCODE,ORG_NAME,ORG_EN_ABBR,BELONG_INDUSTRY,FOUND_DATE,CHAIRMAN,ADDRESS,ORG_WEB,ORG_PROFILE",
+                f"quoteColumns=",
+                f"filter=(SECUCODE=\"{full_code}\")",
+                f"pageNumber=1",
+                f"pageSize=200",
+                f"sortTypes=",
+                f"sortColumns=",
+                f"source=SECURITIES",
+                f"client=PC",
+                f"v=040479816075673425"
+            ]
+            query_string = "&".join(params)
+            full_url = f"{base_url}?{query_string}"
+            return full_url
 
-        # --- Part 1 ---
-        def make_url_basic() -> str:
-            return f"https://emweb.securities.eastmoney.com/PC_HSF10/CoreConception/Page/GetBasicData?code={full_code}"
+    basic_cols = ['CODE', 'NAME', 'LISTING_DATE','MAIN_BUSINESS','INDUSTRY']
 
-        basic_cols = ['CODE', 'NAME', 'LISTING_DATE']
-
-        def parse_basic(json_data):
-            info = json_data.get('jbzl', {})
+    def parse_basic(json_data):
+        if market == "cn":
+            info = json_data.get('jbzl', {})[0]
+            data = json_data.get('fxxg', {})[0]
             if not info:
                 return []
             row = [
                 info.get('SECUCODE', full_code),
-                info.get('SECURITY_NAME_ABBR', ''),
-                info.get('LISTING_DATE', '').split('T')[0]
+                info.get('ORG_NAME'),
+                data.get('LISTING_DATE')[:10],
+                info.get('BUSINESS_SCOPE'),
+                info.get('EM2016'),
             ]
             return [row]
-
-        df_basic = crawl_structured_data(make_url_basic, parse_basic, basic_cols, "easymoney_basic")
-
-        # return an empty DataFrame if fail to get basic
-        if df_basic.empty:
-            logger.warning(f"Failed to fetch basic data for {code}, returning empty DataFrame.")
-            print(make_url_basic())
-            return pd.DataFrame()
-
-        # --- Part 2 ---
-        def make_url_business() -> str:
-            return f"https://emweb.securities.eastmoney.com/PC_HSF10/BusinessAnalysis/Api/GetZyYw?stockCode={full_code}"
-
-        business_cols = ['CODE', 'INDUSTRY', 'MAIN_BUSINESS']
-
-        def parse_business(json_data):
-            if not json_data or not isinstance(json_data, list):
+        elif market == "hk":
+            data = json_data.get('result', {}).get('data', [])[0]
+            if not data:
                 return []
-            info = json_data[0]
             row = [
-                full_code,
-                info.get('INDUSTRY', ''),
-                info.get('BUSINESS_SCOPE', '')
+                data.get('SECUCODE', full_code),
+                data.get('ORG_NAME'),
+                data.get('LISTING_DATE')[:10],
+                data.get('ORG_PROFILE'),
+                data.get('BELONG_INDUSTRY'),
             ]
             return [row]
+        elif market == "us":
+            data = json_data.get('result', {}).get('data', [])[0]
+            if not data:
+                return []
+            row = [
+                data.get('SECUCODE', full_code),
+                data.get('ORG_EN_ABBR'),
+                data.get('LISTING_DATE')[:10],
+                data.get('ORG_PROFILE'),
+                data.get('BELONG_INDUSTRY'),
+            ]
+            return [row]
+    df_basic = crawl_structured_data(make_url_basic, parse_basic, basic_cols, "easymoney_basic")
 
-        df_business = crawl_structured_data(make_url_business, parse_business, business_cols, "easymoney_business")
+    # return an empty DataFrame if fail to get basic
+    if df_basic.empty:
+        logger.warning(f"Failed to fetch basic data for {code}, returning empty DataFrame.")
+        print(make_url_basic())
+        return pd.DataFrame()
 
-        # --- Part 3 ---
-        if df_business.empty:
-            logger.warning(f"Failed to fetch business data for {code}. Some fields will be empty.")
-            final_df = df_basic
-            final_df['INDUSTRY'] = ''
-            final_df['MAIN_BUSINESS'] = ''
-        else:
-            # Merge data based on df_basic
-            final_df = pd.merge(df_basic, df_business, on='CODE', how='left')
+    # Ensure the final cols are right
+    final_cols = ['CODE', 'NAME', 'INDUSTRY', 'MAIN_BUSINESS', 'LISTING_DATE']
+    return df_basic.reindex(columns=final_cols).fillna('')
 
-        # Ensure the final cols are right
-        final_cols = ['CODE', 'NAME', 'INDUSTRY', 'MAIN_BUSINESS', 'LISTING_DATE']
-        return final_df.reindex(columns=final_cols).fillna('')
+
 
 def get_stock_factors_spider(
         market: str,
@@ -455,11 +494,3 @@ def get_stock_factors_spider(
         # Return the structured data using the general crawler
         return crawl_structured_data(make_factors_url, parse_factors, factor_cols, datasource="easymoney")
 
-
-if __name__ == "__main__":
-    df_1 = get_stock_factors_spider(market="cn", code="688256", trade_date="20250312")
-    print(df_1)
-    df_2 = get_stock_profile_spider(market="cn", code="688256")
-    print(df_2)
-    df_3 = get_stock_financials_spider("cn", "688256", "20250820", "YJBB")
-    print(df_3)

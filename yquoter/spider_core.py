@@ -204,10 +204,14 @@ def crawl_structured_data(
         data = resp.json()  # Parse JSON response body
         # ... (rest of the try block remains the same)
 
+        df = pd.DataFrame(data,columns=final_columns)
         # Parse data
         rows = parse_data(data)
+
         if rows:
+
             all_data.extend(rows)
+
             logger.info(f"Successfully fetched structured data, total {len(rows)} row(s)")
         else:
             logger.warning("No structured data found in the response")
@@ -228,7 +232,7 @@ def crawl_structured_data(
 
     # Attempt to convert relevant columns to numeric type (e.g., for financials/factors)
     for col in df.columns:
-        if 'DATE' not in col.upper() and 'CODE' not in col.upper() and 'NAME' not in col.upper():
+        if 'DATE' not in col.upper() and 'CODE' not in col.upper() and 'NAME' not in col.upper() and 'INDUSTRY' not in col.upper() and 'MAIN_BUSINESS' not in col.upper():
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
     logger.info(f"Structured data crawl from {datasource} completed. Total records: {len(all_data)}")
