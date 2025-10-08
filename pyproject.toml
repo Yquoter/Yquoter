@@ -15,6 +15,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.8"
 keywords = ["finance", "stock", "tushare", "quant", "data", "crawler"]
 
+
 dependencies = [
     "pandas>=1.4",
     "tushare>=1.2.0",
@@ -22,6 +23,7 @@ dependencies = [
     "python-dotenv>=0.21",
     "PyYAML>=6.0.2"
 ]
+
 
 [project]
 classifiers = [

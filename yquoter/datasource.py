@@ -1,6 +1,6 @@
 import inspect
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Callable, Optional, Union, List
 from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
 from yquoter.spider_source import get_stock_history_spider, get_stock_realtime_spider, get_stock_financials_spider, get_stock_profile_spider, get_stock_factors_spider
@@ -28,7 +28,7 @@ logger = get_logger(__name__)
 # Frequency to klt (k-line type) mapping
 FREQ_TO_KLT = {
     # Daily/Weekly/Monthly
-    "daily": 1, "day": 1, "d": 1,
+    "daily": 101, "day": 101, "d": 101,
     "weekly": 2, "week": 2, "w": 2,
     "monthly": 3, "month": 3, "m": 3,
 
@@ -135,8 +135,8 @@ def set_default_source(name: str) -> None:
 def get_stock_history(
     market: str,
     code: str,
-    start: str,
-    end: str,
+    start: str = None,
+    end: str = None,
     freq: Optional[str] = None,
     klt: int = 101,
     fqt: int = 1,
@@ -169,6 +169,16 @@ def get_stock_history(
             DataFormatError: Invalid data format returned by source
             DateFormatError: Invalid date format (thrown by parse_date_str)
     """
+    if start is None and end is None:
+        start = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
+        end = datetime.now().strftime('%Y%m%d')
+    elif start is None and end is not None:
+        end = parse_date_str(end)
+        start = (datetime.strptime(end, '%Y%m%d') - timedelta(days=30)).strftime('%Y%m%d')
+    elif end is None and start is not None:
+        start = parse_date_str(start)
+        end = datetime.now().strftime('%Y%m%d')
+
     market = market.lower()
     # Parse date strings (DateFormatError thrown if format is invalid)
     start = parse_date_str(start)
