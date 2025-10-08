@@ -31,23 +31,6 @@ _SOURCE_REGISTRY: Dict[str, Dict[str, Callable]] = {
 _DEFAULT_SOURCE = "spider"  # Spider source takes priority
 logger = get_logger(__name__)
 
-
-# Frequency to klt (k-line type) mapping
-FREQ_TO_KLT = {
-    # Daily/Weekly/Monthly
-    "daily": 1, "day": 1, "d": 1,
-    "weekly": 2, "week": 2, "w": 2,
-    "monthly": 3, "month": 3, "m": 3,
-
-    # Minute levels
-    "1min": 101, "1m": 101,
-    "5min": 102, "5m": 102,
-    "15min": 103, "15m": 103,
-    "30min": 104, "30m": 104,
-    "60min": 105, "60m": 105, "1h": 105,
-}
-
-
 def register_source(source_name: str, func_type: str, func: Callable = None):
     """
     Register a specific function type (e.g., 'realtime') for a data source (e.g., 'tushare').
@@ -144,8 +127,7 @@ def get_stock_history(
     code: str,
     start: str,
     end: str,
-    freq: Optional[str] = None,
-    klt: int = 101,
+    klt: Union[str, int] = 101,
     fqt: int = 1,
     fields: str = "basic",
     source: Optional[str] = None,
@@ -160,8 +142,7 @@ def get_stock_history(
             start: Start date (supports YYYY-MM-DD format, auto-parsed)
             end: End date (supports YYYY-MM-DD format, auto-parsed)
             source: Data source to use (defaults to global default: 'spider')
-            freq: Data frequency (e.g., 'daily', '1min'; overrides klt if provided)
-            klt: K-line type code (1=daily, 2=weekly, 101=1min; default: 101)
+            klt: K-line type code (101=daily, 102=weekly, 103=monthly; default: 101)
             fqt: Forward/factor adjustment type (default: 1)
             fields: Data field set ('basic' or 'full'; default: 'basic')
             **kwargs: Additional parameters passed to the data source function
@@ -176,6 +157,7 @@ def get_stock_history(
             DataFormatError: Invalid data format returned by source
             DateFormatError: Invalid date format (thrown by parse_date_str)
     """
+    from yquoter.config import FREQ_TO_KLT
     market = market.lower()
     # Parse date strings (DateFormatError thrown if format is invalid)
     start = parse_date_str(start)
@@ -184,12 +166,6 @@ def get_stock_history(
     start_dt = datetime.strptime(start, "%Y%m%d")
     end_dt = datetime.strptime(end, "%Y%m%d")
     delta_days = (end_dt - start_dt).days
-
-    # Smart warning for short time ranges
-    if freq in ("w", "weekly") and delta_days < 7:
-        print("⚠️ Time range too short; weekly K-line data may be unavailable")
-    elif freq in ("m", "monthly") and delta_days < 28:
-        print("⚠️ Time range too short; monthly K-line data may be unavailable")
 
     src = (source or _DEFAULT_SOURCE).lower()
     logger.info(f"Using data source: {src}")
@@ -205,12 +181,13 @@ def get_stock_history(
         raise DataSourceError(f"Unknown data source: {src}; available sources: {list(_SOURCE_REGISTRY)}")
 
     # Override klt with freq if freq is provided
-    if freq:
-        freq = freq.lower()
-        if freq not in FREQ_TO_KLT:
-            raise ParameterError(f"Unknown frequency: {freq}; available values: {list(FREQ_TO_KLT)}")
-        klt = FREQ_TO_KLT[freq]
-        logger.info(f"Frequency converted to klt: {klt}")
+    if klt:
+        if isinstance(klt, str):
+            klt = klt.lower()
+            if klt not in FREQ_TO_KLT:
+                raise ParameterError(f"Unknown frequency: {klt}; available values: {list(FREQ_TO_KLT)}")
+            klt = FREQ_TO_KLT[klt]
+            logger.info(f"Frequency converted to klt: {klt}")
 
     # --- Cache & Data Fetch Logic ---
 
@@ -237,7 +214,6 @@ def get_stock_history(
         "code": code,
         "start": start,
         "end": end,
-        "freq": freq,
         "klt": klt,
         "fqt": fqt,
         "fields": fields,
