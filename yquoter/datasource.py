@@ -137,11 +137,11 @@ def get_stock_history(
     code: str,
     start: str,
     end: str,
-    source: Optional[str] = None,
     freq: Optional[str] = None,
     klt: int = 101,
     fqt: int = 1,
     fields: str = "basic",
+    source: Optional[str] = None,
     **kwargs
 ) -> pd.DataFrame:
     """
@@ -514,7 +514,7 @@ def get_stock_profile(
     logger.info(f"Using data source: {src}.")
 
     # 3. Determine function type and validate source support (CORRECTED FUNC_TYPE)
-    func_type = "profile"  # <<<--- 修正: 应该是 "profile"
+    func_type = "profile"
     if func_type not in _SOURCE_REGISTRY[src]:
         raise DataSourceError(f"Data source '{src}' does not support '{func_type}' data.")
     func = _SOURCE_REGISTRY[src][func_type]

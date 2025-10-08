@@ -192,8 +192,8 @@ def get_stock_realtime_spider(
 
     if "code" not in fields:
         fields.insert(0, "code")
-    #if "name" not in fields:
-    #   fields.insert(1, "name")
+    # if "name" not in fields:
+    #    fields.insert(1, "name")
 
     url_fields = map_fields_of_eastmoney(fields)
     def get_fields_number(field: str) -> int:
