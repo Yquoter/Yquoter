@@ -1,4 +1,10 @@
 # yquoter/configs.py
+# Copyright 2025 Yodeesy
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+
 import os
 import sys
 import yaml
@@ -129,6 +135,8 @@ REALTIME_STANDARD_FIELDS: List[str] = STANDARD_CONFIG.get('YQUOTER_REALTIME_STAN
 HISTORY_STANDARD_FIELDS_FULL: List[str] = STANDARD_CONFIG.get('YQUOTER_HISTORY_STANDARD_FIELDS_FULL', [])
 HISTORY_STANDARD_FIELDS_BASIC: List[str] = STANDARD_CONFIG.get('YQUOTER_HISTORY_STANDARD_FIELDS_BASIC', [])
 
+# Mapping for history data's klt
+FREQ_TO_KLT: Dict[str, int] = MAPPING_CONFIG.get('FREQ_TO_KLT', {})
 # Mapping for Tushare's rt_k (realtime) interface
 TUSHARE_REALTIME_MAPPING: Dict[str, str] = MAPPING_CONFIG.get('TUSHARE_REALTIME_MAPPING', {})
 

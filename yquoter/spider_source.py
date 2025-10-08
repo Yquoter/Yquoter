@@ -1,4 +1,10 @@
 # yquoter/spider_source.py
+# Copyright 2025 Yodeesy
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+
 import pandas as pd
 import time
 from yquoter.utils import *
@@ -314,7 +320,7 @@ def get_stock_financials_spider(
 def get_stock_profile_spider(
         market: str,
         code: str,
-) -> pd.DataFrame():  # TODO!Not yet!
+) -> pd.DataFrame():
     """
     Spider interface for fetching stock fundamental profile (Eastmoney source)
 
@@ -429,8 +435,6 @@ def get_stock_profile_spider(
     final_cols = ['CODE', 'NAME', 'INDUSTRY', 'MAIN_BUSINESS', 'LISTING_DATE']
     return df_basic.reindex(columns=final_cols).fillna('')
 
-
-
 def get_stock_factors_spider(
         market: str,
         code: str,
@@ -459,14 +463,14 @@ def get_stock_factors_spider(
             return (
                 f"https://push2his.eastmoney.com/api/qt/stock/kline/get"
                 f"?secid={secid}"
-                f"&fields1=f1,f2,f3,f4,f5,f6"
-                f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f169,f170"  # Include TTM_PE (f169) and TTM_PB (f170)
+                f"&fields1=f1,f2,f3,f4,f5,f6,f20"
+                f"&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f84,f169,f170"  # Include TTM_PE (f169) and TTM_PB (f170)
                 f"&klt=101&fqt=1&beg={trade_date}&end={trade_date}&lmt=1&_={int(time.time() * 1000)}"
             )
 
-        # Factors columns often come directly from the K-line data in Eastmoney,
-        # but we will extract specific valuation metrics.
-        factor_cols = ['TRADE_DATE', 'PE_TTM', 'PB', 'TOTAL_MARKET_CAP']
+        print(make_factors_url())
+
+        factor_cols = ['TRADE_DATE', 'SECURITY_CODE', 'PE_TTM', 'PB', 'TOTAL_MV', 'TURNOVER_RATE']
 
         def parse_factors(json_data):
             """Parse K-line API response to get factors for a single day"""
@@ -494,3 +498,6 @@ def get_stock_factors_spider(
         # Return the structured data using the general crawler
         return crawl_structured_data(make_factors_url, parse_factors, factor_cols, datasource="easymoney")
 
+if __name__ == "__main__":
+    df = get_stock_factors_spider("cn", "600519", "2023-08-04")
+    print(df)

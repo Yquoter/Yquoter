@@ -1,5 +1,57 @@
 # configs/mapping.yaml
 
+# Frequency to klt (k-line type) mapping
+FREQ_TO_KLT:
+    # Daily/Weekly/Monthly/Yearly
+    daily: 101
+    Daily: 101
+    day: 101
+    Day: 101
+    d: 101
+    D: 101
+    1day: 101
+    1Day: 101
+    1d: 101
+    1D: 101
+    weekly: 102
+    Weekly: 102
+    week: 102
+    Week: 102
+    w: 102
+    W: 102
+    1week: 102
+    1Week: 102
+    1w: 102
+    1W: 102
+    monthly: 103
+    Monthly: 103
+    month: 103
+    Month: 103
+    m: 103
+    M: 103
+    1month: 103
+    1Month: 103
+    1m: 103
+    1M: 103
+    half_year: 104
+    Half_year: 104
+    Half_Year: 104
+    HALF_YEAR: 104
+    halfyear: 104
+    Halfyear: 104
+    HalfYear: 104
+    HALFYEAR: 104
+    yearly: 105
+    Yearly: 105
+    year: 105
+    Year: 105
+    y: 105
+    Y: 105
+    1year: 105
+    1Year: 105
+    1y: 105
+    1Y: 105
+
 # Mapping For Tushare Realtime API (rt_k)
 TUSHARE_REALTIME_MAPPING:
   # Tushare Origin: Yquoter Standard
