@@ -222,7 +222,7 @@ def get_stock_realtime_tushare(
         fields_to_filter = field if field is not None else REALTIME_STANDARD_FIELDS
         return pd.DataFrame(columns=fields_to_filter)
 
-    current_date = datetime.now().strftime('%Y%m%d')
+    current_date = datetime.now().strftime('%Y%m%d %H:%M')
 
     loc = 0
     if 'code' in df.columns:

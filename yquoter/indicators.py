@@ -14,7 +14,7 @@ from yquoter.utils import parse_date_str, load_file_to_df
 from yquoter.datasource import get_stock_history
 from yquoter.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_days=5, loader=None, indicator_func=None, **kwargs):
     """
@@ -38,13 +38,17 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
     # Use most recent cached data if no parameters provided
     if df is None and market is None and code is None and start is None and end is None:
         df = get_newest_df_path()
+        print(df)
         logger.info("Using most recent cached data as no parameters provided")
-
+        if "klt101" not in df:
+            logger.error("Indicator calculation could not be performed because klt!=101")
+            raise ValueError("Indicator calculation could not be performed because klt!=101 in the latest df")
     # Load data from file path if provided
     if isinstance(df, str):
-        df = load_file_to_df(df)
+        path = df
+        df = load_file_to_df(path)
         real_start = df['date'].iloc[0].strftime("%Y%m%d")
-        logger.info(f"Loading data from file: {df}")
+        logger.info(f"Loading data from file: {path}")
 
     # Fetch data using loader if df still not available
     if df is None:

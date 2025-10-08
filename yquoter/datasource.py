@@ -7,7 +7,7 @@
 
 import inspect
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Callable, Optional, Union, List
 from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
 from yquoter.spider_source import get_stock_history_spider, get_stock_realtime_spider, get_stock_financials_spider, get_stock_profile_spider, get_stock_factors_spider
@@ -125,8 +125,8 @@ def set_default_source(name: str) -> None:
 def get_stock_history(
     market: str,
     code: str,
-    start: str,
-    end: str,
+    start: str = None,
+    end: str = None,
     klt: Union[str, int] = 101,
     fqt: int = 1,
     fields: str = "basic",
@@ -157,6 +157,15 @@ def get_stock_history(
             DataFormatError: Invalid data format returned by source
             DateFormatError: Invalid date format (thrown by parse_date_str)
     """
+    if start is None and end is None:
+        start = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
+        end = datetime.now().strftime('%Y%m%d')
+    elif start is None and end is not None:
+        end = parse_date_str(end)
+        start = (datetime.strptime(end, '%Y%m%d') - timedelta(days=30)).strftime('%Y%m%d')
+    elif end is None and start is not None:
+        start = parse_date_str(start)
+        end = datetime.now().strftime('%Y%m%d')
     from yquoter.config import FREQ_TO_KLT
     market = market.lower()
     # Parse date strings (DateFormatError thrown if format is invalid)
