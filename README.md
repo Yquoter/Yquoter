@@ -32,7 +32,7 @@ yquoter/
 ├── assets/               # Non-code assets (e.g., logos, screenshots for README)
 ├── temp/                 # Temporary files (ignored by Git)
 ├── .cache/               # Cache files (ignored by Git)
-├── setup.py              # Package configuration for distribution (PyPI)
+├── pyproject.toml        # Package configuration for distribution (PyPI)
 ├── requirements.txt      # Declaration of project dependencies
 ├── LICENSE               # Apache 2.0 Open Source License details
 ├── README.md             # Project documentation (this file)
