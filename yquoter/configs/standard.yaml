@@ -31,6 +31,5 @@ YQUOTER_REALTIME_STANDARD_FIELDS:
   - open
   - high
   - low
-  - close
   - vol
   - amount

@@ -2,7 +2,8 @@ from yquoter import register_source, get_stock_history, get_ma_n, get_rsi_n, get
     get_max_drawdown, get_rv_n
 import pandas as pd
 
-from yquoter.spider_source import get_stock_realtime_spider
+from yquoter.spider_source import get_stock_realtime_spider, get_stock_factors_spider, get_stock_profile_spider, \
+    get_stock_financials_spider
 from yquoter.spider_source import get_stock_history_spider
 
 
@@ -69,3 +70,11 @@ drawdown = get_max_drawdown("cn", "600519", "20250825", "20250911")
 print(drawdown, "\n")
 df = get_rv_n("cn", "600519", "20250108", "20250119", 5)
 print(df, "\n")
+
+#基本面测试
+df_1 = get_stock_factors_spider(market="cn", code="688256", trade_date="20250312")
+print(df_1, "\n")
+df_2 = get_stock_profile_spider(market="us", code="AAPL")
+print(df_2, "\n")
+df_3 = get_stock_financials_spider("cn", "688256", "20250820", "YJBB")
+print(df_3, "\n")

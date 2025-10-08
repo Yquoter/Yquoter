@@ -615,3 +615,4 @@ def get_stock_factors(
         raise DataFetchError(f"Failed to fetch data from source '{src}'") from e
 
     return df
+
