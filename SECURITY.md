@@ -1,27 +1,27 @@
-# Yquoter 项目安全策略 (Security Policy)
+# Yquoter Security Policy
 
-## 支持的版本 (Supported Versions)
+## Supported Versions
 
-我们承诺为以下版本提供安全更新。请尽量使用最新版本。
+We commit to providing security updates for the following versions. Please use the latest version whenever possible.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| Version   | Supported          |
+|-----------|--------------------|
+| 0.1.0 | :white_check_mark: |
+| < 1.0     | :x:                |
 
-## 报告漏洞 (Reporting a Vulnerability)
+## Reporting a Vulnerability
 
-我们非常重视 **Yquoter** 项目的安全性。如果您在项目中发现了安全漏洞，我们非常感谢您的帮助，并希望您能负责任地向我们披露。
+We take the security of **Yquoter** seriously. If you discover a security vulnerability in the project, we appreciate your help and ask that you disclose it responsibly.
 
-**请不要在公开的 GitHub Issues 中提交安全漏洞问题。**
+**Do not submit security vulnerabilities through public GitHub Issues.**
 
-请通过以下方式将您发现的漏洞私下报告给我们：
+Please report discovered vulnerabilities to us privately using the following method:
 
-1.  **发送电子邮件**至：**`[2729147823@qq.com]`**
-2.  邮件标题请以 `[SECURITY] Yquoter Vulnerability Report:` 开头。
-3.  请在邮件中尽可能详细地包含以下信息：
-    * 漏洞的描述，包括它可能造成的影响。
-    * 重现该漏洞的详细步骤（包括代码示例、配置等）。
-    * 您所使用的 **Yquoter** 项目版本。
+1. **Send an email** to: **`yodeeshi@gmail.com`**
+2. Use the email subject format: `[SECURITY] Yquoter Vulnerability Report: <brief description>`
+3. Include as much detail as possible in your report:
+   * A description of the vulnerability and its potential impact
+   * Detailed steps to reproduce the vulnerability (including code examples, configurations, etc.)
+   * The version of **Yquoter** you are using
 
-我们收到报告后，会尽快确认问题，在一个工作日内给予初步回复，并与您保持沟通，告知您我们的修复计划和进度。我们对所有帮助我们提升 **Yquoter** 项目安全性的研究人员表示诚挚的感谢。
+After receiving your report, we will confirm the issue, provide an initial response within one business day, and keep you informed about our remediation plan and progress. We sincerely appreciate all researchers who help improve the security of **Yquoter**.

@@ -93,7 +93,6 @@ __all__ = [
     "get_newest_df_path",
     "get_rsi_n",
     "get_rv_n",
-    "set_max_cache_entries",
     "init_cache_manager",
 ]
 
