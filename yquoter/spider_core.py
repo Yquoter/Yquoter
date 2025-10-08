@@ -7,7 +7,7 @@ import pandas as pd
 from typing import Callable, Optional, Dict, List
 from yquoter.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 def crawl_kline_segments(
     start_date: str,

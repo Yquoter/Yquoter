@@ -232,7 +232,7 @@ def get_stock_realtime_spider(
             rows = []
             for value in single_data.values():
                 rows.append(value)
-            current_date = datetime.now().strftime('%Y%m%d')
+            current_date = datetime.now().strftime('%Y%m%d %H:%M')
             rows.append(current_date)
             result.append(rows)
         return result
