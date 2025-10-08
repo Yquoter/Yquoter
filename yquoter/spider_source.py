@@ -356,6 +356,7 @@ def get_stock_profile_spider(
         # return an empty DataFrame if fail to get basic
         if df_basic.empty:
             logger.warning(f"Failed to fetch basic data for {code}, returning empty DataFrame.")
+            print(make_url_basic())
             return pd.DataFrame()
 
         # --- Part 2 ---
@@ -460,5 +461,5 @@ if __name__ == "__main__":
     print(df_1)
     df_2 = get_stock_profile_spider(market="cn", code="688256")
     print(df_2)
-    df_3 = get_stock_financials_spider("cn", "688256", "20250820", "LRB")
+    df_3 = get_stock_financials_spider("cn", "688256", "20250820", "YJBB")
     print(df_3)
