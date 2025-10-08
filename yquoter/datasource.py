@@ -1,3 +1,10 @@
+# yquoter/datasource.py
+# Copyright 2025 Yodeesy
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+
 import inspect
 import pandas as pd
 from datetime import datetime
@@ -588,7 +595,7 @@ def get_stock_factors(
     logger.info(f"Using data source: {src}.")
 
     # 3. Determine function type and validate source support (CORRECTED FUNC_TYPE)
-    func_type = "factors"  # <<<--- 修正: 应该是 "factors"
+    func_type = "factors"
     if func_type not in _SOURCE_REGISTRY[src]:
         raise DataSourceError(f"Data source '{src}' does not support '{func_type}' data.")
     func = _SOURCE_REGISTRY[src][func_type]
@@ -615,4 +622,3 @@ def get_stock_factors(
         raise DataFetchError(f"Failed to fetch data from source '{src}'") from e
 
     return df
-
