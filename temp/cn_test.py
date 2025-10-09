@@ -54,6 +54,7 @@ df = get_stock_history_spider("cn", "600519", "20241002", "20241012")
 print(df, "\n")
 
 #指标计算测试集
+print(f"Indicators are below.\n")
 df = get_ma_n("cn", "600519", "20241002", "20241012", 5)
 print(df, "\n")
 df = get_rsi_n("cn", "600519", "20250108", "20250204", 5)

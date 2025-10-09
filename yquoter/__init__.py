@@ -25,6 +25,7 @@ setup_logging(level=logging.WARNING)
 from yquoter.datasource import (
     register_source,
     register_tushare_module,
+    set_default_source,
     get_stock_history,
     get_stock_realtime,
     get_stock_financials,
@@ -81,6 +82,7 @@ __all__ = [
     "init_tushare",
     "register_source",
     "register_tushare_module",
+    "set_default_source",
     "get_stock_history",
     "get_stock_realtime",
     "get_stock_factors",

@@ -14,8 +14,8 @@ yquoter/
 ├── yquoter/
 │   ├── __init__.py             # Exposes the main API interfaces (e.g., get_quotes)
 │   ├── datasource.py           # Unified interface for all data fetching sources
-│   ├── tushare_source.py       # Encapsulates the raw implementation of Tushare
-│   ├── spider_source.py        # Fallback data source using internal web scraping
+│   ├── tushare_source.py       # A module for Tushare users, requires activation
+│   ├── spider_source.py        # Default data source using internal web scraping
 │   ├── spider_core.py          # Core logic and mechanism for the internal spider
 │   ├── config.py               # Manages configuration settings (tokens, paths)
 │   ├── .env                    # Stores sensitive environment variables (e.g., Tushare token)
@@ -46,6 +46,8 @@ yquoter/
 The **Yquoter** library exposes a set of standardized functions for data acquisition and technical analysis.
 
 For detailed descriptions of all function parameters (e.g., market, klt, report_type), please refer to the dedicated **[Parameters Reference](./PARAMETERS.md)**.
+
+> 📝 **Note:** Yquoter internally integrates and standardizes external data sources like **Tushare**. This means Tushare users can leverage Yquoter's unified API and caching mechanisms without dealing with complex native interface calls. To learn more about the underlying data source, visit the [Tushare GitHub repository](https://github.com/waditu/tushare).
 
 **Returns**: `pandas.DataFrame`
 
@@ -80,6 +82,7 @@ These functions primarily take an existing DataFrame (`df`) or data request para
 | `init_cache_manager`      | **Initialize the cache manager** with a maximum LRU entry count. | `max_entries` |
 | `register_source`         | **Register** a new custom data **source** plugin.            | `source_name`, `func_type (e.g., "realtime")` |
 | `register_tushare_module` | **Register specific `TuShare` data interfaces**. | **None** |
+| `set_default_source` | **Set a new default data source.** | `name` |
 | `get_newest_df_path`      | **Get the path** of the newest cached data file.             | **None** |
 
 ---
