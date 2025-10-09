@@ -51,7 +51,6 @@ def _add_cache_file_list(path: str):
     """
     Add new cache file to management list and perform cleanup (internal function)
     """
-    global _cache_file_list
     logger.info(f"Adding cache file to management system: {path}")
     if not os.path.exists(path):
         logger.error(f"Cannot add non-existent cache file: {path}")
@@ -81,7 +80,6 @@ def _cleanup_old_cache():
     """
     Clean up old cache files exceeding quantity limit
     """
-    global _cache_file_list
     logger.info(f"Starting cache cleanup check - max allowed: {_MAX_CACHE_ENTRIES}")
     # Calculate number of files to delete
     if len(_cache_file_list) <= _MAX_CACHE_ENTRIES:
