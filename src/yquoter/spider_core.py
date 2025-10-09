@@ -89,13 +89,13 @@ def crawl_kline_segments(
     logger.info(f"K-line crawl completed. Total records: {len(all_data)}")
     return df
 
-from src.yquoter.config import EASTMONEY_REALTIME_MAPPING
+from yquoter.config import EASTMONEY_REALTIME_MAPPING
 def crawl_realtime_data(
     make_url: Callable,
     parse_realtime_data: Callable[[Dict], List[List[str]]],
     url_fields: List[str],
     user_fields: List[str],
-)->pd.DataFrame:
+) -> pd.DataFrame:
     """
     Crawler for real-time stock data
 
@@ -109,7 +109,7 @@ def crawl_realtime_data(
         Returns:
             Real-time data DataFrame with user-specified columns
     """
-    result=[]
+    result = []
     logger.info("Starting real-time data crawl")
     # Set request headers to avoid being identified as a crawler
     headers = {

@@ -22,7 +22,7 @@ setup_logging(level=logging.WARNING)
 # ----------------------------------------------------------------------
 # Core imports
 # ----------------------------------------------------------------------
-from src.yquoter.datasource import (
+from yquoter.datasource import (
     register_source,
     register_tushare_module,
     set_default_source,
@@ -32,7 +32,7 @@ from src.yquoter.datasource import (
     get_stock_profile,
     get_stock_factors,
 )
-from src.yquoter.indicators import *
+from yquoter.indicators import *
 
 
 # ----------------------------------------------------------------------

@@ -7,6 +7,7 @@
 
 from typing import Union
 from yquoter.spider_core import *
+from yquoter.exceptions import CodeFormatError
 from yquoter.config import EASTMONEY_REALTIME_MAPPING, EASYMONEY_FINANCIALS_MAPPING, REALTIME_STANDARD_FIELDS
 
 # Eastmoney field mapping: User-friendly name -> Eastmoney internal field code
