@@ -1,4 +1,4 @@
-name: Yquoter CI
+name: CI
 
 on:
   push:
