@@ -58,7 +58,7 @@ For detailed descriptions of all function parameters (e.g., market, klt, report_
 | ---------------------- | ------------------------------------------------------------ | ----------------------------------------- | ----------------------------- |
 | `get_stock_history`    | Fetch historical **OHLCV** (K-line) data for a date range.   | `market`, `code`, `start`, `end`          | `DataFrame` (OHLCV)           |
 | `get_stock_realtime`   | Fetch the **latest trading snapshot** (real-time quotes).    | `market`, `code`                          | `DataFrame` (Realtime Quotes) |
-| `get_stock_factors`    | Fetch historical **valuation/market factors** (e.g., PE, PB, Market Cap). | `market`, `code`, `trade_day`             | `DataFrame` (Factors)         |
+| `get_stock_factors`    | Fetch historical **valuation/market factors** (e.g., PE, PB). | `market`, `code`, `trade_day`             | `DataFrame` (Factors)         |
 | `get_stock_profile`    | Fetch **basic profile information** (e.g., company name, listing date, industry). | `market`, `code`                          | `DataFrame` (Profile)         |
 | `get_stock_financials` | Fetch **fundamental financial statements** (e.g., Income Statement, Balance Sheet). | `market`, `code`, `end_day`, `report_type` | `DataFrame` (Financials)      |
 
@@ -72,7 +72,7 @@ These functions primarily take an existing DataFrame (`df`) or data request para
 | `get_boll_n`       | Calculate **N-period Bollinger Bands** (BOLL).               | `df`, `n` (default 20) | `DataFrame` (BOLL, Upper/Lower bands) |
 | `get_rsi_n`        | Calculate **N-period Relative Strength Index** (RSI).        | `df`, `n` (default 14) | `DataFrame` (RSI column)              |
 | `get_rv_n`         | Calculate **N-period Rolling Volatility** (RV).              | `df`, `n` (default 5)  | `DataFrame` (RV column)               |
-| `get_max_drawdown` | Calculate **Maximum Drawdown** over a period.                | `df`                   | `float` (Max Drawdown value)          |
+| `get_max_drawdown` | Calculate **Maximum Drawdown** over a period.                | `df`                   | `DateFrame` (Max Drawdown)          |
 | `get_vol_ratio`    | Calculate **Volume Ratio** (Volume to its N-period average). | `df`, `n` (default 5)  | `DataFrame` (Volume Ratio)            |
 
 ### Utility Functions
