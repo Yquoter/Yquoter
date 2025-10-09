@@ -2,9 +2,9 @@ name: Yquoter CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: ["main"]
   pull_request:
-    branches: [ main, master ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -14,35 +14,36 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
-      - name: Checkout repository
+      - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: 🐍 Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install build tools
+      - name: ⚙️ Install build tools and dependencies
         run: |
           python -m pip install --upgrade pip
           pip install build flake8
 
-      - name: Lint with flake8
+      - name: 🔍 Run flake8 lint checks
         run: |
-          echo "🔍 Running flake8 lint checks..."
-          flake8 src/yquoter --count --select=E9,F63,F7,F82 --show-source --statistics || true
+          echo "Running flake8 lint checks..."
+          flake8 src/yquoter --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 src/yquoter --count --exit-zero --max-complexity=12 --max-line-length=120 --statistics
 
-      - name: Install package
+      - name: 📦 Install Yquoter package (editable)
         run: |
-          echo "📦 Installing Yquoter..."
-          pip install .
+          echo "Installing Yquoter in editable mode..."
+          pip install -e .
 
-      - name: Test build
+      - name: 🏗️ Build distribution files
         run: |
-          echo "🏗️ Building source and wheel distribution..."
+          echo "Building source and wheel distributions..."
           python -m build
 
-      - name: Verify import
+      - name: ✅ Verify import
         run: |
-          echo "✅ Verifying package import..."
-          python -c "import yquoter; print('Yquoter imported successfully')"
+          echo "Testing Yquoter import..."
+          python -c "import yquoter; print('✅ Yquoter imported successfully!')"
