@@ -53,7 +53,7 @@ Yquoter/
 │   └── basic_usage.ipynb # Detailed usage examples in Jupyter Notebook
 │
 ├── assets/               # Non-code assets (e.g., logos, screenshots for README)
-├── temp/                 # Temporary files (ignored by Git)
+├── temp/                 # Temporary files for test (ignored by Git)
 ├── .cache/               # Cache files (ignored by Git)
 ├── pyproject.toml        # Package configuration for distribution (PyPI)
 ├── requirements.txt      # Declaration of project dependencies
