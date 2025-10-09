@@ -10,10 +10,10 @@ import os
 import sys
 import pandas as pd
 from datetime import datetime
-from typing import Optional, Literal, List
+from typing import List
 from yquoter.logger import get_logger
-from yquoter.exceptions import CodeFormatError, ConfigError, DateFormatError
-from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError, DataFormatError
+from yquoter.exceptions import CodeFormatError, DateFormatError
+from yquoter.exceptions import DataFormatError
 from yquoter.config import HISTORY_STANDARD_FIELDS_FULL, HISTORY_STANDARD_FIELDS_BASIC
 
 logger = get_logger(__name__)

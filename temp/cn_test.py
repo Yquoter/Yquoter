@@ -1,10 +1,8 @@
-from yquoter import register_source, get_stock_history, get_ma_n, get_rsi_n, get_boll_n, get_vol_ratio, \
-    get_max_drawdown, get_rv_n
+from src.yquoter import register_source, get_stock_history, get_ma_n, get_rsi_n, get_boll_n, get_vol_ratio, get_max_drawdown, get_rv_n
 import pandas as pd
 
-from yquoter.spider_source import get_stock_realtime_spider, get_stock_factors_spider, get_stock_profile_spider, \
-    get_stock_financials_spider
-from yquoter.spider_source import get_stock_history_spider
+from src.yquoter.spider_source import get_stock_realtime_spider, get_stock_factors_spider, get_stock_profile_spider, get_stock_financials_spider
+from src.yquoter.spider_source import get_stock_history_spider
 
 
 # 定义一个自定义数据源函数
@@ -56,6 +54,7 @@ df = get_stock_history_spider("cn", "600519", "20241002", "20241012")
 print(df, "\n")
 
 #指标计算测试集
+print(f"Indicators are below.\n")
 df = get_ma_n("cn", "600519", "20241002", "20241012", 5)
 print(df, "\n")
 df = get_rsi_n("cn", "600519", "20250108", "20250204", 5)

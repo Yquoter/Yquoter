@@ -1,0 +1,6 @@
+recursive-include assets *
+
+recursive-include src/yquoter/configs *.yaml
+
+exclude .env
+recursive-exclude src/yquoter/log *

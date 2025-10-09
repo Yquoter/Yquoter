@@ -5,10 +5,7 @@
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-import pandas as pd
-import time
-from yquoter.utils import *
-from typing import Union, List
+from typing import Union
 from yquoter.spider_core import *
 from yquoter.config import EASTMONEY_REALTIME_MAPPING, EASYMONEY_FINANCIALS_MAPPING, REALTIME_STANDARD_FIELDS
 

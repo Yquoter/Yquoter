@@ -40,11 +40,11 @@ This document provides detailed definitions for the common and specialized param
   - Human-readable type: `str` (e.g.,`d`,`w`,`m`)
   - Low-level type: `int` (e.g.,`101`,`102`,`103`)
 - **Supported values**:  
- - 101: daily, Daily, day, Day, d, D, 1day, 1Day, 1d, 1D
- - 102: weekly, Weekly, week, Week, w, W, 1week, 1Week, 1w, 1W
- - 103: monthly, Monthly, month, Month, m, M, 1month, 1Month, 1m, 1M
- - 104: half_year, Half_year, Half_Year, HALF_YEAR, halfyear, Halfyear, HalfYear, HALFYEAR
- - 105: yearly, Yearly, year, Year, y, Y, 1year, 1Year, 1y, 1Y
+  - 101: daily, Daily, day, Day, d, D, 1day, 1Day, 1d, 1D
+  - 102: weekly, Weekly, week, Week, w, W, 1week, 1Week, 1w, 1W
+  - 103: monthly, Monthly, month, Month, m, M, 1month, 1Month, 1m, 1M
+  - 104: half_year, Half_year, Half_Year, HALF_YEAR, halfyear, Halfyear, HalfYear, HALFYEAR
+  - 105: yearly, Yearly, year, Year, y, Y, 1year, 1Year, 1y, 1Y
 
 ### 5. Data Source (`source`)
 - **Type**: `Optional[str]` 

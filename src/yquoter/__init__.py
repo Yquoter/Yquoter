@@ -22,17 +22,17 @@ setup_logging(level=logging.WARNING)
 # ----------------------------------------------------------------------
 # Core imports
 # ----------------------------------------------------------------------
-from yquoter.datasource import (
+from src.yquoter.datasource import (
     register_source,
     register_tushare_module,
+    set_default_source,
     get_stock_history,
     get_stock_realtime,
     get_stock_financials,
     get_stock_profile,
     get_stock_factors,
 )
-from yquoter.indicators import *
-from yquoter.cache import set_max_cache_entries
+from src.yquoter.indicators import *
 
 
 # ----------------------------------------------------------------------
@@ -81,6 +81,7 @@ __all__ = [
     "init_tushare",
     "register_source",
     "register_tushare_module",
+    "set_default_source",
     "get_stock_history",
     "get_stock_realtime",
     "get_stock_factors",

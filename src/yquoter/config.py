@@ -6,13 +6,12 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 
 import os
-import sys
 import yaml
 from typing import Any, Dict, List
 from dotenv import dotenv_values
 from importlib import resources
 from yquoter.logger import get_logger
-from yquoter.exceptions import ConfigError, PathNotFoundError
+from yquoter.exceptions import ConfigError
 
 logger = get_logger(__name__)
 

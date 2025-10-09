@@ -1,3 +1,34 @@
+Metadata-Version: 2.4
+Name: yquoter
+Version: 0.1.0
+Summary: A unified financial data interface and analysis toolkit for CN/HK/US markets.
+Author-email: Yodeesy <yodeeshi@gmail.com>
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/Yodeesy/Yquoter
+Project-URL: Documentation, https://github.com/Yodeesy/Yquoter#readme
+Project-URL: Source, https://github.com/Yodeesy/Yquoter
+Project-URL: Issues, https://github.com/Yodeesy/Yquoter/issues
+Keywords: finance,stock,tushare,quant,data,crawler
+Classifier: Framework :: Setuptools
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Office/Business :: Financial
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Intended Audience :: Science/Research
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pandas>=1.4
+Requires-Dist: tushare>=1.2.0
+Requires-Dist: requests>=2.26
+Requires-Dist: python-dotenv>=0.21
+Requires-Dist: PyYAML>=6.0.2
+Dynamic: license-file
+
 # Yquoter
 
 Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shares, and US stock prices** easily via one interface.
@@ -54,12 +85,12 @@ For detailed descriptions of all function parameters (e.g., market, klt, report_
 
 ### Data Acquisition Functions
 
-| Function               | Description                                                  | Primary Parameters                        | Returns                       |
-| ---------------------- | ------------------------------------------------------------ | ----------------------------------------- | ----------------------------- |
-| `get_stock_history`    | Fetch historical **OHLCV** (K-line) data for a date range.   | `market`, `code`, `start`, `end`          | `DataFrame` (OHLCV)           |
-| `get_stock_realtime`   | Fetch the **latest trading snapshot** (real-time quotes).    | `market`, `code`                          | `DataFrame` (Realtime Quotes) |
-| `get_stock_factors`    | Fetch historical **valuation/market factors** (e.g., PE, PB). | `market`, `code`, `trade_day`             | `DataFrame` (Factors)         |
-| `get_stock_profile`    | Fetch **basic profile information** (e.g., company name, listing date, industry). | `market`, `code`                          | `DataFrame` (Profile)         |
+| Function               | Description                                                  | Primary Parameters                         | Returns                       |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------ | ----------------------------- |
+| `get_stock_history`    | Fetch historical **OHLCV** (K-line) data for a date range.   | `market`, `code`, `start`, `end`           | `DataFrame` (OHLCV)           |
+| `get_stock_realtime`   | Fetch the **latest trading snapshot** (real-time quotes).    | `market`, `codes`                          | `DataFrame` (Realtime Quotes) |
+| `get_stock_factors`    | Fetch historical **valuation/market factors** (e.g., PE, PB, Market Cap). | `market`, `code`, `trade_day`              | `DataFrame` (Factors)         |
+| `get_stock_profile`    | Fetch **basic profile information** (e.g., company name, listing date, industry). | `market`, `code`                           | `DataFrame` (Profile)         |
 | `get_stock_financials` | Fetch **fundamental financial statements** (e.g., Income Statement, Balance Sheet). | `market`, `code`, `end_day`, `report_type` | `DataFrame` (Financials)      |
 
 ### Technical Analysis Functions
@@ -72,7 +103,7 @@ These functions primarily take an existing DataFrame (`df`) or data request para
 | `get_boll_n`       | Calculate **N-period Bollinger Bands** (BOLL).               | `df`, `n` (default 20) | `DataFrame` (BOLL, Upper/Lower bands) |
 | `get_rsi_n`        | Calculate **N-period Relative Strength Index** (RSI).        | `df`, `n` (default 14) | `DataFrame` (RSI column)              |
 | `get_rv_n`         | Calculate **N-period Rolling Volatility** (RV).              | `df`, `n` (default 5)  | `DataFrame` (RV column)               |
-| `get_max_drawdown` | Calculate **Maximum Drawdown** over a period.                | `df`                   | `DateFrame` (Max Drawdown)          |
+| `get_max_drawdown` | Calculate **Maximum Drawdown** over a period.                | `df`                   | `float` (Max Drawdown value)          |
 | `get_vol_ratio`    | Calculate **Volume Ratio** (Volume to its N-period average). | `df`, `n` (default 5)  | `DataFrame` (Volume Ratio)            |
 
 ### Utility Functions

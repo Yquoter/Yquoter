@@ -8,11 +8,10 @@
 import inspect
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Dict, Callable, Optional, Union, List
+from typing import Dict, Callable, Optional, Union
 from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
 from yquoter.spider_source import get_stock_history_spider, get_stock_realtime_spider, get_stock_financials_spider, get_stock_profile_spider, get_stock_factors_spider
-from yquoter.utils import *
-from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError, DataFormatError
+from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError
 from yquoter.logger import get_logger
 from yquoter.config import modify_df_path
 from yquoter.utils import _validate_dataframe
@@ -37,7 +36,7 @@ def register_source(source_name: str, func_type: str, func: Callable = None):
 
     Prompts the user for confirmation if an existing function is about to be overwritten in an interactive session.
     """
-    from yquoter.utils import _is_interactive_session
+    from src.yquoter.utils import _is_interactive_session
     source_name = source_name.lower()
     func_type = func_type.lower()
 
@@ -93,7 +92,7 @@ def register_tushare_module():
     """
     Automatically registers all relevant functions from the provided Tushare module.
     """
-    from yquoter.tushare_source import get_stock_history_tushare, get_stock_realtime_tushare
+    from src.yquoter.tushare_source import get_stock_history_tushare, get_stock_realtime_tushare
     if "tushare" not in _SOURCE_REGISTRY:
         _SOURCE_REGISTRY["tushare"] = {
         "history": get_stock_history_tushare,
@@ -166,7 +165,7 @@ def get_stock_history(
     elif end is None and start is not None:
         start = parse_date_str(start)
         end = datetime.now().strftime('%Y%m%d')
-    from yquoter.config import FREQ_TO_KLT
+    from src.yquoter.config import FREQ_TO_KLT
     market = market.lower()
     # Parse date strings (DateFormatError thrown if format is invalid)
     start = parse_date_str(start)
@@ -255,7 +254,7 @@ def get_stock_history(
 
 def get_stock_realtime(
         market: str,
-        codes: Union[str, list[str]] = [],
+        code: Union[str, list[str]] = [],
         fields: Union[str, list[str]] = [],
         source: Optional[str] = None,
         **kwargs
@@ -265,7 +264,7 @@ def get_stock_realtime(
 
     Args:
         market: Market identifier (e.g., 'cn', 'hk', 'us').
-        codes: Stock code(s) to fetch. Can be a single string or a list.
+        code: Stock code(s) to fetch. Can be a single string or a list.
         fields: Optional list of standardized fields to filter the results.
         source: Specific data source to use (e.g., 'tushare', 'spider').
         **kwargs: Additional keyword arguments passed to the underlying source function.
@@ -281,12 +280,12 @@ def get_stock_realtime(
     market = market.lower()
 
     # 1. Standardize codes and fields to lists
-    if isinstance(codes, str):
-        codes = [codes]
+    if isinstance(code, str):
+        code = [code]
     if isinstance(fields, str):
         fields = [fields]
 
-    logger.info(f"Initiating real-time data fetch for {market} with {len(codes)} code(s).")
+    logger.info(f"Initiating real-time data fetch for {market} with {len(code)} code(s).")
 
     src = (source or _DEFAULT_SOURCE).lower()
 
@@ -315,9 +314,9 @@ def get_stock_realtime(
     # -------------------------------------------------------------
     if src == "tushare":
         # Tushare requires single-code calls; iterating manually.
-        logger.info(f"Tushare source selected. Iterating through {len(codes)} codes individually.")
+        logger.info(f"Tushare source selected. Iterating through {len(code)} codes individually.")
 
-        for code in codes:
+        for code in code:
             # Parameters tailored for the single-code Tushare function (expecting 'code')
             params = {
                 "market": market,
@@ -350,7 +349,7 @@ def get_stock_realtime(
         # Parameters for the batch query function (expecting 'codes')
         params = {
             "market": market,
-            "codes": codes,  # Pass the full list of codes
+            "codes": code,  # Pass the full list of codes
             "fields": fields,
             **kwargs,
         }
