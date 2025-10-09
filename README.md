@@ -1,11 +1,32 @@
 # Yquoter
 
+[![PyPI](https://img.shields.io/pypi/v/yquoter.svg?style=flat&logo=pypi&label=PyPI)](https://pypi.org/project/yquoter/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-0.1.0-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
+[![Build Status](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml/badge.svg)](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml)
+![Status: Alpha](https://img.shields.io/badge/status-alpha-red?style=flat)
+[![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
+[![License](https://img.shields.io/github/license/Yodeesy/Yquoter?style=flat)](./LICENSE)
+![Yquoter Social Banner](assets/yquoter_banner.png)
+---
 Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shares, and US stock prices** easily via one interface.
 
-- [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
-- [![License](https://img.shields.io/github/license/Yodeesy/Yquoter?style=flat)](./LICENSE)
+> 🧠 **Project Info**
+> 
+> **Yquoter** is developed by the **Yquoter Team**, co-founded by four students from SYSU and SCUT.  
+> 
+> **Project Lead:** [@Yodeesy](https://github.com/Yodeesy)  
+> **Core Contributors:** [@Suk!ce](https://github.com/Sukice), [@encounter666741](https://github.com/encounter666741), [@Gaeulczy](https://github.com/Gaeulczy)  
+> 
+> The first version (v0.1.0) was completed collaboratively in 2025.
 
-![Yquoter Social Banner](assets/yquoter_banner.png)
+---
+
+## 📦 Installation
+
+```bash
+pip install yquoter
+```
+
 ---
 ## 📂 Project Structure
 This is a high-level overview of the Yquoter package structure:
