@@ -66,14 +66,14 @@ For detailed descriptions of all function parameters (e.g., market, klt, report_
 
 These functions primarily take an existing DataFrame (`df`) or data request parameters (`market`, `code`, `start`, `end`) and calculate indicators.
 
-| Function           | Description                                                  | Primary Parameters     | Returns                               |
-| ------------------ | ------------------------------------------------------------ | ---------------------- | ------------------------------------- |
-| `get_ma_n`         | Calculate **N-period Moving Average** (MA).                  | `df`, `n` (default 5)  | `DataFrame` (MA column)               |
-| `get_boll_n`       | Calculate **N-period Bollinger Bands** (BOLL).               | `df`, `n` (default 20) | `DataFrame` (BOLL, Upper/Lower bands) |
-| `get_rsi_n`        | Calculate **N-period Relative Strength Index** (RSI).        | `df`, `n` (default 14) | `DataFrame` (RSI column)              |
-| `get_rv_n`         | Calculate **N-period Rolling Volatility** (RV).              | `df`, `n` (default 5)  | `DataFrame` (RV column)               |
-| `get_max_drawdown` | Calculate **Maximum Drawdown** over a period.                | `df`                   | `DateFrame` (Max Drawdown)          |
-| `get_vol_ratio`    | Calculate **Volume Ratio** (Volume to its N-period average). | `df`, `n` (default 5)  | `DataFrame` (Volume Ratio)            |
+| Function           | Description                                                    | Primary Parameters     | Returns                               |
+| ------------------ |----------------------------------------------------------------| ---------------------- |---------------------------------------|
+| `get_ma_n`         | Calculate **N-period Moving Average** (MA).                    | `df`, `n` (default 5)  | `DataFrame` (MA column)               |
+| `get_boll_n`       | Calculate **N-period Bollinger Bands** (BOLL).                 | `df`, `n` (default 20) | `DataFrame` (BOLL, Upper/Lower bands) |
+| `get_rsi_n`        | Calculate **N-period Relative Strength Index** (RSI).          | `df`, `n` (default 14) | `DataFrame` (RSI column)              |
+| `get_rv_n`         | Calculate **N-period Rolling Volatility** (RV).                | `df`, `n` (default 5)  | `DataFrame` (RV column)               |
+| `get_max_drawdown` | Calculate **Maximum Drawdown** and **Recovery** over a period. | `df`                   | `Dict` (Max Drawdown)                 |
+| `get_vol_ratio`    | Calculate **Volume Ratio** (Volume to its N-period average).   | `df`, `n` (default 5)  | `DataFrame` (Volume Ratio)            |
 
 ### Utility Functions
 

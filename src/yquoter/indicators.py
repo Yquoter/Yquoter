@@ -37,7 +37,6 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
     # Use most recent cached data if no parameters provided
     if df is None and market is None and code is None and start is None and end is None:
         df = get_newest_df_path()
-        print(df)
         logger.info("Using most recent cached data as no parameters provided")
         if "klt101" not in df:
             logger.error("Indicator calculation could not be performed because klt!=101")
@@ -269,7 +268,7 @@ def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
         logger.info(f"Calculating {n}-period rolling volatility")
         # Calculate logarithmic returns
         df["log_change"] = np.log(df['close'] / df['close'].shift(1))
-        rv_col = f"rv{n}"
+        rv_col = f"RV{n}"
         # Calculate SD ( standard deviation )
         df[rv_col] = df['log_change'].rolling(window=n, min_periods=1).std() * np.sqrt(n)
         df = df[['date', rv_col]].copy()
