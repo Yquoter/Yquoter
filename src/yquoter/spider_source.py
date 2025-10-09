@@ -381,7 +381,7 @@ def get_stock_profile_spider(
             full_url = f"{base_url}?{query_string}"
             return full_url
 
-    basic_cols = ['CODE', 'NAME', 'LISTING_DATE','MAIN_BUSINESS','INDUSTRY']
+    basic_cols = ['CODE', 'NAME', 'LISTING_DATE', 'MAIN_BUSINESS', 'INDUSTRY']
 
     def parse_basic(json_data):
         if market == "cn":
