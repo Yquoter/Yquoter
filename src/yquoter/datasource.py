@@ -14,7 +14,7 @@ from yquoter.spider_source import get_stock_history_spider, get_stock_realtime_s
 from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError
 from yquoter.logger import get_logger
 from yquoter.config import modify_df_path
-from yquoter.utils import _validate_dataframe
+from yquoter.utils import _validate_dataframe, parse_date_str
 
 # Global registry for data sources:
 # Structure: {source_name: {function_type: function_callable}}
