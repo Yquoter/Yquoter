@@ -15,7 +15,7 @@ Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shar
 > **Yquoter** is developed by the **Yquoter Team**, co-founded by four students from SYSU and SCUT.  
 > 
 > **Project Lead:** [@Yodeesy](https://github.com/Yodeesy)  
-> **Core Contributors:** [@Suk!ce](https://github.com/Sukice), [@encounter666741](https://github.com/encounter666741), [@Gaeulczy](https://github.com/Gaeulczy)  
+> **Core Contributors:** [@Sukice](https://github.com/Sukice), [@encounter666741](https://github.com/encounter666741), [@Gaeulczy](https://github.com/Gaeulczy)  
 > 
 > The first version (v0.1.0) was completed collaboratively in 2025.
 
