@@ -36,7 +36,7 @@ def register_source(source_name: str, func_type: str, func: Callable = None):
 
     Prompts the user for confirmation if an existing function is about to be overwritten in an interactive session.
     """
-    from src.yquoter.utils import _is_interactive_session
+    from yquoter.utils import _is_interactive_session
     source_name = source_name.lower()
     func_type = func_type.lower()
 
@@ -92,7 +92,7 @@ def register_tushare_module():
     """
     Automatically registers all relevant functions from the provided Tushare module.
     """
-    from src.yquoter.tushare_source import get_stock_history_tushare, get_stock_realtime_tushare
+    from yquoter.tushare_source import get_stock_history_tushare, get_stock_realtime_tushare
     if "tushare" not in _SOURCE_REGISTRY:
         _SOURCE_REGISTRY["tushare"] = {
         "history": get_stock_history_tushare,
@@ -165,7 +165,7 @@ def get_stock_history(
     elif end is None and start is not None:
         start = parse_date_str(start)
         end = datetime.now().strftime('%Y%m%d')
-    from src.yquoter.config import FREQ_TO_KLT
+    from yquoter.config import FREQ_TO_KLT
     market = market.lower()
     # Parse date strings (DateFormatError thrown if format is invalid)
     start = parse_date_str(start)
@@ -349,7 +349,7 @@ def get_stock_realtime(
         # Parameters for the batch query function (expecting 'codes')
         params = {
             "market": market,
-            "codes": code,  # Pass the full list of codes
+            "code": code,  # Pass the full list of codes
             "fields": fields,
             **kwargs,
         }

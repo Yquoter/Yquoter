@@ -35,8 +35,8 @@ def init_tushare(token: str = None):
             ValueError: If no token is provided and not set in environment variables
     """
     logger.info(f"Initializing TuShare with token: {token}")
-    from src.yquoter.config import get_tushare_token
-    from src.yquoter.datasource import register_source
+    from yquoter.config import get_tushare_token
+    from yquoter.datasource import register_tushare_module
 
     global _pro, _token
     if token is None:
@@ -49,7 +49,7 @@ def init_tushare(token: str = None):
     _token = token
     _pro = ts.pro_api(token)
     # Register TuShare as an available data source
-    register_source("tushare", get_stock_history_tushare)
+    register_tushare_module()
 
 def get_pro():
     """
