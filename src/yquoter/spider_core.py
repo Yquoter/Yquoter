@@ -9,7 +9,7 @@ import time
 import requests
 from datetime import datetime, timedelta
 import pandas as pd
-from typing import Callable, Optional, Dict, List
+from typing import Callable, Dict, List
 from yquoter.logger import get_logger
 
 logger = get_logger(__name__)
@@ -89,7 +89,7 @@ def crawl_kline_segments(
     logger.info(f"K-line crawl completed. Total records: {len(all_data)}")
     return df
 
-from yquoter.config import EASTMONEY_REALTIME_MAPPING
+from src.yquoter.config import EASTMONEY_REALTIME_MAPPING
 def crawl_realtime_data(
     make_url: Callable,
     parse_realtime_data: Callable[[Dict], List[List[str]]],

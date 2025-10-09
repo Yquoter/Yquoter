@@ -1,3 +1,27 @@
+Metadata-Version: 2.4
+Name: yquoter
+Version: 0.1.0
+Summary: A unified financial data interface and analysis toolkit for CN/HK/US markets.
+Author-email: Yodeesy <yodeeshi@gmail.com>
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/Yodeesy/Yquoter
+Project-URL: Documentation, https://github.com/Yodeesy/Yquoter#readme
+Project-URL: Source, https://github.com/Yodeesy/Yquoter
+Project-URL: Issues, https://github.com/Yodeesy/Yquoter/issues
+Keywords: finance,stock,tushare,quant,data,crawler
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pandas>=1.4
+Requires-Dist: tushare>=1.2.0
+Requires-Dist: requests>=2.26
+Requires-Dist: python-dotenv>=0.21
+Requires-Dist: PyYAML>=6.0.2
+Dynamic: license-file
+
 # Yquoter
 
 Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shares, and US stock prices** easily via one interface.

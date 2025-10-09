@@ -5,7 +5,6 @@
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-from unittest import result
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -156,20 +155,20 @@ def get_boll_n (market=None, code=None, start=None, end=None, n=20, df=None):
         Returns:
             DataFrame containing dates, upper band, middle band (MA), and lower band
     """
-    def _calc_boll(df,real_start,n=20):
+    def _calc_boll(df, real_start, n=20):
         logger.info(f"Calculating Bollinger Bands with {n}-period window")
-        ma_col = f"mid{n}"
-        df[ma_col] = df['close'].rolling(window=n, min_periods=1).mean().round(2)
-        std_col = f"std{n}"
-        df[std_col] = df['close'].rolling(window=n, min_periods=1).std().round(2)
+        ma_values = df['close'].rolling(window=n, min_periods=1).mean().round(2)
+        std_values = df['close'].rolling(window=n, min_periods=1).std().round(2)
 
-        df['up'] = (df[ma_col] + 2 * df[std_col]).round(2)
-        df['down'] = (df[ma_col] - 2 * df[std_col]).round(2)
+        df['upper'] = (ma_values + 2 * std_values).round(2)
+        df['lower'] = (ma_values - 2 * std_values).round(2)
+        df['mid'] = ma_values
 
         df = df[df['date'] >= real_start]
         logger.info(f"Bollinger Bands calculation completed for {len(df)} records")
-        return df[['date','up', ma_col,'down']].copy().reset_index(drop=True)
-    return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
+
+        return df[['date', 'upper', 'mid', 'lower']].copy().reset_index(drop=True)
+    return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n,
                           indicator_func=_calc_boll, n=n)
 
 def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
@@ -273,7 +272,7 @@ def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
         rv_col = f"rv{n}"
         # Calculate SD ( standard deviation )
         df[rv_col] = df['log_change'].rolling(window=n, min_periods=1).std() * np.sqrt(n)
-        df = df[['date',rv_col]].copy()
+        df = df[['date', rv_col]].copy()
         result = df[df['date'] >= real_start].copy().reset_index(drop=True)
         logger.info(f"Rolling volatility calculation completed for {len(result)} records")
         return result
