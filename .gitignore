@@ -30,3 +30,6 @@ Thumbs.db
 
 # test
 temp/
+
+# Python egg-info
+*.egg-info/
