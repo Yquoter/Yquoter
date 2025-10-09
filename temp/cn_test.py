@@ -1,9 +1,7 @@
-from yquoter import register_source, get_stock_history, get_ma_n, get_rsi_n, get_boll_n, get_vol_ratio, \
-    get_max_drawdown, get_rv_n
+from yquoter import register_source, get_stock_history, get_ma_n, get_rsi_n, get_boll_n, get_vol_ratio, get_max_drawdown, get_rv_n
 import pandas as pd
 
-from yquoter.spider_source import get_stock_realtime_spider, get_stock_factors_spider, get_stock_profile_spider, \
-    get_stock_financials_spider
+from yquoter.spider_source import get_stock_realtime_spider, get_stock_factors_spider, get_stock_profile_spider, get_stock_financials_spider
 from yquoter.spider_source import get_stock_history_spider
 
 
