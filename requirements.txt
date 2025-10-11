@@ -1,4 +1,3 @@
-tushare>=1.2.89
 pandas>=1.5.3
 requests>=2.31.0
 pyyaml~=6.0.2

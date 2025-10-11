@@ -25,6 +25,8 @@ Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shar
 
 ```bash
 pip install yquoter
+# If you need tuShare Module, please use:
+# pip install yquoter[tushare]
 ```
 
 ---
@@ -100,11 +102,10 @@ These functions primarily take an existing DataFrame (`df`) or data request para
 
 | Function                  | Description                                                  | Primary Parameters |
 | ------------------------- | ------------------------------------------------------------ |--|
-| `init_tushare`            | **Initialize TuShare connection** with your API token.       | `token` |
 | `init_cache_manager`      | **Initialize the cache manager** with a maximum LRU entry count. | `max_entries` |
 | `register_source`         | **Register** a new custom data **source** plugin.            | `source_name`, `func_type (e.g., "realtime")` |
-| `register_tushare_module` | **Register specific `TuShare` data interfaces**. | **None** |
 | `set_default_source` | **Set a new default data source.** | `name` |
+| `init_tushare`            | **Initialize `TuShare` connection** with your API token and **register`TuShare` data interfaces**. | `token (or None)` |
 | `get_newest_df_path`      | **Get the path** of the newest cached data file.             | **None** |
 
 ---

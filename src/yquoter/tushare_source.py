@@ -10,7 +10,7 @@ import datetime
 import tushare as ts
 import pandas as pd
 from typing import Optional, List
-from yquoter.exceptions import CodeFormatError, ConfigError, DataFetchError
+from yquoter.exceptions import CodeFormatError, ConfigError, DataFetchError, TuShareAPIError, TuShareNotImportableError
 from yquoter.logger import get_logger
 from yquoter.config import REALTIME_STANDARD_FIELDS, TUSHARE_REALTIME_MAPPING
 from yquoter.utils import convert_code_to_tushare, filter_fields
@@ -20,25 +20,62 @@ logger = get_logger(__name__)
 _pro = None  # Global TuShare instance
 _token = None  # Delayed token storage
 
+def _check_tushare_token(ts, token: str) -> bool:
+    """
+    Validates Tushare Token by calling a lightweight API (trade_cal).
+
+    Args:
+        ts: The imported tushare module.
+        token: The Tushare API token.
+
+    Returns:
+        True if the token is valid and connection is successful, False otherwise.
+    """
+    try:
+        ts.set_token(token)
+        pro = ts.pro_api(token)
+
+        # Use a lightweight, low-frequency API to check connection/auth
+        # Query for a single day's trade calendar
+        df = pro.daily(ts_code='000001.SZ', start_date='20180701', end_date='20180718')
+
+        if df is not None:  # Tushare usually returns a DF, even if empty
+            logger.info("Tushare Token validated successfully via lightweight API.")
+            return True
+
+        # This case is unlikely if the API call succeeded, but kept for robustness
+        logger.warning("Tushare API returned empty data during validation.")
+    except TuShareAPIError as e:
+        logger.warning(f"Tushare Token verification failed. The API server may be unreachable or the token is invalid. Reason: {e}")
+        return False
 
 def init_tushare(token: str = None):
     """
-    Initialize TuShare interface.
+    Initializes and registers the Tushare data source module.
 
-        - Uses provided token if available
-        - Otherwise retrieves token via get_tushare_token()
+    Performs Tushare dependency check, token validation, and module registration.
 
-        Args:
-            token: Optional TuShare API token
+    Args:
+        token: Optional Tushare API token. If None, tries to load from environment
+               variables (e.g., TUSHARE_TOKEN).
 
-        Raises:
-            ValueError: If no token is provided and not set in environment variables
+    Returns:
+        True if Tushare source was successfully initialized and registered.
     """
-    logger.info(f"Initializing TuShare with token: {token}")
-    from yquoter.config import get_tushare_token
-    from yquoter.datasource import register_tushare_module
+    logger.info("Attempting to initialize Tushare data source with token: {token}...")
 
-    global _pro, _token
+    try:
+        import tushare as ts
+    except ImportError:
+        logger.warning(
+            "Tushare library not found. Please install it to use the Tushare data source: "
+            "pip install yquoter[tushare] or pip install tushare"
+        )
+        raise TuShareNotImportableError
+
+    from yquoter.config import get_tushare_token
+    from yquoter.datasource import _register_tushare_module
+
     if token is None:
         token = get_tushare_token()
 
@@ -46,10 +83,13 @@ def init_tushare(token: str = None):
         logger.error("No token provided")
         raise ConfigError("TuShare Token not provided. Please pass token or set TUSHARE_TOKEN in .env/environment variables")
 
-    _token = token
-    _pro = ts.pro_api(token)
-    # Register TuShare as an available data source
-    register_tushare_module()
+    if _check_tushare_token(ts, token):
+        global _pro, _token
+        _token = token
+        _pro = ts.pro_api(token)
+        # Register TuShare as an available data source
+        _register_tushare_module()
+        logger.info("Tushare data source successfully registered.")
 
 def get_pro():
     """

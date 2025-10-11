@@ -8,7 +8,7 @@
 import os
 import yaml
 from typing import Any, Dict, List
-from dotenv import dotenv_values
+from dotenv import dotenv_values, find_dotenv
 from importlib import resources
 from yquoter.logger import get_logger
 from yquoter.exceptions import ConfigError
@@ -37,9 +37,11 @@ def load_config_env():
     2. Override with system environment variables
     """
     logger.info("Starting to load configuration")
-    cfg = dotenv_values(".env") or {}
+    dotenv_path = find_dotenv(usecwd=True)
+    env_cfg = dotenv_values(dotenv_path) if dotenv_path else {}
+    cfg = dict(os.environ)
     # System environment variables take higher priority
-    cfg.update(os.environ)
+    cfg.update(env_cfg)
     if "CACHE_ROOT" not in cfg:
         cfg["CACHE_ROOT"] = ".cache"
     if "LOG_ROOT" not in cfg:

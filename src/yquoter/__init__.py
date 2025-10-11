@@ -7,8 +7,8 @@
 
 """Yquoter: A unified financial data interface and analysis toolkit for CN/HK/US markets."""
 
-__version__ = "0.1.0"
-__author__ = "Yodeesy"
+__version__ = "0.2.0"
+__author__ = "Yquoter Team"
 __email__ = "yodeeshi@gmail.com"
 
 import logging
@@ -24,7 +24,6 @@ setup_logging(level=logging.WARNING)
 # ----------------------------------------------------------------------
 from yquoter.datasource import (
     register_source,
-    register_tushare_module,
     set_default_source,
     get_stock_history,
     get_stock_realtime,
@@ -78,10 +77,9 @@ def init_tushare(token: str = None):
 # Public API
 # ----------------------------------------------------------------------
 __all__ = [
-    "init_tushare",
     "register_source",
-    "register_tushare_module",
     "set_default_source",
+    "init_tushare",
     "get_stock_history",
     "get_stock_realtime",
     "get_stock_factors",

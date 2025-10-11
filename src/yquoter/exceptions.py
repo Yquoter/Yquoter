@@ -75,6 +75,15 @@ class DataFormatError(YquoterError):
 class IndicatorCalculationError(YquoterError):
     """Raised when an error occurs during technical indicator calculation."""
     pass
+
+class TuShareAPIError(YquoterError):
+    """Raised when a tuShare token is invalid or Not enough permission."""
+    pass
+
+class TuShareNotImportableError(YquoterError):
+    """Raised when failing to import TuShare."""
+    pass
+
 # Add more exceptions here as needed in the future, e.g.:
 # class DataNotFoundError(YquoterError):
 #     """Raised when the requested data does not exist."""

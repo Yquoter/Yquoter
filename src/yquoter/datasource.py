@@ -88,7 +88,7 @@ def register_source(source_name: str, func_type: str, func: Callable = None):
 
     return decorator  # Decorator usage
 
-def register_tushare_module():
+def _register_tushare_module():
     """
     Automatically registers all relevant functions from the provided Tushare module.
     """

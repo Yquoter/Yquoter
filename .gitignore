@@ -33,3 +33,6 @@ temp/
 
 # Python egg-info
 *.egg-info/
+
+# release
+dist/
