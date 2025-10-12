@@ -99,7 +99,6 @@ def get_pro():
         Raises:
             ValueError: If TuShare is not initialized and no token is available
     """
-    global _pro
     if _pro is None:
         logger.error("TuShare not initialized. Must call init_tushare() first.")
         raise ConfigError("TuShare not initialized. Please call init_tushare() before fetching data.")
@@ -123,7 +122,6 @@ def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, f
         Raises:
             ValueError: If market is not supported
     """
-    global _ts_module
     pro = get_pro()
 
     ts = _ts_module
