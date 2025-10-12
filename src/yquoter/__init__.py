@@ -32,7 +32,7 @@ from yquoter.datasource import (
     get_stock_factors,
 )
 from yquoter.indicators import *
-
+from yquoter.exceptions import TuShareNotImportableError
 
 # ----------------------------------------------------------------------
 # Cache initialization
@@ -69,9 +69,18 @@ def init_tushare(token: str = None):
     Args:
         token (str, optional): TuShare API token.
     """
-    from .tushare_source import init_tushare as _init
-    return _init(token)
-
+    try:
+        from .tushare_source import init_tushare as _ts_init
+        _ts_init(token)
+    except TuShareNotImportableError as e:
+        logger.error(
+            "Tushare library not found. Please install it to use the Tushare data source: "
+            "pip install yquoter[tushare] or pip install tushare"
+        )
+        raise e
+    except ImportError:
+        logger.error("Failed to load tushare_source module. Check package integrity.")
+        raise
 
 # ----------------------------------------------------------------------
 # Public API

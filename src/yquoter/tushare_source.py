@@ -7,7 +7,6 @@
 
 import os
 import datetime
-import tushare as ts
 import pandas as pd
 from typing import Optional, List
 from yquoter.exceptions import CodeFormatError, ConfigError, DataFetchError, TuShareAPIError, TuShareNotImportableError
@@ -17,12 +16,12 @@ from yquoter.utils import convert_code_to_tushare, filter_fields
 
 logger = get_logger(__name__)
 
-_pro = None  # Global TuShare instance
-_token = None  # Delayed token storage
+_pro = None  # Global TuShare API instance
+_ts_module = None # Global TuShare module instance (ts)
 
-def _check_tushare_token(ts, token: str) -> bool:
+def _check_tushare_token(ts_module, token: str) -> bool:
     """
-    Validates Tushare Token by calling a lightweight API (trade_cal).
+    Validates Tushare Token by calling a lightweight API (daily).
 
     Args:
         ts: The imported tushare module.
@@ -32,8 +31,8 @@ def _check_tushare_token(ts, token: str) -> bool:
         True if the token is valid and connection is successful, False otherwise.
     """
     try:
-        ts.set_token(token)
-        pro = ts.pro_api(token)
+        ts_module.set_token(token)
+        pro = ts_module.pro_api(token)
 
         # Use a lightweight, low-frequency API to check connection/auth
         # Query for a single day's trade calendar
@@ -45,9 +44,9 @@ def _check_tushare_token(ts, token: str) -> bool:
 
         # This case is unlikely if the API call succeeded, but kept for robustness
         logger.warning("Tushare API returned empty data during validation.")
-    except TuShareAPIError as e:
+    except Exception as e:
         logger.warning(f"Tushare Token verification failed. The API server may be unreachable or the token is invalid. Reason: {e}")
-        return False
+        raise TuShareAPIError(f"Tushare Token verification failed: {e}") from e
 
 def init_tushare(token: str = None):
     """
@@ -67,10 +66,6 @@ def init_tushare(token: str = None):
     try:
         import tushare as ts
     except ImportError:
-        logger.warning(
-            "Tushare library not found. Please install it to use the Tushare data source: "
-            "pip install yquoter[tushare] or pip install tushare"
-        )
         raise TuShareNotImportableError
 
     from yquoter.config import get_tushare_token
@@ -83,13 +78,16 @@ def init_tushare(token: str = None):
         logger.error("No token provided")
         raise ConfigError("TuShare Token not provided. Please pass token or set TUSHARE_TOKEN in .env/environment variables")
 
-    if _check_tushare_token(ts, token):
-        global _pro, _token
-        _token = token
-        _pro = ts.pro_api(token)
-        # Register TuShare as an available data source
-        _register_tushare_module()
-        logger.info("Tushare data source successfully registered.")
+    try:
+        if _check_tushare_token(ts, token):
+            global _pro, _ts_module
+            _ts_module = ts
+            _pro = ts.pro_api(token)
+            # Register TuShare as an available data source
+            _register_tushare_module()
+            logger.info("Tushare data source successfully registered.")
+    except TuShareAPIError as e:
+        raise
 
 def get_pro():
     """
@@ -101,19 +99,11 @@ def get_pro():
         Raises:
             ValueError: If TuShare is not initialized and no token is available
     """
-    global _pro, _token
-    if _pro:
-        return _pro
-    if not _token:
-        token = os.environ.get("TUSHARE_TOKEN")
-        if not token:
-            logger.error("TuShare not initialized.")
-            raise ConfigError("TuShare not initialized. Please call init_tushare or set TUSHARE_TOKEN environment variable")
-        _token = token
-        _pro = ts.pro_api(_token)
-    logger.info(f"get_pro successfully.")
+    global _pro
+    if _pro is None:
+        logger.error("TuShare not initialized. Must call init_tushare() first.")
+        raise ConfigError("TuShare not initialized. Please call init_tushare() before fetching data.")
     return _pro
-
 
 def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, fqt: int=1) -> pd.DataFrame:
     """
@@ -133,7 +123,13 @@ def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, f
         Raises:
             ValueError: If market is not supported
     """
+    global _ts_module
     pro = get_pro()
+
+    ts = _ts_module
+    if ts is None:
+        raise ConfigError("Tushare module object not found (Internal state error).")
+
     ts_code = convert_code_to_tushare(code, market)
     def _klt_to_freq(klt: int) -> str:
         """Convert klt code to TuShare frequency string"""
