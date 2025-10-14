@@ -1,7 +1,7 @@
 # Yquoter
 
 [![PyPI](https://img.shields.io/pypi/v/yquoter.svg?style=flat&logo=pypi&label=PyPI)](https://pypi.org/project/yquoter/)
-[![TestPyPI](https://img.shields.io/badge/TestPyPI-0.1.0-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.2.0-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
 [![Yquoter CI](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml)
 ![Status: Alpha](https://img.shields.io/badge/status-alpha-red?style=flat)
 [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
