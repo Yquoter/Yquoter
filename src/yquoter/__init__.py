@@ -7,7 +7,7 @@
 
 """Yquoter: A unified financial data interface and analysis toolkit for CN/HK/US markets."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __author__ = "Yquoter Team"
 __email__ = "yodeeshi@gmail.com"
 
@@ -32,6 +32,7 @@ from yquoter.datasource import (
     get_stock_factors,
 )
 from yquoter.indicators import *
+from yquoter.reporting import generate_stock_report
 from yquoter.exceptions import TuShareNotImportableError
 
 # ----------------------------------------------------------------------
@@ -102,5 +103,6 @@ __all__ = [
     "get_rsi_n",
     "get_rv_n",
     "init_cache_manager",
+    "generate_stock_report"
 ]
 

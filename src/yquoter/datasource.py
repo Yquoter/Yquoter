@@ -374,13 +374,13 @@ def get_stock_realtime(
     if not all_results:
         # If all attempts failed or returned empty data
         logger.warning(f"All fetch attempts for market '{market}' failed or returned empty data.")
-        # Return an empty DataFrame with correct columns
-        return _validate_dataframe(pd.DataFrame(), fields)
+        # Return an empty DataFrame
+        return pd.DataFrame()
 
     # 3. Concatenate and validate/order the final result
     final_df = pd.concat(all_results, ignore_index=True)
 
-    return _validate_dataframe(final_df, fields)
+    return final_df
 
 def get_stock_financials(
         market: str,

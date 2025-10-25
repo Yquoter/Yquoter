@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 from yquoter.config import get_newest_df_path
+from yquoter.exceptions import DataFetchError, DateFormatError
 from yquoter.utils import parse_date_str, load_file_to_df
 from yquoter.datasource import get_stock_history
 from yquoter.logger import get_logger
@@ -33,36 +34,47 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
         Returns:
             Result of indicator calculation (typically DataFrame or dict)
     """
+    real_start = None
 
     # Use most recent cached data if no parameters provided
     if df is None and market is None and code is None and start is None and end is None:
-        df = get_newest_df_path()
+        path = get_newest_df_path()
         logger.info("Using most recent cached data as no parameters provided")
-        if "klt101" not in df:
+        if "klt101" not in path:
             logger.error("Indicator calculation could not be performed because klt!=101")
             raise ValueError("Indicator calculation could not be performed because klt!=101 in the latest df")
+        df = load_file_to_df(path)
+        if not df.empty and 'date' in df.columns:
+            real_start = df['date'].iloc[0].strftime("%Y%m%d")
+
     # Load data from file path if provided
     if isinstance(df, str):
         path = df
         df = load_file_to_df(path)
-        real_start = df['date'].iloc[0].strftime("%Y%m%d")
+        if not df.empty and 'date' in df.columns:
+            real_start = df['date'].iloc[0].strftime("%Y%m%d")
         logger.info(f"Loading data from file: {path}")
 
     # Fetch data using loader if df still not available
     if df is None:
-        input_start="YYYYMMDD"
-        if start is not None:
+        if end is None:
+            end = datetime.today().strftime("%Y%m%d")
+
+        if start is None:
+            real_start = (datetime.today() - timedelta(days=90)).strftime("%Y%m%d")
+            input_start = datetime.strptime(real_start, "%Y%m%d") - timedelta(days=20 + pre_days)
+        else:
             real_start = parse_date_str(start, "%Y%m%d")
-            input_start = datetime.strptime(start, '%Y%m%d') - timedelta(days=15)
+            input_start = datetime.strptime(real_start, '%Y%m%d') - timedelta(days=20 + pre_days)
+
         loader = loader or get_stock_history
 
-        # Set default date range if not provided
-        if start is None or end is None:
-            end = datetime.today().strftime("%Y%m%d")
-            real_start = (datetime.today() - timedelta(days=90)).strftime("%Y%m%d")
-            input_start = datetime.strptime(real_start, "%Y%m%d") - timedelta(days=20+pre_days)
-        df = loader(market, code, str(input_start), end, mode="full")
-        logger.info(f"Fetching data via {loader.__name__} for {market}:{code}")
+        df = loader(market, code, input_start.strftime("%Y%m%d"), end, mode="full")
+        logger.info(
+            f"Fetching data via {loader.__name__} for {market}:{code} (Input Start: {input_start.strftime('%Y%m%d')})")
+        if df is None or df.empty:
+            raise DataFetchError(
+                f"Failed to load data for {market}:{code} from {input_start.strftime('%Y%m%d')} to {end}")
 
     # Prepare data for calculation
     data = df.copy()
@@ -92,13 +104,19 @@ def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
             DataFrame containing dates and corresponding MA(n) values
     """
 
-    def _calc_ma(df, real_start=0, n=5):
+    def _calc_ma(df, real_start=None, n=5):
         logger.info(f"Calculating MA{n} indicator")
+        df_result = df.copy()
         ma_col = f"MA{n}"
-        df[ma_col] = df['close'].rolling(window=n, min_periods=1).mean().round(2)
-        df = df[df['date'] >= real_start]
+        df_result[ma_col] = df_result['close'].rolling(window=n, min_periods=1).mean().round(2)
+        if real_start is not None:
+            try:
+                df_result = df_result[df_result['date'] >= real_start]
+            except DateFormatError as e:
+                logger.error(f"Date comparison failed. Ensure 'df_result[\"date\"]' and 'real_start' are comparable types (e.g., datetime or string): {e}")
+                pass
         logger.info(f"MA{n} calculation completed for {len(df)} records")
-        return df[['date', ma_col]].copy().reset_index(drop=True)
+        return df_result.reset_index(drop=True)
     return calc_indicator(df=df, market=market, code=code, start=start,end=end, pre_days=n,
                           indicator_func=_calc_ma, n=n)
 

@@ -1,5 +1,4 @@
-from src.yquoter import init_tushare, get_stock_history
+import yquoter as yq
 
-init_tushare()
-df_cn_1 = get_stock_history("cn", "600519", "2023-01-01", "2023-06-30", klt="1Y", source="tushare")
-print(df_cn_1)
+report = yq.generate_stock_report(market="cn", code="600717", language='en')
+print(report)

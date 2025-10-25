@@ -43,9 +43,9 @@ df_cn = get_ma_n()
 print(df_cn, "\n")
 
 #实时行情爬虫测试集
-df_realtime = get_stock_realtime_spider(market="cn", codes=["600519"])
+df_realtime = get_stock_realtime_spider(market="cn", code=["600519"])
 print(df_realtime, "\n")
-df_realtime = get_stock_realtime_spider(market="us", codes="AAPL", fields=["code", "open", "pre_close"])
+df_realtime = get_stock_realtime_spider(market="us", code="AAPL", fields=["code", "open", "pre_close"])
 print(df_realtime, "\n")
 
 #历史行情爬虫测试集

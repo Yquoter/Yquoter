@@ -24,13 +24,6 @@ class CodeFormatError(YquoterError, ValueError):
     """
     pass
 
-class DateFormatError(YquoterError, ValueError):
-    """
-    Raised when the date string format cannot be recognized or processed.
-    Inherits from ValueError to maintain partial semantic compatibility.
-    """
-    pass
-
 class CacheError(YquoterError):
     """Base exception related to cache operations."""
     pass
@@ -47,20 +40,16 @@ class ConfigError(YquoterError):
     """Raised when a configuration item is missing or has an invalid format."""
     pass
 
+class DateFormatError(YquoterError, ValueError):
+    """
+    Raised when the date string format cannot be recognized or processed.
+    Inherits from ValueError to maintain partial semantic compatibility.
+    """
+    pass
 
 class DataSourceError(YquoterError):
     """
     Errors related to data sources, such as non-existent or uninitialized data sources.
-    """
-    pass
-
-class ParameterError(YquoterError, ValueError):
-    """Raised when the parameters provided to the API are invalid."""
-    pass
-
-class PathNotFoundError(YquoterError, FileNotFoundError):
-    """Raised when a required file or directory path does not exist.
-    Inherits from FileNotFoundError for standard exception compatibility.
     """
     pass
 
@@ -74,6 +63,20 @@ class DataFormatError(YquoterError):
 
 class IndicatorCalculationError(YquoterError):
     """Raised when an error occurs during technical indicator calculation."""
+    pass
+
+class ParameterError(YquoterError, ValueError):
+    """Raised when the parameters provided to the API are invalid."""
+    pass
+
+class PathNotFoundError(YquoterError, FileNotFoundError):
+    """Raised when a required file or directory path does not exist.
+    Inherits from FileNotFoundError for standard exception compatibility.
+    """
+    pass
+
+class PlotLibImportError(YquoterError):
+    """Raised when an error occurs during trying to import Matplotlib or Mplfinance."""
     pass
 
 class TuShareAPIError(YquoterError):
