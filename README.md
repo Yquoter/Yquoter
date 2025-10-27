@@ -45,7 +45,7 @@ Yquoter/
 │       ├── spider_source.py        # Default data source using internal web scraping
 │       ├── spider_core.py          # Core logic and mechanism for the internal spider
 │       ├── config.py               # Manages configuration settings (tokens, paths)
-│       ├── .env                    # Stores sensitive environment variables (e.g., Tushare token)
+│       ├── models.py               # Offer a type-safe and intuitive API
 │       ├── indicators.py           # Utility for calculating technical indicators
 │       ├── logger.py               # Logging configuration and utilities
 │       ├── cache.py                # Manages local data caching mechanisms

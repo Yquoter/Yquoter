@@ -88,7 +88,7 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
     return result
 
 
-def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
+def get_ma_n(market: str = None, code: str = None, start: str = None, end: str = None, n: int = 5, df: pd.DataFrame = None):
     """
     Calculate MA(n) moving average
 
@@ -120,7 +120,7 @@ def get_ma_n(market=None, code=None, start=None, end=None, n=5, df=None):
     return calc_indicator(df=df, market=market, code=code, start=start,end=end, pre_days=n,
                           indicator_func=_calc_ma, n=n)
 
-def get_rsi_n(market=None, code=None,start=None, end=None, n=5, df=None):
+def get_rsi_n(market: str=None, code: str=None,start: str=None, end: str=None, n: int=5, df: pd.DataFrame=None):
     """
     Calculate n-period Relative Strength Index
 
@@ -157,7 +157,7 @@ def get_rsi_n(market=None, code=None,start=None, end=None, n=5, df=None):
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n,
                           indicator_func=_calc_rsi, n=n)
 
-def get_boll_n (market=None, code=None, start=None, end=None, n=20, df=None):
+def get_boll_n (market:str=None, code:str=None, start:str=None, end:str=None, n:int=20, df:pd.DataFrame=None):
     """
     Calculate Bollinger Bands with n-period window
 
@@ -188,7 +188,7 @@ def get_boll_n (market=None, code=None, start=None, end=None, n=20, df=None):
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n,
                           indicator_func=_calc_boll, n=n)
 
-def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
+def get_vol_ratio(market:str=None, code:str=None, start:str=None, end:str=None, n:int=20, df:pd.DataFrame=None):
     """
     Calculate vol ratio against n-period average volume
 
@@ -216,7 +216,7 @@ def get_vol_ratio(market=None, code=None, start=None, end=None, n=20, df=None):
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
                           indicator_func=_calc_vol_ratio, n=n)
 
-def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None):
+def get_max_drawdown(market:str=None, code:str=None, start:str=None, end:str=None, n:int=5, df:pd.DataFrame=None):
     """
     Calculate maximum drawdown and recovery metrics
 
@@ -267,7 +267,7 @@ def get_max_drawdown(market=None, code=None, start=None, end=None, n=5, df=None)
         return result
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,indicator_func=_calc_max_drawdown, n=n)
 
-def get_rv_n(market=None, code=None, start=None, end=None, n=5, df=None):
+def get_rv_n(market:str=None, code:str=None, start:str=None, end:str=None, n:int=5, df:pd.DataFrame=None):
     """
     Calculate n-period rolling volatility
 

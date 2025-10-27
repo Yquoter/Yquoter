@@ -254,8 +254,8 @@ def get_stock_history(
 
 def get_stock_realtime(
         market: str,
-        code: Union[str, list[str]] = [],
-        fields: Union[str, list[str]] = [],
+        code: Union[str, list[str]],
+        fields: Union[str, list[str]] = None,
         source: Optional[str] = None,
         **kwargs
 ) -> pd.DataFrame:

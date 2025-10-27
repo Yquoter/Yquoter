@@ -162,8 +162,8 @@ def get_xueqiu_symbol(market: str, code: str) -> str:
 
 def get_stock_realtime_spider(
     market: str,
-    code: Union[str, list[str]] = [],
-    fields: Union[str, list[str]] = [],
+    code: Union[str, list[str]],
+    fields: Union[str, list[str]] = None,
 ) -> pd.DataFrame:
     """
     Spider interface for fetching real-time stock data from Eastmoney

@@ -32,6 +32,7 @@ from yquoter.datasource import (
     get_stock_factors,
 )
 from yquoter.indicators import *
+from yquoter.models import Stock
 from yquoter.reporting import generate_stock_report
 from yquoter.exceptions import TuShareNotImportableError
 
@@ -90,6 +91,7 @@ __all__ = [
     "register_source",
     "set_default_source",
     "init_tushare",
+    "Stock",
     "get_stock_history",
     "get_stock_realtime",
     "get_stock_factors",
