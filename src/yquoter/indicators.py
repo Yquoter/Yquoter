@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from yquoter.config import get_newest_df_path
 from yquoter.exceptions import DataFetchError, DateFormatError
 from yquoter.utils import parse_date_str, load_file_to_df
-from yquoter.datasource import get_stock_history
+from yquoter.datasource import _get_stock_history
 from yquoter.logger import get_logger
 
 logger = get_logger(__name__)
@@ -67,7 +67,7 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
             real_start = parse_date_str(start, "%Y%m%d")
             input_start = datetime.strptime(real_start, '%Y%m%d') - timedelta(days=20 + pre_days)
 
-        loader = loader or get_stock_history
+        loader = loader or _get_stock_history
 
         df = loader(market, code, input_start.strftime("%Y%m%d"), end, mode="full")
         logger.info(
@@ -88,7 +88,7 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
     return result
 
 
-def get_ma_n(market: str = None, code: str = None, start: str = None, end: str = None, n: int = 5, df: pd.DataFrame = None):
+def _get_ma_n(market: str = None, code: str = None, start: str = None, end: str = None, n: int = 5, df: pd.DataFrame = None):
     """
     Calculate MA(n) moving average
 
@@ -120,7 +120,7 @@ def get_ma_n(market: str = None, code: str = None, start: str = None, end: str =
     return calc_indicator(df=df, market=market, code=code, start=start,end=end, pre_days=n,
                           indicator_func=_calc_ma, n=n)
 
-def get_rsi_n(market: str=None, code: str=None,start: str=None, end: str=None, n: int=5, df: pd.DataFrame=None):
+def _get_rsi_n(market: str=None, code: str=None,start: str=None, end: str=None, n: int=5, df: pd.DataFrame=None):
     """
     Calculate n-period Relative Strength Index
 
@@ -157,7 +157,7 @@ def get_rsi_n(market: str=None, code: str=None,start: str=None, end: str=None, n
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n,
                           indicator_func=_calc_rsi, n=n)
 
-def get_boll_n (market:str=None, code:str=None, start:str=None, end:str=None, n:int=20, df:pd.DataFrame=None):
+def _get_boll_n (market:str=None, code:str=None, start:str=None, end:str=None, n:int=20, df:pd.DataFrame=None):
     """
     Calculate Bollinger Bands with n-period window
 
@@ -188,7 +188,7 @@ def get_boll_n (market:str=None, code:str=None, start:str=None, end:str=None, n:
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n,
                           indicator_func=_calc_boll, n=n)
 
-def get_vol_ratio(market:str=None, code:str=None, start:str=None, end:str=None, n:int=20, df:pd.DataFrame=None):
+def _get_vol_ratio(market:str=None, code:str=None, start:str=None, end:str=None, n:int=20, df:pd.DataFrame=None):
     """
     Calculate vol ratio against n-period average volume
 
@@ -216,7 +216,7 @@ def get_vol_ratio(market:str=None, code:str=None, start:str=None, end:str=None, 
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
                           indicator_func=_calc_vol_ratio, n=n)
 
-def get_max_drawdown(market:str=None, code:str=None, start:str=None, end:str=None, n:int=5, df:pd.DataFrame=None):
+def _get_max_drawdown(market:str=None, code:str=None, start:str=None, end:str=None, n:int=5, df:pd.DataFrame=None):
     """
     Calculate maximum drawdown and recovery metrics
 
@@ -267,7 +267,7 @@ def get_max_drawdown(market:str=None, code:str=None, start:str=None, end:str=Non
         return result
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,indicator_func=_calc_max_drawdown, n=n)
 
-def get_rv_n(market:str=None, code:str=None, start:str=None, end:str=None, n:int=5, df:pd.DataFrame=None):
+def _get_rv_n(market:str=None, code:str=None, start:str=None, end:str=None, n:int=5, df:pd.DataFrame=None):
     """
     Calculate n-period rolling volatility
 
@@ -294,4 +294,3 @@ def get_rv_n(market:str=None, code:str=None, start:str=None, end:str=None, n:int
         logger.info(f"Rolling volatility calculation completed for {len(result)} records")
         return result
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n, indicator_func=_calc_rv_n, n=n)
-

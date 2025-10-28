@@ -32,6 +32,12 @@ plotting = [
     "mplfinance",
     "tabulate"
 ]
+all = [
+    "tushare>=1.2.0",
+    "matplotlib>=3.5.0",
+    "mplfinance",
+    "tabulate"
+]
 
 [project.urls]
 Homepage = "https://github.com/Yodeesy/Yquoter"

@@ -10,9 +10,22 @@ from typing import Optional, Union, Literal
 from yquoter.logger import get_logger
 from yquoter.exceptions import DataSourceError
 from yquoter.datasource import _SOURCE_REGISTRY
-from yquoter.datasource import get_stock_history, get_stock_realtime, get_stock_profile, get_stock_financials, get_stock_factors
-from yquoter.indicators import get_ma_n, get_rv_n, get_rsi_n, get_boll_n, get_vol_ratio, get_max_drawdown
-from yquoter.reporting import generate_stock_report
+from yquoter.datasource import (
+    _get_stock_history,
+    _get_stock_realtime,
+    _get_stock_profile,
+    _get_stock_financials,
+    _get_stock_factors
+)
+from yquoter.indicators import(
+    _get_ma_n,
+    _get_rv_n,
+    _get_rsi_n,
+    _get_boll_n,
+    _get_vol_ratio,
+    _get_max_drawdown
+)
+from yquoter.reporting import _generate_stock_report
 
 logger = get_logger(__name__)
 
@@ -65,7 +78,7 @@ class Stock:
         Returns:
             DataFrame containing historical OHLCV data.
         """
-        return get_stock_history(
+        return _get_stock_history(
             market=self.market,
             code=self.code,
             start=start_date,
@@ -85,7 +98,7 @@ class Stock:
         Returns:
             DataFrame with current trading data (price, volume, bid/ask, etc.).
         """
-        return get_stock_realtime(
+        return _get_stock_realtime(
             market=self.market,
             code=self.code,
             fields=fields,
@@ -98,7 +111,7 @@ class Stock:
         Returns:
             DataFrame containing company metadata (industry, listing date, etc.).
         """
-        return get_stock_profile(
+        return _get_stock_profile(
             market=self.market,
             code=self.code,
             source=self.loader
@@ -113,7 +126,7 @@ class Stock:
         Returns:
             DataFrame containing factor metrics (PE, PB, etc.).
         """
-        return get_stock_factors(
+        return _get_stock_factors(
             market=self.market,
             code=self.code,
             trade_date=trade_date,
@@ -139,7 +152,7 @@ class Stock:
         Returns:
             DataFrame containing financial statement data.
         """
-        return get_stock_financials(
+        return _get_stock_financials(
             market=self.market,
             code=self.code,
             end_day=end_day,
@@ -163,7 +176,7 @@ class Stock:
         Returns:
             DataFrame with MA_n column added.
         """
-        return get_ma_n(
+        return _get_ma_n(
             market=self.market,
             code=self.code,
             start=start_date,
@@ -183,7 +196,7 @@ class Stock:
             Returns:
                 DataFrame containing dates and corresponding rolling volatility values
         """
-        return get_rv_n(
+        return _get_rv_n(
             market=self.market,
             code=self.code,
             start=start_date,
@@ -201,7 +214,7 @@ class Stock:
         Returns:
             DataFrame with RSI_n column added.
         """
-        return get_rsi_n(
+        return _get_rsi_n(
             market=self.market,
             code=self.code,
             start=start_date,
@@ -220,7 +233,7 @@ class Stock:
         Returns:
             DataFrame with Upper/Lower Band columns added.
         """
-        return get_boll_n(
+        return _get_boll_n(
             market=self.market,
             code=self.code,
             start=start_date,
@@ -239,7 +252,7 @@ class Stock:
         Returns:
             DataFrame with Volume_Ratio column added.
         """
-        return get_vol_ratio(
+        return _get_vol_ratio(
             market=self.market,
             code=self.code,
             start=start_date,
@@ -258,7 +271,7 @@ class Stock:
         Returns:
             DataFrame with Max_Drawdown column added.
         """
-        return get_max_drawdown(
+        return _get_max_drawdown(
             market=self.market,
             code=self.code,
             start=start_date,
@@ -266,7 +279,7 @@ class Stock:
             n=n
         )
 
-    def generate_report(self,
+    def get_report(self,
                         start: Optional[str] = None,
                         end: Optional[str] = None,
                         language: Literal["cn", "en"] = 'en',
@@ -282,7 +295,7 @@ class Stock:
         Returns:
             DataFrame containing report data (may also save to file).
         """
-        return generate_stock_report(
+        return _generate_stock_report(
             market=self.market,
             code=self.code,
             start=start,
