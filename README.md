@@ -27,6 +27,8 @@ Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shar
 pip install yquoter
 # If you need tuShare Module, please use:
 # pip install yquoter[tushare]
+# If you need a data-visualized report, please use:
+# pip install yquoter[plotting]
 ```
 
 ---
@@ -37,19 +39,21 @@ Yquoter/
 ├── src/ 
 │   └── yquoter/
 │       ├── __init__.py             # Exposes the main API interfaces (e.g., get_quotes)
+│       ├── reporting.py            # Generate reports for stocks
 │       ├── datasource.py           # Unified interface for all data fetching sources
-│       ├── tushare_source.py       # A module for Tushare users, requires activation
+│       ├── tushare_source.py       # A module for Tushare users, requiring activation
 │       ├── spider_source.py        # Default data source using internal web scraping
 │       ├── spider_core.py          # Core logic and mechanism for the internal spider
 │       ├── config.py               # Manages configuration settings (tokens, paths)
-│       ├── .env                    # Stores sensitive environment variables (e.g., Tushare token)
+│       ├── models.py               # Offer a type-safe and intuitive API
 │       ├── indicators.py           # Utility for calculating technical indicators
 │       ├── logger.py               # Logging configuration and utilities
 │       ├── cache.py                # Manages local data caching mechanisms
 │       ├── utils.py                # General-purpose utility functions
 │       └── configs/
 │           ├── mapping.yaml        # Mapping for Data & configs
-│           └── standard.yaml       # Yquoter's data standard
+│           ├── standard.yaml       # Yquoter's data standard
+│           └── dictionary.yaml     # Report's standard words
 │
 ├── examples/
 │   └── basic_usage.ipynb # Detailed usage examples in Jupyter Notebook

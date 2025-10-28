@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yquoter"
-version = "0.2.0"
+version = "0.3.0"
 description = "A unified financial data interface and analysis toolkit for CN/HK/US markets."
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [{ name = "Yodeesy", email = "yodeeshi@gmail.com" }]
 license = { text = "Apache-2.0" }
 requires-python = ">=3.9"
-keywords = ["finance", "stock", "tushare", "quant", "data", "crawler"]
+keywords = ["finance", "stock", "quant", "data", "crawler"]
 
 dependencies = [
     "pandas>=1.4",
@@ -27,6 +27,11 @@ classifiers = [
 
 [project.optional-dependencies]
 tushare = ["tushare>=1.2.0"]
+plotting = [
+    "matplotlib>=3.5.0",
+    "mplfinance",
+    "tabulate"
+]
 
 [project.urls]
 Homepage = "https://github.com/Yodeesy/Yquoter"

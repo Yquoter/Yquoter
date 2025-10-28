@@ -125,9 +125,16 @@ def load_standard_config() -> Dict[str, Any]:
     """
     return _load_yaml_config('standard.yaml')
 
+def load_dictionary_config() -> Dict[str, Any]:
+    """
+    Loads all standard field definitions from the 'dictionary.yaml' file.
+    """
+    return _load_yaml_config('dictionary.yaml')
+
 # Expose the global configuration dictionary right after definition
 MAPPING_CONFIG: Dict[str, Any] = load_mapping_config()
 STANDARD_CONFIG: Dict[str, Any] = load_standard_config()
+DICTIONARY_CONFIG: Dict[str, Any] = load_dictionary_config()
 
 # Standard realtime data fields defined by Yquoter (used for filtering/validation)
 REALTIME_STANDARD_FIELDS: List[str] = STANDARD_CONFIG.get('YQUOTER_REALTIME_STANDARD_FIELDS', [])
@@ -149,3 +156,6 @@ EASTMONEY_REALTIME_MAPPING: Dict[str, str] = MAPPING_CONFIG.get('EASTMONEY_REALT
 
 # Mapping for EastMoney Financials spider
 EASYMONEY_FINANCIALS_MAPPING: Dict[str, Any] = MAPPING_CONFIG.get('FINANCIAL_REPORT_MAP', {})
+
+# Dictionary for report
+LOCALIZATION: Dict[str, Dict[str, str]] = DICTIONARY_CONFIG.get('LOCALIZATION', {})

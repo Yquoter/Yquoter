@@ -162,15 +162,15 @@ def get_xueqiu_symbol(market: str, code: str) -> str:
 
 def get_stock_realtime_spider(
     market: str,
-    codes: Union[str, list[str]] = [],
-    fields: Union[str, list[str]] = [],
+    code: Union[str, list[str]],
+    fields: Union[str, list[str]] = None,
 ) -> pd.DataFrame:
     """
     Spider interface for fetching real-time stock data from Eastmoney
 
         Args:
             market: Market identifier ('cn', 'hk', 'us')
-            codes: Single stock code or list of codes (cannot be empty)
+            code: Single stock code or list of codes (cannot be empty)
             fields: Single field name or list of fields (defaults to ["code","latest","pe_dynamic","open","high","low","pre_close"] if empty)
 
         Returns:
@@ -181,16 +181,16 @@ def get_stock_realtime_spider(
     """
     logger.info(f"Fetching real-time stock data from spider")
     # Convert single string inputs to lists for consistency
-    if isinstance(codes, str):
-        codes = [codes]
+    if isinstance(code, str):
+        code = [code]
     if isinstance(fields, str):
         fields = [fields]
 
     # Validate and clean input
-    if not codes: # Check if codes list is empty
-        logger.error("No codes provided")
+    if not code:  # Check if codes list is empty
+        logger.error("No code(s) provided")
         raise ValueError("Code(s) can't be none.")
-    if not fields:# Set default fields if none provided (to be finalized via discussion)
+    if not fields:  # Set default fields if none provided (to be finalized via discussion)
         logger.info("No fields provided, initial fields will be used.")
         fields = REALTIME_STANDARD_FIELDS
     if "code" not in fields:
@@ -207,8 +207,8 @@ def get_stock_realtime_spider(
 
     # Generate Eastmoney secids for all input codes
     secids = []
-    for percode in codes:
-        persecid = get_secid_of_eastmoney(market,percode)
+    for percode in code:
+        persecid = get_secid_of_eastmoney(market, percode)
         secids.append(persecid)
 
     def make_realtime_url() -> str:

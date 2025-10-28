@@ -268,5 +268,4 @@ def get_stock_realtime_tushare(
 
     fields_to_filter = field if field is not None else REALTIME_STANDARD_FIELDS
 
-
     return filter_fields(df, fields_to_filter)

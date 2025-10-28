@@ -1,5 +1,7 @@
-from src.yquoter import init_tushare, get_stock_history
+import yquoter as yq
 
-init_tushare()
-df_cn_1 = get_stock_history("cn", "600519", "2023-01-01", "2023-06-30", klt="1Y", source="tushare")
-print(df_cn_1)
+a1= yq.Stock(market="cn", code="600717")
+df = a1.get_ma(n=20)
+print(df)
+df_2 = a1.get_realtime()
+print(df_2)
