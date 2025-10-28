@@ -19,6 +19,7 @@ import logging
 from yquoter.logger import setup_logging, get_logger
 setup_logging(level=logging.WARNING)
 logger = get_logger(__name__)
+
 # ----------------------------------------------------------------------
 # Core imports
 # ----------------------------------------------------------------------
