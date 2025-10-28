@@ -10,14 +10,14 @@ import pandas as pd
 from datetime import datetime, timedelta
 from yquoter.logger import get_logger
 from yquoter.config import LOCALIZATION
-from yquoter.exceptions import PlotLibImportError
-from yquoter.indicators import get_ma_n
+from yquoter.exceptions import PlotLibImportError, ParameterError
+from yquoter.indicators import _get_ma_n
 from typing import Optional
 
 from yquoter.datasource import (
-    get_stock_history,
-    get_stock_realtime,
-    get_stock_profile,
+    _get_stock_history,
+    _get_stock_realtime,
+    _get_stock_profile,
 )
 
 logger = get_logger(__name__)
@@ -67,7 +67,7 @@ def _get_plot_as_base64(df_history: pd.DataFrame, code: str, title: str, ylabel:
     # 4. Technical Indicators (with error handling)
     try:
         N = 20
-        df_plot = get_ma_n(n=N, df=df_plot)
+        df_plot = _get_ma_n(n=N, df=df_plot)
     except Exception as e:
         logger.warning("Failed to calculate moving average for stock %s: %s", code, str(e))
         # Continue without MA rather than failing completely
@@ -146,9 +146,9 @@ def _get_plot_as_base64(df_history: pd.DataFrame, code: str, title: str, ylabel:
         return None
 
 
-def generate_stock_report(
-        market: str = None,
-        code: str = None,
+def _generate_stock_report(
+        market: str,
+        code: str,
         start: Optional[str] = None,
         end: Optional[str] = None,
         source: Optional[str] = None,
@@ -176,7 +176,7 @@ def generate_stock_report(
     """
     # Validate required parameters
     if not market or not code:
-        raise ValueError("Both market and code parameters are required")
+        raise ParameterError("Both market and code parameters are required")
 
     # Set default date range if not provided
     today = datetime.now()
@@ -204,9 +204,9 @@ def generate_stock_report(
 
     # Data collection
     try:
-        df_history = get_stock_history(market=market, code=code, start=start, end=end, source=source)
-        df_realtime = get_stock_realtime(market=market, code=code)
-        profile = get_stock_profile(market=market, code=code)
+        df_history = _get_stock_history(market=market, code=code, start=start, end=end, source=source)
+        df_realtime = _get_stock_realtime(market=market, code=code)
+        profile = _get_stock_profile(market=market, code=code)
     except Exception as e:
         logger.error(f"Failed to fetch stock data: {e}")
         return f"# Error\nFailed to generate report: {str(e)}"

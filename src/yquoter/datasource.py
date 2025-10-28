@@ -121,7 +121,7 @@ def set_default_source(name: str) -> None:
     logger.info(f"Default data source set to: {name}")
 
 
-def get_stock_history(
+def _get_stock_history(
     market: str,
     code: str,
     start: str = None,
@@ -252,7 +252,7 @@ def get_stock_history(
     return _validate_dataframe(df, fields)
 
 
-def get_stock_realtime(
+def _get_stock_realtime(
         market: str,
         code: Union[str, list[str]],
         fields: Union[str, list[str]] = None,
@@ -382,7 +382,7 @@ def get_stock_realtime(
 
     return final_df
 
-def get_stock_financials(
+def _get_stock_financials(
         market: str,
         code: str,
         end_day: str,
@@ -463,7 +463,7 @@ def get_stock_financials(
     return df
 
 
-def get_stock_profile(
+def _get_stock_profile(
         market: str,
         code: str,
         source: Optional[str] = None,
@@ -534,7 +534,7 @@ def get_stock_profile(
     return df
 
 
-def get_stock_factors(
+def _get_stock_factors(
         market: str,
         code: str,
         trade_date: str,

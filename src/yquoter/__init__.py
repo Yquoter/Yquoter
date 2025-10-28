@@ -22,19 +22,24 @@ setup_logging(level=logging.WARNING)
 # ----------------------------------------------------------------------
 # Core imports
 # ----------------------------------------------------------------------
-from yquoter.datasource import (
-    register_source,
-    set_default_source,
+from yquoter.config import get_newest_df_path
+from yquoter.datasource import register_source, set_default_source
+from yquoter.models import Stock
+from yquoter.exceptions import TuShareNotImportableError
+from yquoter.compat import (
     get_stock_history,
     get_stock_realtime,
     get_stock_financials,
     get_stock_profile,
     get_stock_factors,
+    get_rsi_n,
+    get_max_drawdown,
+    get_boll_n,
+    get_rv_n,
+    get_vol_ratio,
+    get_ma_n,
+    generate_stock_report
 )
-from yquoter.indicators import *
-from yquoter.models import Stock
-from yquoter.reporting import generate_stock_report
-from yquoter.exceptions import TuShareNotImportableError
 
 # ----------------------------------------------------------------------
 # Cache initialization

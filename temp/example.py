@@ -1,7 +1,7 @@
 import yquoter as yq
 
-a1= yq.Stock(market="cn", code="600717")
-df = a1.get_ma(n=20)
+df = yq.get_newest_df_path()
 print(df)
-df_2 = a1.get_realtime()
-print(df_2)
+
+df_s = yq.get_stock_history(market="cn", code="600797")
+print(df_s)
