@@ -118,7 +118,7 @@ def _get_plot_as_base64(df_history: pd.DataFrame, code: str, title: str, ylabel:
         add_plots = []
         if 'MA20' in df_plot.columns:
             add_plots.append(
-                mpf.make_addplot(df_plot['MA20'], color='b', secondary_y=False)
+                mpf.make_addplot(df_plot['MA20'], color='#FF6B00', secondary_y=False)
             )
 
         fig, axes = mpf.plot(
@@ -135,12 +135,18 @@ def _get_plot_as_base64(df_history: pd.DataFrame, code: str, title: str, ylabel:
             tight_layout=True,
             datetime_format='%Y-%m-%d',
         )
+        import matplotlib.dates as mdates
+        axes[0].xaxis.set_major_locator(mdates.DayLocator(interval=1))
         fig.suptitle(
-            title,  # 标题文本
-            y=1,  # 垂直位置（0-1之间，值越大越靠上）
-            fontsize=14,  # 标题字体大小
-            ha='center'  # 水平居中
+            title,
+            y=1,
+            fontsize=14,
+            ha='center'
         )
+        for ax in axes:
+            for spine in ax.spines.values():
+                spine.set_edgecolor('#CCCCCC')
+                spine.set_linewidth(0.8)
         # 6. Save to buffer and encode
         buf = BytesIO()
         with warnings.catch_warnings():
