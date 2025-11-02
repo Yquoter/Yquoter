@@ -36,3 +36,4 @@ temp/
 
 # release
 dist/
+/src/yquoter/out/

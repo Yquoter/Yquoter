@@ -6,6 +6,9 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 
 import os
+import warnings
+
+import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 from yquoter.logger import get_logger
@@ -106,7 +109,10 @@ def _get_plot_as_base64(df_history: pd.DataFrame, code: str, title: str, ylabel:
         style = mpf.make_mpf_style(
             base_mpf_style='yahoo',
             gridstyle='-',
-            rc={'font.family': ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS', 'sans-serif']}
+            rc={'font.family': ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS', 'sans-serif'],
+                'figure.subplot.hspace': 0.4,
+                'figure.autolayout': True
+            }
         )
 
         add_plots = []
@@ -119,23 +125,32 @@ def _get_plot_as_base64(df_history: pd.DataFrame, code: str, title: str, ylabel:
             df_plot,
             type='candle',
             style=style,
-            title=title,
+
             ylabel=ylabel,
             volume=True,
             addplot=add_plots,
-            figratio=(16, 9),
-            figscale=0.8,
-            returnfig=True
+            figratio=(16, 10),
+            figscale=0.9,
+            returnfig=True,
+            tight_layout=True,
+            datetime_format='%Y-%m-%d',
         )
-
+        fig.suptitle(
+            title,  # 标题文本
+            y=1,  # 垂直位置（0-1之间，值越大越靠上）
+            fontsize=14,  # 标题字体大小
+            ha='center'  # 水平居中
+        )
         # 6. Save to buffer and encode
         buf = BytesIO()
-        fig.savefig(
-            buf,
-            format='png',
-            bbox_inches='tight',
-            dpi=100  # Adjust for quality/size balance
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, message=".*tight_layout.*")
+            fig.savefig(
+                buf,
+                format='png',
+                bbox_inches='tight',
+                dpi=100  # Adjust for quality/size balance
+            )
         plt.close(fig)
         buf.seek(0)
 
@@ -227,9 +242,9 @@ def _generate_stock_report(
         p = profile.iloc[0]
         description = p.get('description', p.get('MAIN_BUSINESS', L['no_description']))
         report_sections.extend([
-            f"**{L['label_name']}:** {p.get('name', p.get('NAME', 'N/A'))}",
-            f"**{L['label_industry']}:** {p.get('industry', p.get('INDUSTRY', 'N/A'))}",
-            f"**{L['label_list_date']}:** {p.get('list_date', p.get('LISTING_DATE', 'N/A'))}",
+            f"**{L['label_name']}:** {p.get('name', p.get('NAME', 'N/A'))}\n\n",
+            f"**{L['label_industry']}:** {p.get('industry', p.get('INDUSTRY', 'N/A'))}\n\n",
+            f"**{L['label_list_date']}:** {p.get('list_date', p.get('LISTING_DATE', 'N/A'))}\n\n",
             f"**{L['label_desc']}:** \n> {description}\n"
         ])
     else:
@@ -326,3 +341,6 @@ def _generate_stock_report(
         logger.error(f"Failed to save report: {e}")
 
     return final_report
+
+if __name__ == '__main__':
+    _generate_stock_report("cn","000001")
