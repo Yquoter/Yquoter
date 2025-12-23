@@ -24,7 +24,7 @@ From v0.3.0, all core operations are now methods of the `Stock` class.
 from yquoter import Stock
 
 # New chained style
-df = Stock("AAPL").get_history(start_date="2023-01-01")
+df = Stock(market="us", code="AAPL").get_history(start_date="2023-01-01")
 ```
 
 ### ⚠️ Compatibility Notice
