@@ -13,9 +13,10 @@ requires-python = ">=3.9"
 keywords = ["finance", "stock", "quant", "data", "crawler"]
 
 dependencies = [
-    "pandas>=1.4",
-    "python-dotenv>=0.21",
-    "PyYAML>=6.0.2",
+    "pandas>=1.5.3",
+    "requests>=2.31.0",
+    "python-dotenv>=1.1.1",
+    "PyYAML~=6.0.2",
     "httpx>=0.27.0",
 ]
 
