@@ -28,8 +28,9 @@ Thumbs.db
 # Environment Variable Setting
 *.env
 
-# test
+# Output & temp
 temp/
+out/
 
 # Python egg-info
 *.egg-info/
