@@ -12,6 +12,7 @@ helper functions to prepare data context for LLM consumption.
 """
 
 from typing import Dict, Optional
+import pandas as pd
 
 # ---------------------------------------------------------------------------
 # Market analysis prompts
@@ -228,8 +229,6 @@ def prepare_analysis_context(
     Returns:
         Dict[str, str]: Formatted context data for template filling.
     """
-    import pandas as pd
-
     # --- Extract company info from profile ---
     company_name = "N/A"
     industry = "N/A"
