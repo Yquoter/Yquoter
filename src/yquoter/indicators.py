@@ -16,23 +16,32 @@ from yquoter.logger import get_logger
 
 logger = get_logger(__name__)
 
-def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_days=5, loader=None, indicator_func=None, **kwargs):
-    """
-    Generic indicator calculator
+def calc_indicator(df=None, market=None, code=None, start=None, end=None,
+                    pre_days=5, loader=None, indicator_func=None, **kwargs):
+    """Generic indicator calculator supporting multiple data sources.
 
-        Args:
-            df: DataFrame or file path (string) containing stock data
-            market: Market identifier (required if df is None)
-            code: Stock code (required if df is None)
-            start: Start date for data fetching (required if df is None)
-            end: End date for data fetching (required if df is None)
-            pre_days: Number of days to fetch beyond start date for calculation
-            loader: Function to load data (defaults to get_stock_history)
-            indicator_func: Actual indicator calculation function (df -> df)
-            **kwargs: Additional parameters passed to indicator_func
+    Accepts a DataFrame, file path, or fetches data automatically.
+    Applies the given indicator function and returns the result.
 
-        Returns:
-            Result of indicator calculation (typically DataFrame or dict)
+    Args:
+        df: DataFrame or file path (string) containing stock data.
+            If ``None``, data will be fetched automatically.
+        market: Market identifier. Required if ``df`` is ``None``.
+        code: Stock code. Required if ``df`` is ``None``.
+        start: Start date for data fetching. Required if ``df`` is
+            ``None``.
+        end: End date for data fetching. Required if ``df`` is ``None``.
+        pre_days: Number of extra days to fetch before the start date
+            for warm-up calculation. Default is 5.
+        loader: Function to load data. Defaults to
+            ``_get_stock_history``.
+        indicator_func: The actual indicator calculation function that
+            takes a DataFrame and returns a result.
+        **kwargs: Additional parameters passed to the indicator function.
+
+    Returns:
+        Result of the indicator calculation, typically a
+        ``pd.DataFrame`` or ``dict``.
     """
     real_start = None
 
@@ -88,20 +97,22 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,pre_day
     return result
 
 
-def _get_ma_n(market: str = None, code: str = None, start: str = None, end: str = None, n: int = 5, df: pd.DataFrame = None):
-    """
-    Calculate MA(n) moving average
+def _get_ma_n(market: str = None, code: str = None, start: str = None,
+               end: str = None, n: int = 5,
+               df: pd.DataFrame = None) -> pd.DataFrame:
+    """Calculate N-period Moving Average (MA).
 
-        Args:
-            market: Market identifier
-            code: Stock code
-            start: Start date
-            end: End date
-            n: Number of periods for MA calculation (default: 5)
-            df: Optional DataFrame with stock data
+    Args:
+        market: Market identifier.
+        code: Stock code.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        n: Number of periods for MA calculation. Default is 5.
+        df: Optional DataFrame with stock data. If provided, ``market``,
+            ``code``, ``start``, and ``end`` are ignored.
 
-        Returns:
-            DataFrame containing dates and corresponding MA(n) values
+    Returns:
+        pd.DataFrame: Data with an ``MA{n}`` column added.
     """
 
     def _calc_ma(df, real_start=None, n=5):
@@ -120,20 +131,21 @@ def _get_ma_n(market: str = None, code: str = None, start: str = None, end: str 
     return calc_indicator(df=df, market=market, code=code, start=start,end=end, pre_days=n,
                           indicator_func=_calc_ma, n=n)
 
-def _get_rsi_n(market: str=None, code: str=None,start: str=None, end: str=None, n: int=5, df: pd.DataFrame=None):
-    """
-    Calculate n-period Relative Strength Index
+def _get_rsi_n(market: str = None, code: str = None, start: str = None,
+                end: str = None, n: int = 5,
+                df: pd.DataFrame = None) -> pd.DataFrame:
+    """Calculate N-period Relative Strength Index (RSI).
 
-        Args:
-            market: Market identifier
-            code: Stock code
-            start: Start date
-            end: End date
-            n: Number of periods for RSI calculation (default: 5)
-            df: Optional DataFrame with stock data
+    Args:
+        market: Market identifier.
+        code: Stock code.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        n: Number of periods for RSI calculation. Default is 5.
+        df: Optional DataFrame with stock data.
 
-        Returns:
-            DataFrame containing dates and corresponding RSI(n) values
+    Returns:
+        pd.DataFrame: Data with an ``RSI{n}`` column.
     """
     def _calc_rsi(df, real_start, n=5):
         logger.info(f"Calculating RSI{n} indicator")
@@ -157,20 +169,22 @@ def _get_rsi_n(market: str=None, code: str=None,start: str=None, end: str=None, 
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n,
                           indicator_func=_calc_rsi, n=n)
 
-def _get_boll_n (market:str=None, code:str=None, start:str=None, end:str=None, n:int=20, df:pd.DataFrame=None):
-    """
-    Calculate Bollinger Bands with n-period window
+def _get_boll_n(market: str = None, code: str = None, start: str = None,
+                 end: str = None, n: int = 20,
+                 df: pd.DataFrame = None) -> pd.DataFrame:
+    """Calculate N-period Bollinger Bands.
 
-        Args:
-            market: Market identifier
-            code: Stock code
-            start: Start date
-            end: End date
-            n: Number of periods for calculation (default: 20)
-            df: Optional DataFrame with stock data
+    Args:
+        market: Market identifier.
+        code: Stock code.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        n: Standard deviation window. Default is 20.
+        df: Optional DataFrame with stock data.
 
-        Returns:
-            DataFrame containing dates, upper band, middle band (MA), and lower band
+    Returns:
+        pd.DataFrame: Data with ``upper``, ``mid``, and ``lower``
+            band columns.
     """
     def _calc_boll(df, real_start, n=20):
         logger.info(f"Calculating Bollinger Bands with {n}-period window")
@@ -188,20 +202,21 @@ def _get_boll_n (market:str=None, code:str=None, start:str=None, end:str=None, n
     return calc_indicator(df=df, market=market, code=code, start=start, end=end, pre_days=n,
                           indicator_func=_calc_boll, n=n)
 
-def _get_vol_ratio(market:str=None, code:str=None, start:str=None, end:str=None, n:int=20, df:pd.DataFrame=None):
-    """
-    Calculate vol ratio against n-period average volume
+def _get_vol_ratio(market: str = None, code: str = None, start: str = None,
+                    end: str = None, n: int = 20,
+                    df: pd.DataFrame = None) -> pd.DataFrame:
+    """Calculate volume ratio against N-period average volume.
 
-        Args:
-            market: Market identifier
-            code: Stock code
-            start: Start date
-            end: End date
-            n: Number of periods for average calculation (default: 20)
-            df: Optional DataFrame with stock data
+    Args:
+        market: Market identifier.
+        code: Stock code.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        n: Baseline volume window. Default is 20.
+        df: Optional DataFrame with stock data.
 
-        Returns:
-            DataFrame containing dates and corresponding volume ratios
+    Returns:
+        pd.DataFrame: Data with a ``vol_ratio{n}`` column.
     """
     def _calc_vol_ratio(df,real_start,n=5):
         logger.info(f"Calculating volume ratio with {n}-period average")
@@ -216,20 +231,30 @@ def _get_vol_ratio(market:str=None, code:str=None, start:str=None, end:str=None,
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,
                           indicator_func=_calc_vol_ratio, n=n)
 
-def _get_max_drawdown(market:str=None, code:str=None, start:str=None, end:str=None, n:int=5, df:pd.DataFrame=None):
-    """
-    Calculate maximum drawdown and recovery metrics
+def _get_max_drawdown(market: str = None, code: str = None,
+                        start: str = None, end: str = None, n: int = 5,
+                        df: pd.DataFrame = None) -> dict:
+    """Calculate maximum drawdown and recovery metrics.
 
-        Args:
-            market: Market identifier
-            code: Stock code
-            start: Start date
-            end: End date
-            n: Lookback period (default: 5)
-            df: Optional DataFrame with stock data
+    Args:
+        market: Market identifier.
+        code: Stock code.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        n: Lookback period. Default is 5.
+        df: Optional DataFrame with stock data.
 
-        Returns:
-            Dictionary containing max drawdown value and related dates/metrics
+    Returns:
+        dict: Dictionary containing:
+            - ``max_drawdown``: Maximum drawdown value.
+            - ``max_drawdown_peak_date``: Date of the peak before
+              drawdown.
+            - ``max_drawdown_peak_price``: Price at the peak.
+            - ``max_drawdown_trough_date``: Date of the trough.
+            - ``max_drawdown_trough_price``: Price at the trough.
+            - ``recovery_success``: Whether recovery occurred.
+            - ``recovery_days``: Days to recover (or ``None``).
+            - ``recovery_date``: Recovery date (or ``None``).
     """
 
     def _calc_max_drawdown(df,real_start,n=5):
@@ -267,20 +292,21 @@ def _get_max_drawdown(market:str=None, code:str=None, start:str=None, end:str=No
         return result
     return calc_indicator(df=df, market=market, code=code, start=start,end=end,pre_days=n,indicator_func=_calc_max_drawdown, n=n)
 
-def _get_rv_n(market:str=None, code:str=None, start:str=None, end:str=None, n:int=5, df:pd.DataFrame=None):
-    """
-    Calculate n-period rolling volatility
+def _get_rv_n(market: str = None, code: str = None, start: str = None,
+               end: str = None, n: int = 5,
+               df: pd.DataFrame = None) -> pd.DataFrame:
+    """Calculate N-period rolling volatility (RV).
 
-        Args:
-            market: Market identifier
-            code: Stock code
-            start: Start date
-            end: End date
-            n: Number of periods for calculation (default: 5)
-            df: Optional DataFrame with stock data
+    Args:
+        market: Market identifier.
+        code: Stock code.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        n: Rolling window size. Default is 5.
+        df: Optional DataFrame with stock data.
 
-        Returns:
-            DataFrame containing dates and corresponding rolling volatility values
+    Returns:
+        pd.DataFrame: Data with an ``RV{n}`` column.
     """
     def _calc_rv_n(df,real_start,n=5):
         logger.info(f"Calculating {n}-period rolling volatility")

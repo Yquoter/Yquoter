@@ -31,14 +31,16 @@ F = TypeVar('F', bound=Callable[..., Any])
 
 
 def deprecated(new_api: str, version: str = "0.3.0") -> Callable[[F], F]:
-    """Mark functions as deprecated with alternative API recommendation.
+    """Decorator to mark functions as deprecated with an alternative API recommendation.
 
     Args:
-        new_api: Replacement API path (e.g. 'module.new_function')
-        version: Version when deprecation occurred (default: '0.3.0')
+        new_api: Replacement API path (e.g., ``'Stock.get_history()'``).
+        version: Version when the deprecation occurred. Default is
+            ``'0.3.0'``.
 
     Returns:
-        Decorated function that emits deprecation warning on invocation.
+        Callable: Decorated function that emits a ``DeprecationWarning``
+        on invocation.
     """
 
     def decorator(func: F) -> F:
@@ -71,20 +73,21 @@ def get_stock_history(
 ) -> pd.DataFrame:
     """DEPRECATED: Get historical stock data.
 
-    Warning: Use Stock.get_history() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_history()` instead.
 
     Args:
-        market: Exchange market code
-        code: Stock symbol
-        start: Start date (YYYY-MM-DD)
-        end: End date (YYYY-MM-DD)
-        klt: K-line type (default: 101)
-        fqt: Forward-adjusted type (default: 1)
-        fields: Data fields to return (default: "basic")
-        source: Optional data source override
+        market: Exchange market code.
+        code: Stock symbol.
+        start: Start date in ``YYYY-MM-DD`` format.
+        end: End date in ``YYYY-MM-DD`` format.
+        klt: K-line type. Default is 101.
+        fqt: Forward-adjusted type. Default is 1.
+        fields: Data fields to return. Default is ``"basic"``.
+        source: Optional data source override.
 
     Returns:
-        DataFrame containing historical stock data
+        pd.DataFrame: Historical stock data.
     """
     return _get_stock_history(market, code, start, end, klt, fqt, fields, source, **kwargs)
 
@@ -99,16 +102,17 @@ def get_stock_realtime(
 ) -> pd.DataFrame:
     """DEPRECATED: Get real-time stock quotes.
 
-    Warning: Use Stock.get_realtime() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_realtime()` instead.
 
     Args:
-        market: Exchange market code
-        code: Stock symbol or list of symbols
-        fields: Data fields to retrieve
-        source: Optional data source override
+        market: Exchange market code.
+        code: Stock symbol or list of symbols.
+        fields: Data fields to retrieve.
+        source: Optional data source override.
 
     Returns:
-        DataFrame with real-time market data
+        pd.DataFrame: Real-time market data.
     """
     return _get_stock_realtime(market, code, fields, source, **kwargs)
 
@@ -122,15 +126,16 @@ def get_stock_profile(
 ) -> pd.DataFrame:
     """DEPRECATED: Get company profile information.
 
-    Warning: Use Stock.get_profile() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_profile()` instead.
 
     Args:
-        market: Exchange market code
-        code: Stock symbol
-        source: Optional data source override
+        market: Exchange market code.
+        code: Stock symbol.
+        source: Optional data source override.
 
     Returns:
-        DataFrame containing company profile data
+        pd.DataFrame: Company profile data.
     """
     return _get_stock_profile(market, code, source, **kwargs)
 
@@ -145,16 +150,17 @@ def get_stock_factors(
 ) -> pd.DataFrame:
     """DEPRECATED: Get stock factor data.
 
-    Warning: Use Stock.get_factors() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_factors()` instead.
 
     Args:
-        market: Exchange market code
-        code: Stock symbol
-        trade_date: Specific trading date (YYYY-MM-DD)
-        source: Optional data source override
+        market: Exchange market code.
+        code: Stock symbol.
+        trade_date: Specific trading date in ``YYYY-MM-DD`` format.
+        source: Optional data source override.
 
     Returns:
-        DataFrame with factor metrics
+        pd.DataFrame: Factor metrics.
     """
     return _get_stock_factors(market, code, trade_date, source, **kwargs)
 
@@ -171,18 +177,19 @@ def get_stock_financials(
 ) -> pd.DataFrame:
     """DEPRECATED: Get financial statements.
 
-    Warning: Use Stock.get_financials() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_financials()` instead.
 
     Args:
-        market: Exchange market code
-        code: Stock symbol
-        end_day: Report end date (YYYY-MM-DD)
-        report_type: Financial report type (default: 'CWBB')
-        limit: Number of periods to retrieve (default: 12)
-        source: Optional data source override
+        market: Exchange market code.
+        code: Stock symbol.
+        end_day: Report end date in ``YYYY-MM-DD`` format.
+        report_type: Financial report type. Default is ``'CWBB'``.
+        limit: Number of periods to retrieve. Default is 12.
+        source: Optional data source override.
 
     Returns:
-        DataFrame containing financial data
+        pd.DataFrame: Financial data.
     """
     return _get_stock_financials(market, code, end_day, report_type, limit, source, **kwargs)
 
@@ -198,18 +205,19 @@ def get_ma_n(
 ) -> pd.DataFrame:
     """DEPRECATED: Calculate moving average.
 
-    Warning: Use Stock.get_ma() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_ma()` instead.
 
     Args:
-        market: Exchange market code (optional)
-        code: Stock symbol (optional)
-        start: Start date (YYYY-MM-DD, optional)
-        end: End date (YYYY-MM-DD, optional)
-        n: Period length (optional)
-        df: Input DataFrame (alternative to market/code)
+        market: Exchange market code.
+        code: Stock symbol.
+        start: Start date in ``YYYY-MM-DD`` format.
+        end: End date in ``YYYY-MM-DD`` format.
+        n: Period length.
+        df: Input DataFrame (alternative to ``market``/``code``).
 
     Returns:
-        DataFrame with MA calculations
+        pd.DataFrame: MA calculation results.
     """
     return _get_ma_n(market, code, start, end, n, df)
 
@@ -225,18 +233,19 @@ def get_boll_n(
 ) -> pd.DataFrame:
     """DEPRECATED: Calculate Bollinger Bands.
 
-    Warning: Use Stock.get_boll() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_boll()` instead.
 
     Args:
-        market: Exchange market code (optional)
-        code: Stock symbol (optional)
-        start: Start date (YYYY-MM-DD, optional)
-        end: End date (YYYY-MM-DD, optional)
-        n: Period length (optional)
-        df: Input DataFrame (alternative to market/code)
+        market: Exchange market code.
+        code: Stock symbol.
+        start: Start date in ``YYYY-MM-DD`` format.
+        end: End date in ``YYYY-MM-DD`` format.
+        n: Period length.
+        df: Input DataFrame (alternative to ``market``/``code``).
 
     Returns:
-        DataFrame with Bollinger Band calculations
+        pd.DataFrame: Bollinger Band calculation results.
     """
     return _get_boll_n(market, code, start, end, n, df)
 
@@ -252,18 +261,19 @@ def get_vol_ratio(
 ) -> pd.DataFrame:
     """DEPRECATED: Calculate volume ratio.
 
-    Warning: Use Stock.get_vol_ratio() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_vol_ratio()` instead.
 
     Args:
-        market: Exchange market code (optional)
-        code: Stock symbol (optional)
-        start: Start date (YYYY-MM-DD, optional)
-        end: End date (YYYY-MM-DD, optional)
-        n: Period length (optional)
-        df: Input DataFrame (alternative to market/code)
+        market: Exchange market code.
+        code: Stock symbol.
+        start: Start date in ``YYYY-MM-DD`` format.
+        end: End date in ``YYYY-MM-DD`` format.
+        n: Period length.
+        df: Input DataFrame (alternative to ``market``/``code``).
 
     Returns:
-        DataFrame with volume ratio calculations
+        pd.DataFrame: Volume ratio calculation results.
     """
     return _get_vol_ratio(market, code, start, end, n, df)
 
@@ -279,18 +289,19 @@ def get_max_drawdown(
 ) -> pd.DataFrame:
     """DEPRECATED: Calculate maximum drawdown.
 
-    Warning: Use Stock.get_max_drawdown() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_max_drawdown()` instead.
 
     Args:
-        market: Exchange market code (optional)
-        code: Stock symbol (optional)
-        start: Start date (YYYY-MM-DD, optional)
-        end: End date (YYYY-MM-DD, optional)
-        n: Period length (optional)
-        df: Input DataFrame (alternative to market/code)
+        market: Exchange market code.
+        code: Stock symbol.
+        start: Start date in ``YYYY-MM-DD`` format.
+        end: End date in ``YYYY-MM-DD`` format.
+        n: Period length.
+        df: Input DataFrame (alternative to ``market``/``code``).
 
     Returns:
-        DataFrame with max drawdown calculations
+        pd.DataFrame: Max drawdown calculation results.
     """
     return _get_max_drawdown(market, code, start, end, n, df)
 
@@ -306,18 +317,19 @@ def get_rsi_n(
 ) -> pd.DataFrame:
     """DEPRECATED: Calculate Relative Strength Index.
 
-    Warning: Use Stock.get_rsi() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_rsi()` instead.
 
     Args:
-        market: Exchange market code (optional)
-        code: Stock symbol (optional)
-        start: Start date (YYYY-MM-DD, optional)
-        end: End date (YYYY-MM-DD, optional)
-        n: Period length (optional)
-        df: Input DataFrame (alternative to market/code)
+        market: Exchange market code.
+        code: Stock symbol.
+        start: Start date in ``YYYY-MM-DD`` format.
+        end: End date in ``YYYY-MM-DD`` format.
+        n: Period length.
+        df: Input DataFrame (alternative to ``market``/``code``).
 
     Returns:
-        DataFrame with RSI calculations
+        pd.DataFrame: RSI calculation results.
     """
     return _get_rsi_n(market, code, start, end, n, df)
 
@@ -333,18 +345,19 @@ def get_rv_n(
 ) -> pd.DataFrame:
     """DEPRECATED: Calculate realized volatility.
 
-    Warning: Use Stock.get_rv() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_rv()` instead.
 
     Args:
-        market: Exchange market code (optional)
-        code: Stock symbol (optional)
-        start: Start date (YYYY-MM-DD, optional)
-        end: End date (YYYY-MM-DD, optional)
-        n: Period length (optional)
-        df: Input DataFrame (alternative to market/code)
+        market: Exchange market code.
+        code: Stock symbol.
+        start: Start date in ``YYYY-MM-DD`` format.
+        end: End date in ``YYYY-MM-DD`` format.
+        n: Period length.
+        df: Input DataFrame (alternative to ``market``/``code``).
 
     Returns:
-        DataFrame with volatility calculations
+        pd.DataFrame: Volatility calculation results.
     """
     return _get_rv_n(market, code, start, end, n, df)
 
@@ -357,22 +370,30 @@ def generate_stock_report(
         end: Optional[str] = None,
         source: Optional[str] = None,
         language: str = 'en',
-        output_dir: Optional[str] = None
+        output_dir: Optional[str] = None,
+        llm_provider: Optional[str] = None,
 ) -> str:
     """DEPRECATED: Generate stock analysis report.
 
-    Warning: Use Stock.get_report() instead.
+    .. deprecated:: 0.3.0
+       Use :meth:`Stock.get_report(llm_provider=...)` instead.
 
     Args:
-        market: Exchange market code (optional)
-        code: Stock symbol (optional)
-        start: Start date (YYYY-MM-DD, optional)
-        end: End date (YYYY-MM-DD, optional)
-        source: Optional data source override
-        language: Report language (default: 'en')
-        output_dir: Custom output directory (optional)
+        market: Exchange market code.
+        code: Stock symbol.
+        start: Start date in ``YYYY-MM-DD`` format.
+        end: End date in ``YYYY-MM-DD`` format.
+        source: Optional data source override.
+        language: Report language. Default is ``'en'``.
+        output_dir: Custom output directory.
+        llm_provider: Optional LLM provider for AI analysis.
+            ``None`` (default) skips AI. Accepts names like
+            ``"deepseek"``, ``"ChatGPT"``, ``"Claude"``.
 
     Returns:
-        Path to generated report file
+        str: Generated report content in Markdown format.
     """
-    return _generate_stock_report(market, code, start, end, source, language, output_dir)
+    return _generate_stock_report(
+        market, code, start, end, source, language, output_dir,
+        llm_provider=llm_provider,
+    )

@@ -20,18 +20,18 @@ logger = get_logger(__name__)
 
 # Standardized columns for History-DataFrame format
 def _validate_dataframe(df: pd.DataFrame, fields: str) -> pd.DataFrame:
-    """
-    Validate DataFrame structure against required columns
+    """Validate DataFrame structure against required columns.
 
-        Args:
-            df: DataFrame to validate
-            fields: Validation mode ('basic' or 'full')
+    Args:
+        df: DataFrame to validate.
+        fields: Validation mode. Either ``"basic"`` or ``"full"``.
 
-        Returns:
-            Validated DataFrame (filtered to required columns)
+    Returns:
+        pd.DataFrame: Validated DataFrame filtered to required columns.
 
-        Raises:
-            DataFormatError: If DataFrame is empty or missing required columns
+    Raises:
+        DataFormatError: If the DataFrame is empty or missing required
+            columns.
     """
     if df is None or df.empty:
         raise DataFormatError("Data source returned empty data or parsing failed; validation cannot proceed.")
@@ -54,33 +54,43 @@ def _validate_dataframe(df: pd.DataFrame, fields: str) -> pd.DataFrame:
 # ---------- Stock Code Tools ----------
 
 def normalize_code(code: str) -> str:
-    """
-    Normalize stock code by removing whitespace and converting to uppercase
+    """Normalize a stock code.
+
+    Removes leading/trailing whitespace and converts to uppercase.
+
+    Args:
+        code: Raw stock code.
+
+    Returns:
+        str: Normalized stock code.
     """
     return code.strip().upper()
 
 def has_market_suffix(code: str) -> bool:
-    """
-    Check if stock code contains market suffix
+    """Check if a stock code contains a market suffix (e.g., ``.SH``).
+
+    Args:
+        code: Stock code to check.
+
+    Returns:
+        bool: ``True`` if the code has a market suffix, ``False`` otherwise.
     """
     return bool(re.match(r'^[\w\d]+\.([A-Z]{2,3})$', code))
 
-def convert_code_to_tushare(
-    code: str, 
-    market: str
-) -> str:
-    """
-    Convert stock code to TuShare standard format based on market type
+def convert_code_to_tushare(code: str, market: str) -> str:
+    """Convert a stock code to TuShare standard format.
 
-        Args:
-            code: Original stock code
-            market: Market identifier ('cn', 'hk', 'us')
+    Args:
+        code: Original stock code.
+        market: Market identifier ('cn', 'hk', 'us').
 
-        Returns:
-            TuShare-formatted stock code with market suffix
+    Returns:
+        str: TuShare-formatted stock code with market suffix
+            (e.g., ``"600000.SH"``).
 
-        Raises:
-            CodeFormatError: If code format is unrecognized or market is unknown
+    Raises:
+        CodeFormatError: If the code format is unrecognized or the
+            market is unknown.
     """
     logger.info(f"Converting {code} to TuShare format")
     market.strip().lower()
@@ -112,28 +122,24 @@ def convert_code_to_tushare(
 
 # ---------- Date Processing Tools ----------
 
-def parse_date_str(
-    date_str: str, 
-    fmt_out: str = "%Y%m%d"
-) -> str:
-    """
-    Parse various common date string formats into specified output format
+def parse_date_str(date_str: str, fmt_out: str = "%Y%m%d") -> str:
+    """Parse a date string into the specified output format.
 
-        Supported input formats:
-        - '2025-07-09'
-        - '2025/07/09'
-        - '20250709'
-        - '2025-07-09 23:00:00'
+    Supported input formats:
+    - ``"2025-07-09"``
+    - ``"2025/07/09"``
+    - ``"20250709"``
+    - ``"2025-07-09 23:00:00"``
 
-        Args:
-            date_str: Input date string to parse
-            fmt_out: Desired output format (default: '%Y%m%d')
+    Args:
+        date_str: Input date string to parse.
+        fmt_out: Desired output format. Default is ``"%Y%m%d"``.
 
-        Returns:
-            Formatted date string in specified output format
+    Returns:
+        str: Formatted date string in the specified output format.
 
-        Raises:
-            DateFormatError: If date format cannot be recognized
+    Raises:
+        DateFormatError: If the date string cannot be parsed.
     """
     date_str = date_str.strip()
     fmts_in = ["%Y-%m-%d", "%Y/%m/%d", "%Y%m%d", "%Y-%m-%d %H:%M:%S"]
@@ -151,22 +157,21 @@ def parse_date_str(
 
 
 def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
-    """
-    Automatically load file into DataFrame based on file extension
+    """Load a file into a DataFrame based on its extension.
 
-        Supports: csv / xlsx / json / parquet
-        Additional parameters are passed to corresponding pandas read functions
+    Supports: csv, xlsx, json, parquet.
 
-        Args:
-            path: Path to the file to load
-           ** kwargs: Additional parameters for pandas read functions
+    Args:
+        path: Path to the file to load.
+        **kwargs: Additional keyword arguments passed to the corresponding
+            pandas read function.
 
-        Returns:
-            DataFrame containing at least ['date', 'close'] columns
+    Returns:
+        pd.DataFrame: Loaded DataFrame.
 
-        Raises:
-            FileNotFoundError: If specified file does not exist
-            ValueError: If file format is unsupported or required columns are missing
+    Raises:
+        FileNotFoundError: If the specified file does not exist.
+        ValueError: If the file format is unsupported.
     """
     if not os.path.exists(path):
         logger.error(f"File not found: {path}")
@@ -198,15 +203,14 @@ def load_file_to_df(path: str, **kwargs) -> pd.DataFrame:
     return _validate_dataframe(df, fields="full")
 
 def filter_fields(df: pd.DataFrame, fields: List[str]) -> pd.DataFrame:
-    """
-    Filter DataFrame to contain only specified fields
+    """Filter a DataFrame to contain only the specified fields.
 
-        Args:
-            df: Source DataFrame from data source
-            fields: List of fields that user wants to keep
+    Args:
+        df: Source DataFrame.
+        fields: List of field names to keep.
 
-        Returns:
-            DataFrame containing only the specified fields
+    Returns:
+        pd.DataFrame: Filtered DataFrame.
     """
     if not fields:
         return df
@@ -218,6 +222,11 @@ def filter_fields(df: pd.DataFrame, fields: List[str]) -> pd.DataFrame:
 
     return df[available]
 def _is_interactive_session() -> bool:
-    """Checks if the code is running in an interactive terminal session."""
+    """Check if the code is running in an interactive terminal session.
+
+    Returns:
+        bool: ``True`` if running interactively (stdin is a TTY and not
+            in CI), ``False`` otherwise.
+    """
     # Check if stdin is a TTY and not running in a continuous integration environment (e.g., GitHub Actions)
     return sys.stdin.isatty() and not os.environ.get('CI')

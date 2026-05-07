@@ -30,11 +30,23 @@ _SOURCE_REGISTRY: Dict[str, Dict[str, Callable]] = {
 _DEFAULT_SOURCE = "spider"  # Spider source takes priority
 logger = get_logger(__name__)
 
-def register_source(source_name: str, func_type: str, func: Callable = None):
-    """
-    Register a specific function type (e.g., 'realtime') for a data source (e.g., 'tushare').
+def register_source(source_name: str, func_type: str,
+                    func: Callable = None):
+    """Register a function type for a data source.
 
-    Prompts the user for confirmation if an existing function is about to be overwritten in an interactive session.
+    Can be used as a decorator or a regular function call. Prompts the user
+    for confirmation if an existing function is about to be overwritten in
+    an interactive session.
+
+    Args:
+        source_name: Name of the data source (e.g., 'tushare').
+        func_type: Type of function to register (e.g., 'realtime',
+            'history').
+        func: The callable function to register. If ``None``, this
+            operates as a decorator.
+
+    Returns:
+        Callable: The registered function (or decorator wrapper).
     """
     from yquoter.utils import _is_interactive_session
     source_name = source_name.lower()
@@ -88,9 +100,11 @@ def register_source(source_name: str, func_type: str, func: Callable = None):
 
     return decorator  # Decorator usage
 
-def _register_tushare_module():
-    """
-    Automatically registers all relevant functions from the provided Tushare module.
+def _register_tushare_module() -> None:
+    """Register all available Tushare functions into the source registry.
+
+    Adds the 'tushare' data source with its supported function types
+    (e.g., 'history', 'realtime') to the global ``_SOURCE_REGISTRY``.
     """
     from yquoter.tushare_source import get_stock_history_tushare, get_stock_realtime_tushare
     if "tushare" not in _SOURCE_REGISTRY:
@@ -104,14 +118,14 @@ def _register_tushare_module():
     return
 
 def set_default_source(name: str) -> None:
-    """
-    Set global default data source
+    """Set the global default data source.
 
-        Args:
-            name: Name of the data source to set as default (case-insensitive)
+    Args:
+        name: Name of the data source to set as default.
+            Case-insensitive.
 
-        Raises:
-            DataSourceError: If the specified data source is not registered
+    Raises:
+        DataSourceError: If the specified data source is not registered.
     """
     global _DEFAULT_SOURCE
     name = name.lower()
@@ -132,29 +146,33 @@ def _get_stock_history(
     source: Optional[str] = None,
     **kwargs
 ) -> pd.DataFrame:
-    """
-    Unified interface for fetching stock historical data
+    """Unified interface for fetching stock historical data.
 
-        Args:
-            market: Market identifier ('cn' for China, 'hk' for Hong Kong, 'us' for US)
-            code: Stock code
-            start: Start date (supports YYYY-MM-DD format, auto-parsed)
-            end: End date (supports YYYY-MM-DD format, auto-parsed)
-            source: Data source to use (defaults to global default: 'spider')
-            klt: K-line type code (101=daily, 102=weekly, 103=monthly; default: 101)
-            fqt: Forward/factor adjustment type (default: 1)
-            fields: Data field set ('basic' or 'full'; default: 'basic')
-            **kwargs: Additional parameters passed to the data source function
+    Handles cache checking, data fetching from the specified source,
+    and result validation.
 
-        Returns:
-            Validated DataFrame containing stock historical data
+    Args:
+        market: Market identifier ('cn', 'hk', 'us').
+        code: Stock code.
+        start: Start date. Supports ``YYYY-MM-DD`` format (auto-parsed).
+        end: End date. Supports ``YYYY-MM-DD`` format (auto-parsed).
+        source: Data source to use. Defaults to the global default.
+        klt: K-line type code (101=daily, 102=weekly, 103=monthly).
+            Default is 101.
+        fqt: Forward/factor adjustment type. Default is 1.
+        fields: Data field set (``"basic"`` or ``"full"``).
+            Default is ``"basic"``.
+        **kwargs: Additional parameters passed to the data source function.
 
-        Raises:
-            DataSourceError: Invalid/missing data source or uninitialized TuShare
-            ParameterError: Invalid frequency parameter
-            DataFetchError: Failed to fetch data from the source
-            DataFormatError: Invalid data format returned by source
-            DateFormatError: Invalid date format (thrown by parse_date_str)
+    Returns:
+        pd.DataFrame: Validated historical stock data.
+
+    Raises:
+        DataSourceError: If the data source is invalid or uninitialized.
+        ParameterError: If an invalid frequency parameter is provided.
+        DataFetchError: If data fetching fails.
+        DataFormatError: If the returned data format is invalid.
+        DateFormatError: If a date string cannot be parsed.
     """
     if start is None and end is None:
         start = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
@@ -259,22 +277,25 @@ def _get_stock_realtime(
         source: Optional[str] = None,
         **kwargs
 ) -> pd.DataFrame:
-    """
-    Unified interface to fetch real-time stock quotes from various data sources.
+    """Unified interface for fetching real-time stock quotes.
+
+    Supports batch queries for sources that support them, and falls back
+    to individual queries for sources like Tushare that require
+    single-code calls.
 
     Args:
-        market: Market identifier (e.g., 'cn', 'hk', 'us').
+        market: Market identifier ('cn', 'hk', 'us').
         code: Stock code(s) to fetch. Can be a single string or a list.
-        fields: Optional list of standardized fields to filter the results.
-        source: Specific data source to use (e.g., 'tushare', 'spider').
-        **kwargs: Additional keyword arguments passed to the underlying source function.
+        fields: List of fields to filter in the results.
+        source: Data source to use (e.g., 'tushare', 'spider').
+        **kwargs: Additional keyword arguments for the source function.
 
     Returns:
-        DataFrame with standardized real-time quotes.
+        pd.DataFrame: Standardized real-time quotes.
 
     Raises:
-        DataSourceError: If the specified source is unknown or not initialized.
-        DataFetchError: If the data fetching operation fails at the source level.
+        DataSourceError: If the source is unknown or uninitialized.
+        DataFetchError: If data fetching fails.
     """
 
     market = market.lower()
@@ -386,29 +407,32 @@ def _get_stock_financials(
         market: str,
         code: str,
         end_day: str,
-        report_type: str = 'CWBB',  # Default to Consolidated Financial Statements
-        limit: int = 12,  # Last 12 periods
+        report_type: str = "CWBB",
+        limit: int = 12,
         source: Optional[str] = None,
         **kwargs
 ) -> pd.DataFrame:
-    """
-    Unified interface to fetch stock financial statements (e.g., balance sheet, income statement).
+    """Unified interface for fetching stock financial statements.
 
     Args:
-        market: Market identifier (e.g., 'cn', 'hk', 'us').
+        market: Market identifier ('cn', 'hk', 'us').
         code: Stock code to fetch.
-        end_day: The latest report period end date to include (YYYYMMDD format).
-        report_type: Type of report (e.g., 'CWBB' for consolidated statements).
+        end_day: Latest report period end date in ``YYYYMMDD`` format.
+        report_type: Type of financial report. Options: 'CWBB'
+            (Consolidated), 'LRB' (Income), 'ZCFZB' (Balance Sheet),
+            'XJLLB' (Cash Flow), 'YJBB' (Earnings). Default is 'CWBB'.
         limit: Maximum number of recent reporting periods to fetch.
-        source: Specific data source to use (e.g., 'tushare', 'spider').
-        **kwargs: Additional keyword arguments passed to the underlying source function.
+            Default is 12.
+        source: Data source to use (e.g., 'tushare', 'spider').
+        **kwargs: Additional keyword arguments for the source function.
 
     Returns:
-        DataFrame with standardized financial statements.
+        pd.DataFrame: Standardized financial statement data.
 
     Raises:
-        DataSourceError: If the specified source is unknown or does not support 'financials'.
-        DataFetchError: If the data fetching operation fails at the source level.
+        DataSourceError: If the source is unknown or does not support
+            'financials'.
+        DataFetchError: If data fetching fails.
     """
     market = market.lower()
     end_day = parse_date_str(end_day)
@@ -469,21 +493,22 @@ def _get_stock_profile(
         source: Optional[str] = None,
         **kwargs
 ) -> pd.DataFrame:
-    """
-    Unified interface to fetch stock company basic profile information.
+    """Unified interface for fetching company profile information.
 
     Args:
-        market: Market identifier (e.g., 'cn', 'hk', 'us').
+        market: Market identifier ('cn', 'hk', 'us').
         code: Stock code to fetch.
-        source: Specific data source to use (e.g., 'tushare', 'spider').
-        **kwargs: Additional keyword arguments passed to the underlying source function.
+        source: Data source to use (e.g., 'tushare', 'spider').
+        **kwargs: Additional keyword arguments for the source function.
 
     Returns:
-        DataFrame with standardized company profile data (e.g., industry, main business).
+        pd.DataFrame: Standardized company profile data (industry,
+            main business, listing date, etc.).
 
     Raises:
-        DataSourceError: If the specified source is unknown or does not support 'profile'.
-        DataFetchError: If the data fetching operation fails at the source level.
+        DataSourceError: If the source is unknown or does not support
+            'profile'.
+        DataFetchError: If data fetching fails.
     """
     market = market.lower()
 
@@ -534,6 +559,84 @@ def _get_stock_profile(
     return df
 
 
+# ======================================================================
+# Async wrappers (internal, for use in reporting.py async kernel)
+# ======================================================================
+
+
+async def _aget_stock_history(
+    market: str,
+    code: str,
+    start: str = None,
+    end: str = None,
+    klt: int = 101,
+    fqt: int = 1,
+) -> pd.DataFrame:
+    """Async version: directly awaits the async spider implementation.
+
+    Bypasses cache. Use the sync ``_get_stock_history`` when caching
+    is desired.
+    """
+    from yquoter.spider_source import async_get_stock_history_spider
+    from yquoter.config import FREQ_TO_KLT
+
+    if start is None and end is None:
+        start = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
+        end = datetime.now().strftime('%Y%m%d')
+    elif start is None:
+        end = parse_date_str(end)
+        start = (datetime.strptime(end, '%Y%m%d') - timedelta(days=30)).strftime('%Y%m%d')
+    elif end is None:
+        start = parse_date_str(start)
+        end = datetime.now().strftime('%Y%m%d')
+
+    start = parse_date_str(start)
+    end = parse_date_str(end)
+
+    if isinstance(klt, str):
+        klt = klt.lower()
+        if klt not in FREQ_TO_KLT:
+            raise ParameterError(f"Unknown frequency: {klt}")
+        klt = FREQ_TO_KLT[klt]
+
+    return await async_get_stock_history_spider(
+        market=market, code=code, start=start, end=end, klt=klt, fqt=fqt
+    )
+
+
+async def _aget_stock_realtime(
+        market: str,
+        code: str,
+        fields: list[str] = None,
+) -> pd.DataFrame:
+    """Async version: fetch real-time quotes without thread pool."""
+    from yquoter.spider_source import async_get_stock_realtime_spider
+    return await async_get_stock_realtime_spider(
+        market=market, code=code, fields=fields
+    )
+
+
+async def _aget_stock_profile(
+        market: str,
+        code: str,
+) -> pd.DataFrame:
+    """Async version: fetch company profile without thread pool."""
+    from yquoter.spider_source import async_get_stock_profile_spider
+    return await async_get_stock_profile_spider(market=market, code=code)
+
+
+async def _aget_stock_factors(
+        market: str,
+        code: str,
+        trade_date: str,
+) -> pd.DataFrame:
+    """Async version: fetch factors without thread pool."""
+    from yquoter.spider_source import async_get_stock_factors_spider
+    return await async_get_stock_factors_spider(
+        market=market, code=code, trade_date=trade_date
+    )
+
+
 def _get_stock_factors(
         market: str,
         code: str,
@@ -541,22 +644,25 @@ def _get_stock_factors(
         source: Optional[str] = None,
         **kwargs
 ) -> pd.DataFrame:
-    """
-    Unified interface to fetch stock fundamental factors (e.g., PE, PB, Market Cap) for a specific date.
+    """Unified interface for fetching stock fundamental factors.
+
+    Fetches valuation and market factors such as PE, PB, and market
+    capitalization for a specific date.
 
     Args:
-        market: Market identifier (e.g., 'cn', 'hk', 'us').
+        market: Market identifier ('cn', 'hk', 'us').
         code: Stock code to fetch.
-        trade_date: The date for which the factors snapshot is required (YYYYMMDD format).
-        source: Specific data source to use (e.g., 'tushare', 'spider').
-        **kwargs: Additional keyword arguments passed to the underlying source function.
+        trade_date: Date for the factor snapshot in ``YYYYMMDD`` format.
+        source: Data source to use (e.g., 'tushare', 'spider').
+        **kwargs: Additional keyword arguments for the source function.
 
     Returns:
-        DataFrame with standardized factor data.
+        pd.DataFrame: Standardized factor data.
 
     Raises:
-        DataSourceError: If the specified source is unknown or does not support 'factors'.
-        DataFetchError: If the data fetching operation fails at the source level.
+        DataSourceError: If the source is unknown or does not support
+            'factors'.
+        DataFetchError: If data fetching fails.
     """
     market = market.lower()
     trade_date = parse_date_str(trade_date)

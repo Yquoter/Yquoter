@@ -19,22 +19,32 @@ _config = None
 
 df_cache_path = ""  # Path of the latest cached file
 
-def get_newest_df_path():
-    """Return path of the latest cached file"""
+def get_newest_df_path() -> str:
+    """Return the path of the most recently cached file.
+
+    Returns:
+        str: Path to the latest cached DataFrame file.
+    """
     logger.info(f"Retrieving newest cached file path: {df_cache_path}")
     return df_cache_path
 
-def modify_df_path(path):
-    """Update path of the latest cached file"""
+def modify_df_path(path: str) -> None:
+    """Update the path of the latest cached file.
+
+    Args:
+        path: New path to set.
+    """
     global df_cache_path
     df_cache_path = path
     logger.info(f"Updated newest cached file path to: {path}")
 
-def load_config_env():
-    """
-    Load configuration:
-    1. Read from .env file
-    2. Override with system environment variables
+def load_config_env() -> dict:
+    """Load configuration from environment and .env file.
+
+    Priority: system environment variables > .env file > defaults.
+
+    Returns:
+        dict: Configuration dictionary.
     """
     logger.info("Starting to load configuration")
     dotenv_path = find_dotenv(usecwd=True)
@@ -51,8 +61,12 @@ def load_config_env():
 
 
 
-def get_config():
-    """Get configuration (load if not initialized)"""
+def get_config() -> dict:
+    """Get the configuration dictionary, loading it if not initialized.
+
+    Returns:
+        dict: Configuration dictionary.
+    """
     global _config
     if _config is None:
         logger.info("Configuration not initialized, loading now")
@@ -60,8 +74,15 @@ def get_config():
     logger.info("Configuration retrieved successfully")
     return _config
 
-def get_tushare_token():
-    """Get tushare token with error handling"""
+def get_tushare_token() -> str:
+    """Get the Tushare API token from configuration.
+
+    Returns:
+        str: The Tushare token.
+
+    Raises:
+        ConfigError: If the token is not set.
+    """
     logger.info("Attempting to get Tushare token")
     token = get_config().get("TUSHARE_TOKEN")
     if not token:
@@ -70,21 +91,43 @@ def get_tushare_token():
     logger.info("Tushare token retrieved successfully")
     return token
 
-def get_cache_root():
-    """Get cache root directory (with default value)"""
+def get_cache_root() -> str:
+    """Get the cache root directory.
+
+    Defaults to ``".cache"`` if not configured.
+
+    Returns:
+        str: Path to the cache root directory.
+    """
     cache_root = get_config().get("CACHE_ROOT", ".cache")
     logger.info(f"Cache root directory retrieved: {cache_root}")
     return cache_root
 
-def get_log_root():
-    """Get log root directory (with default value)"""
+def get_log_root() -> str:
+    """Get the log root directory.
+
+    Defaults to ``".log"`` if not configured.
+
+    Returns:
+        str: Path to the log root directory.
+    """
     log_root = get_config().get("LOG_ROOT", ".log")
     logger.info(f"Log root directory retrieved: {log_root}")
     return log_root
 
 def _load_yaml_config(resource_name: str) -> Dict[str, Any]:
-    """
-    Internal utility to load a YAML configuration file from the package resources.
+    """Load a YAML configuration file from package resources.
+
+    Args:
+        resource_name: Name of the YAML resource file (e.g.,
+            ``"mapping.yaml"``).
+
+    Returns:
+        Dict[str, Any]: Parsed YAML configuration dictionary.
+
+    Raises:
+        RuntimeError: If the resource file is not found.
+        ConfigError: If the YAML content is malformed.
     """
     package_name = 'yquoter.configs'
 
@@ -114,20 +157,26 @@ def _load_yaml_config(resource_name: str) -> Dict[str, Any]:
     return config
 
 def load_mapping_config() -> Dict[str, Any]:
-    """
-    Loads all field mapping configurations from the 'mapping.yaml' file.
+    """Load field mapping configurations from ``mapping.yaml``.
+
+    Returns:
+        Dict[str, Any]: Mapping configuration dictionary.
     """
     return _load_yaml_config('mapping.yaml')
 
 def load_standard_config() -> Dict[str, Any]:
-    """
-    Loads all standard field definitions from the 'standard.yaml' file.
+    """Load standard field definitions from ``standard.yaml``.
+
+    Returns:
+        Dict[str, Any]: Standard configuration dictionary.
     """
     return _load_yaml_config('standard.yaml')
 
 def load_dictionary_config() -> Dict[str, Any]:
-    """
-    Loads all standard field definitions from the 'dictionary.yaml' file.
+    """Load localization dictionary from ``dictionary.yaml``.
+
+    Returns:
+        Dict[str, Any]: Dictionary configuration.
     """
     return _load_yaml_config('dictionary.yaml')
 

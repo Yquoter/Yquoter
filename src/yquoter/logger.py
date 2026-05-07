@@ -10,13 +10,13 @@ import os
 import sys
 from typing import Optional, Union
 
-def setup_logging(level: int = logging.WARNING):
-    """
-    Initialize global logging configuration (call only once)
+def setup_logging(level: int = logging.WARNING) -> None:
+    """Initialize global logging configuration.
 
-        Args:
-            level: Logging severity level (default: logging.WARNING).
+    Should be called only once at application startup.
 
+    Args:
+        level: Logging severity level. Default is logging.WARNING.
     """
     logging.basicConfig(
         level=level,
@@ -29,19 +29,24 @@ def get_logger(
         name: Optional[str] = None,
         level: Union[int, str] = logging.INFO,
 ) -> logging.Logger:
-    """
-    Get a module-specific logger (recommended to use __name__ as 'name' parameter)
+    """Get a module-specific logger.
 
-        Args:
-            name: Unique name for the logger (typically the module name __name__).
-                  If provided, logs will be written to a dedicated file; if None, raises error.
-            level: Logging severity level (can be int constant like logging.DEBUG or string like "INFO", default: logging.INFO)
+    It is recommended to use ``__name__`` as the logger name. If a name is
+    provided, logs will be written to a dedicated file in the .log directory.
 
-        Returns:
-            Configured logging.Logger instance
+    Args:
+        name: Unique name for the logger, typically the module ``__name__``.
+            Required for file-based logging.
+        level: Logging severity level. Accepts either an integer constant
+            (e.g., ``logging.DEBUG``) or a string (e.g., ``"INFO"``).
+            Default is ``logging.INFO``.
 
-        Raises:
-            Exception: If 'name' is None (logger name is required for file logging)
+    Returns:
+        logging.Logger: Configured logger instance.
+
+    Raises:
+        ValueError: If ``name`` is ``None`` (a logger name is required for
+            file logging).
     """
     logger = logging.getLogger(name)
 
@@ -81,7 +86,7 @@ def get_logger(
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
     else:
-        raise
+        raise ValueError("Logger name is required for file logging")
 
     return logger
 

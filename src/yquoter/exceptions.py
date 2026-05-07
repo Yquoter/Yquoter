@@ -10,30 +10,30 @@ This module defines all custom exception types for the yquoter project.
 """
 
 class YquoterError(Exception):
-    """
-    Base custom exception class for the project.
-    All other custom exceptions in the project should inherit from this class,
-    allowing users to catch only this base exception to handle all known project errors.
+    """Base exception class for all yquoter custom errors.
+
+    All project-specific exceptions inherit from this class, allowing
+    users to catch only this base exception to handle all known errors.
     """
     pass
 
 class CodeFormatError(YquoterError, ValueError):
-    """
-    Raised when the stock code format cannot be recognized or processed.
-    Inherits from ValueError to maintain partial semantic compatibility.
+    """Raised when a stock code format cannot be recognized or processed.
+
+    Inherits from ``ValueError`` for semantic compatibility.
     """
     pass
 
 class CacheError(YquoterError):
-    """Base exception related to cache operations."""
+    """Base exception for cache-related errors."""
     pass
 
 class CacheSaveError(CacheError):
-    """Raised when saving cache fails."""
+    """Raised when saving a cache file fails."""
     pass
 
 class CacheDirectoryError(CacheError):
-    """Raised when creating a cache directory fails."""
+    """Raised when the cache directory cannot be created."""
     pass
 
 class ConfigError(YquoterError):
@@ -41,20 +41,21 @@ class ConfigError(YquoterError):
     pass
 
 class DateFormatError(YquoterError, ValueError):
-    """
-    Raised when the date string format cannot be recognized or processed.
-    Inherits from ValueError to maintain partial semantic compatibility.
+    """Raised when a date string format cannot be recognized or processed.
+
+    Inherits from ``ValueError`` for semantic compatibility.
     """
     pass
 
 class DataSourceError(YquoterError):
-    """
-    Errors related to data sources, such as non-existent or uninitialized data sources.
+    """Raised for errors related to data sources.
+
+    Examples include non-existent or uninitialized data sources.
     """
     pass
 
 class DataFetchError(YquoterError):
-    """Raised when fetching data from an external data source fails."""
+    """Raised when fetching data from an external source fails."""
     pass
 
 class DataFormatError(YquoterError):
@@ -62,29 +63,31 @@ class DataFormatError(YquoterError):
     pass
 
 class IndicatorCalculationError(YquoterError):
-    """Raised when an error occurs during technical indicator calculation."""
+    """Raised when a technical indicator calculation fails."""
     pass
 
 class ParameterError(YquoterError, ValueError):
-    """Raised when the parameters provided to the API are invalid."""
+    """Raised when API parameters are invalid."""
     pass
 
 class PathNotFoundError(YquoterError, FileNotFoundError):
     """Raised when a required file or directory path does not exist.
-    Inherits from FileNotFoundError for standard exception compatibility.
+
+    Inherits from ``FileNotFoundError`` for standard exception
+    compatibility.
     """
     pass
 
 class PlotLibImportError(YquoterError):
-    """Raised when an error occurs during trying to import Matplotlib or Mplfinance."""
+    """Raised when importing matplotlib or mplfinance fails."""
     pass
 
 class TuShareAPIError(YquoterError):
-    """Raised when a tuShare token is invalid or Not enough permission."""
+    """Raised when the Tushare token is invalid or has insufficient permissions."""
     pass
 
 class TuShareNotImportableError(YquoterError):
-    """Raised when failing to import TuShare."""
+    """Raised when the Tushare package cannot be imported."""
     pass
 
 # Add more exceptions here as needed in the future, e.g.:

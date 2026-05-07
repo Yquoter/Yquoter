@@ -7,7 +7,7 @@
 
 """Yquoter: A unified financial data interface and analysis toolkit for CN/HK/US markets."""
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "Yquoter Team"
 __email__ = "yodeeshi@gmail.com"
 
@@ -23,6 +23,7 @@ logger = get_logger(__name__)
 # ----------------------------------------------------------------------
 # Core imports
 # ----------------------------------------------------------------------
+from yquoter.llm_gateway import LLMGateway, LLMError, LLMNotAvailableError, LLMResponseError, normalize_provider_name
 from yquoter.config import get_newest_df_path
 from yquoter.datasource import register_source, set_default_source
 from yquoter.models import Stock
@@ -45,12 +46,12 @@ from yquoter.compat import (
 # ----------------------------------------------------------------------
 # Cache initialization
 # ----------------------------------------------------------------------
-def init_cache_manager(max_entries: int = 50):
-    """
-    Initialize the cache manager.
+def init_cache_manager(max_entries: int = 50) -> None:
+    """Initialize the cache manager.
 
     Args:
-        max_entries (int): Max number of cached files. Default is 50.
+        max_entries: Maximum number of cached files to keep.
+            Default is 50.
     """
     from .cache import init_cache, set_max_cache_entries
     set_max_cache_entries(max_entries)
@@ -68,14 +69,45 @@ except Exception as e:
 
 
 # ----------------------------------------------------------------------
+# LLM Gateway (auto-detect from environment)
+# ----------------------------------------------------------------------
+def get_llm_gateway() -> LLMGateway:
+    """Get the LLM gateway instance for AI-powered analysis.
+
+    Automatically detects configured providers from environment variables
+    (e.g., ``DEEPSEEK_API_KEY``, ``OPENAI_API_KEY``).
+
+    Returns:
+        LLMGateway: The LLM gateway instance.
+
+    Example:
+        >>> from yquoter import get_llm_gateway
+        >>> gateway = get_llm_gateway()
+        >>> if gateway.is_available():
+        ...     result = gateway.analyze(
+        ...         system_prompt="You are an analyst.",
+        ...         user_prompt="Analyze this stock..."
+        ...     )
+    """
+    return LLMGateway()
+
+
+# ----------------------------------------------------------------------
 # TuShare initialization
 # ----------------------------------------------------------------------
-def init_tushare(token: str = None):
-    """
-    Initialize TuShare data source.
+def init_tushare(token: str = None) -> None:
+    """Initialize the Tushare data source.
 
     Args:
-        token (str, optional): TuShare API token.
+        token: Tushare API token. If ``None``, attempts to load from
+            environment variables.
+
+    Raises:
+        TuShareNotImportableError: If the Tushare library is not
+            installed.
+        ImportError: If the ``tushare_source`` module is missing.
+        ConfigError: If no token is available.
+        TuShareAPIError: If token validation fails.
     """
     try:
         from .tushare_source import init_tushare as _ts_init
@@ -97,7 +129,14 @@ __all__ = [
     "register_source",
     "set_default_source",
     "init_tushare",
+    "init_cache_manager",
     "Stock",
+    # LLM
+    "get_llm_gateway",
+    "LLMGateway",
+    "LLMError",
+    "normalize_provider_name",
+    # Legacy compat API
     "get_stock_history",
     "get_stock_realtime",
     "get_stock_factors",
@@ -110,7 +149,6 @@ __all__ = [
     "get_newest_df_path",
     "get_rsi_n",
     "get_rv_n",
-    "init_cache_manager",
-    "generate_stock_report"
+    "generate_stock_report",
 ]
 

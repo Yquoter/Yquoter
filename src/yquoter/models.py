@@ -30,24 +30,25 @@ from yquoter.reporting import _generate_stock_report
 logger = get_logger(__name__)
 
 class Stock:
-    """A class representing a stock with methods to fetch market data and technical indicators.
+    """A class representing a stock for fetching market data and technical indicators.
 
     Attributes:
-        market (str): Stock exchange market identifier (e.g., 'sh' for Shanghai, 'sz' for Shenzhen).
-        code (str): Stock ticker/symbol.
-        loader (str): Data source loader name (default: "spider").
+        market: Stock exchange market identifier (e.g., 'cn', 'hk', 'us').
+        code: Stock ticker/symbol.
+        loader: Data source loader name. Default is "spider".
     """
 
     def __init__(self, market: str, code: str, loader: str = "spider"):
         """Initialize a Stock instance.
 
         Args:
-            market: Stock exchange market code (case-insensitive).
+            market: Stock exchange market code. Case-insensitive.
             code: Stock ticker symbol.
-            loader: Data source identifier. Must be registered in _SOURCE_REGISTRY.
+            loader: Data source identifier. Must be registered in the
+                source registry.
 
         Raises:
-            DataSourceError: If specified loader is not registered.
+            DataSourceError: If the specified loader is not registered.
         """
         self.market = market.lower()
         self.code = code
@@ -66,17 +67,23 @@ class Stock:
                     klt: Union[str, int] = 101,
                     fqt: int = 1,
                     fields: Literal["basic", "full"] = "basic") -> pd.DataFrame:
-        """Fetch historical price/volume data.
+        """Fetch historical price/volume (OHLCV) data.
 
         Args:
-            start_date: Start date in 'YYYY-MM-DD' format. If None, fetches from earliest available.
-            end_date: End date in 'YYYY-MM-DD' format. If None, fetches to most recent.
-            klt: K-line type (timeframe). 101=1 minute, 102=5 minutes, etc.
-            fqt: Forward-adjusted type (1=adjusted, 2=unadjusted).
-            fields: Return fields scope ('basic' for core fields, 'full' for extended).
+            start_date: Start date in ``YYYY-MM-DD`` format. If ``None``,
+                fetches from the earliest available date.
+            end_date: End date in ``YYYY-MM-DD`` format. If ``None``,
+                fetches to the most recent date.
+            klt: K-line type (timeframe). Accepts integer codes
+                (e.g., 101=daily, 102=weekly) or string aliases
+                (e.g., "d", "w"). Default is 101 (daily).
+            fqt: Forward-adjusted type. 1=adjusted, 2=unadjusted.
+                Default is 1.
+            fields: Return fields scope. ``"basic"`` for core OHLCV fields,
+                ``"full"`` for extended fields. Default is ``"basic"``.
 
         Returns:
-            DataFrame containing historical OHLCV data.
+            pd.DataFrame: DataFrame containing historical OHLCV data.
         """
         return _get_stock_history(
             market=self.market,
@@ -93,10 +100,12 @@ class Stock:
         """Fetch real-time market data.
 
         Args:
-            fields: Single field name or list of fields to retrieve. Empty list returns all fields.
+            fields: Single field name or list of fields to retrieve.
+                If ``None`` or empty, returns all available fields.
 
         Returns:
-            DataFrame with current trading data (price, volume, bid/ask, etc.).
+            pd.DataFrame: Real-time trading data (price, volume,
+            bid/ask, etc.).
         """
         return _get_stock_realtime(
             market=self.market,
@@ -109,7 +118,8 @@ class Stock:
         """Fetch company profile information.
 
         Returns:
-            DataFrame containing company metadata (industry, listing date, etc.).
+            pd.DataFrame: Company metadata (name, industry, listing date,
+            description, etc.).
         """
         return _get_stock_profile(
             market=self.market,
@@ -118,13 +128,13 @@ class Stock:
         )
 
     def get_factors(self, trade_date: str) -> pd.DataFrame:
-        """Fetch factor data for specific trading date.
+        """Fetch factor data for a specific trading date.
 
         Args:
-            trade_date: Date in 'YYYY-MM-DD' format.
+            trade_date: Trading date in ``YYYY-MM-DD`` format.
 
         Returns:
-            DataFrame containing factor metrics (PE, PB, etc.).
+            pd.DataFrame: Factor metrics (PE, PB, etc.).
         """
         return _get_stock_factors(
             market=self.market,
@@ -135,22 +145,23 @@ class Stock:
 
     def get_financials(self,
                        end_day: str,
-                       report_type: Literal["CWBB", "LRB", "ZCFZB", "XJLLB", "YJBB"] = 'CWBB',
+                       report_type: Literal["CWBB", "LRB", "ZCFZB", "XJLLB", "YJBB"] = "CWBB",
                        limit: int = 12) -> pd.DataFrame:
         """Fetch financial statements.
 
         Args:
-            end_day: Report period end date in 'YYYY-MM-DD' format.
-            report_type: Financial report type:
-                - 'CWBB': Consolidated balance sheet
-                - 'LRB': Income statement
-                - 'ZCFZB': Balance sheet
-                - 'XJLLB': Cash flow statement
-                - 'YJBB': Earnings report
+            end_day: Report period end date in ``YYYY-MM-DD`` format.
+            report_type: Financial report type. Options:
+                - ``"CWBB"``: Consolidated balance sheet
+                - ``"LRB"``: Income statement
+                - ``"ZCFZB"``: Balance sheet
+                - ``"XJLLB"``: Cash flow statement
+                - ``"YJBB"``: Earnings report
             limit: Maximum number of historical periods to fetch.
+                Default is 12.
 
         Returns:
-            DataFrame containing financial statement data.
+            pd.DataFrame: Financial statement data.
         """
         return _get_stock_financials(
             market=self.market,
@@ -161,20 +172,19 @@ class Stock:
             source=self.loader
         )
 
-    def get_ma(self, start_date: str = None, end_date: str = None, n: int = 5) -> pd.DataFrame:
-        """Calculate moving average over n periods.
+    def get_ma(self, start_date: str = None, end_date: str = None,
+               n: int = 5) -> pd.DataFrame:
+        """Calculate N-period Moving Average (MA).
 
         Args:
-            start_date: Start date in 'YYYY-MM-DD' format.
-            end_date: End date in 'YYYY-MM-DD' format.
-            n: Moving average window size (default 5).
-                Common values:
-                - Short-term: 5, 10, 20
-                - Medium-term: 30, 50, 60
-                - Long-term: 120, 200, 250
+            start_date: Start date in ``YYYY-MM-DD`` format.
+            end_date: End date in ``YYYY-MM-DD`` format.
+            n: Moving average window size. Default is 5.
+                Common values: 5, 10, 20 (short-term);
+                30, 50, 60 (medium-term); 120, 200, 250 (long-term).
 
         Returns:
-            DataFrame with MA_n column added.
+            pd.DataFrame: Original data with an additional ``MA{n}`` column.
         """
         return _get_ma_n(
             market=self.market,
@@ -184,17 +194,17 @@ class Stock:
             n=n
         )
 
-    def get_rv(self, start_date: str = None, end_date: str = None, n: int = 5) -> pd.DataFrame:
-        """
-        Calculate n-period rolling volatility
+    def get_rv(self, start_date: str = None, end_date: str = None,
+               n: int = 5) -> pd.DataFrame:
+        """Calculate N-period rolling volatility (RV).
 
-            Args:
-                start_date: Start date
-                end_date: End date
-                n: Number of periods for calculation (default: 5)
+        Args:
+            start_date: Start date in ``YYYY-MM-DD`` format.
+            end_date: End date in ``YYYY-MM-DD`` format.
+            n: Rolling window size. Default is 5.
 
-            Returns:
-                DataFrame containing dates and corresponding rolling volatility values
+        Returns:
+            pd.DataFrame: Data with an additional ``RV{n}`` column.
         """
         return _get_rv_n(
             market=self.market,
@@ -203,16 +213,17 @@ class Stock:
             end=end_date,
             n=n
         )
-    def get_rsi(self, start_date: str = None, end_date: str = None, n: int = 5) -> pd.DataFrame:
-        """Calculate Relative Strength Index (RSI) over n periods.
+    def get_rsi(self, start_date: str = None, end_date: str = None,
+                n: int = 5) -> pd.DataFrame:
+        """Calculate N-period Relative Strength Index (RSI).
 
         Args:
-            start_date: Start date in 'YYYY-MM-DD' format.
-            end_date: End date in 'YYYY-MM-DD' format.
-            n: RSI calculation window (default 14 is standard).
+            start_date: Start date in ``YYYY-MM-DD`` format.
+            end_date: End date in ``YYYY-MM-DD`` format.
+            n: RSI calculation window. Default is 5 (14 is the standard).
 
         Returns:
-            DataFrame with RSI_n column added.
+            pd.DataFrame: Data with an additional ``RSI{n}`` column.
         """
         return _get_rsi_n(
             market=self.market,
@@ -222,16 +233,18 @@ class Stock:
             n=n
         )
 
-    def get_boll(self, start_date: str = None, end_date: str = None, n: int = 20) -> pd.DataFrame:
-        """Calculate Bollinger Bands with n-period moving average.
+    def get_boll(self, start_date: str = None, end_date: str = None,
+                 n: int = 20) -> pd.DataFrame:
+        """Calculate N-period Bollinger Bands.
 
         Args:
-            start_date: Start date in 'YYYY-MM-DD' format.
-            end_date: End date in 'YYYY-MM-DD' format.
-            n: Standard deviation calculation window (default 20).
+            start_date: Start date in ``YYYY-MM-DD`` format.
+            end_date: End date in ``YYYY-MM-DD`` format.
+            n: Standard deviation calculation window. Default is 20.
 
         Returns:
-            DataFrame with Upper/Lower Band columns added.
+            pd.DataFrame: Data with ``upper``, ``mid``, and ``lower``
+            band columns.
         """
         return _get_boll_n(
             market=self.market,
@@ -241,16 +254,17 @@ class Stock:
             n=n
         )
 
-    def get_vol_ratio(self, start_date: str = None, end_date: str = None, n: int = 20) -> pd.DataFrame:
-        """Calculate volume ratio compared to n-period average volume.
+    def get_vol_ratio(self, start_date: str = None, end_date: str = None,
+                      n: int = 20) -> pd.DataFrame:
+        """Calculate volume ratio relative to N-period average volume.
 
         Args:
-            start_date: Start date in 'YYYY-MM-DD' format.
-            end_date: End date in 'YYYY-MM-DD' format.
-            n: Baseline volume calculation window (default 20).
+            start_date: Start date in ``YYYY-MM-DD`` format.
+            end_date: End date in ``YYYY-MM-DD`` format.
+            n: Baseline volume calculation window. Default is 20.
 
         Returns:
-            DataFrame with Volume_Ratio column added.
+            pd.DataFrame: Data with a ``vol_ratio{n}`` column.
         """
         return _get_vol_ratio(
             market=self.market,
@@ -260,16 +274,25 @@ class Stock:
             n=n
         )
 
-    def get_max_drawdown(self, start_date: str = None, end_date: str = None, n: int = 5) -> pd.DataFrame:
-        """Calculate maximum drawdown over n periods.
+    def get_max_drawdown(self, start_date: str = None, end_date: str = None,
+                          n: int = 5) -> dict:
+        """Calculate maximum drawdown over the full available period.
 
         Args:
-            start_date: Start date in 'YYYY-MM-DD' format.
-            end_date: End date in 'YYYY-MM-DD' format.
-            n: Rolling window size for drawdown calculation.
+            start_date: Start date in ``YYYY-MM-DD`` format.
+            end_date: End date in ``YYYY-MM-DD`` format.
+            n: Lookback period for the calculation. Default is 5.
 
         Returns:
-            DataFrame with Max_Drawdown column added.
+            dict: Dictionary containing drawdown metrics:
+                - ``max_drawdown``: Maximum drawdown value.
+                - ``max_drawdown_peak_date``: Date of the peak.
+                - ``max_drawdown_peak_price``: Price at the peak.
+                - ``max_drawdown_trough_date``: Date of the trough.
+                - ``max_drawdown_trough_price``: Price at the trough.
+                - ``recovery_success``: Whether full recovery occurred.
+                - ``recovery_days``: Days to recover (or ``None``).
+                - ``recovery_date``: Recovery date (or ``None``).
         """
         return _get_max_drawdown(
             market=self.market,
@@ -280,20 +303,31 @@ class Stock:
         )
 
     def get_report(self,
-                        start: Optional[str] = None,
-                        end: Optional[str] = None,
-                        language: Literal["cn", "en"] = 'en',
-                        output_dir: Optional[str] = None) -> str:
-        """Generate comprehensive stock analysis report.
+                    start: Optional[str] = None,
+                    end: Optional[str] = None,
+                    language: Literal["cn", "en"] = "en",
+                    output_dir: Optional[str] = None,
+                    llm_provider: Optional[str] = None) -> str:
+        """Generate a comprehensive stock analysis report.
+
+        The report includes company profile, real-time quote, historical
+        price chart, and summary statistics.  Set ``llm_provider`` to
+        enable AI-powered market analysis.
 
         Args:
-            start: Report start date in 'YYYY-MM-DD' format.
-            end: Report end date in 'YYYY-MM-DD' format.
-            language: Report language ('en' for English, 'cn' for Chinese).
-            output_dir: Directory path to save report. If None, returns DataFrame only.
+            start: Report start date in ``YYYY-MM-DD`` format.
+            end: Report end date in ``YYYY-MM-DD`` format.
+            language: Report language. ``"en"`` for English,
+                ``"cn"`` for Chinese. Default is ``"en"``.
+            output_dir: Directory to save the report file. If ``None``,
+                defaults to ``./out``.
+            llm_provider: Optional LLM provider for AI analysis.
+                ``None`` (default) skips AI. Accepts common names:
+                ``"deepseek"``, ``"ChatGPT"``, ``"Claude"``,
+                ``"qwen"``, ``"kimi"``, ``"gemini"``.
 
         Returns:
-            DataFrame containing report data (may also save to file).
+            str: Report content in Markdown format.
         """
         return _generate_stock_report(
             market=self.market,
@@ -301,5 +335,6 @@ class Stock:
             start=start,
             end=end,
             language=language,
-            output_dir=output_dir
+            output_dir=output_dir,
+            llm_provider=llm_provider,
         )

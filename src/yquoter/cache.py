@@ -19,9 +19,11 @@ logger = get_logger(__name__)
 _cache_file_list = []  # List of cached file paths
 _MAX_CACHE_ENTRIES = 5  # Default maximum cache entries
 
-def init_cache():
-    """
-    Initialize cache manager, scan cache directory and load file list
+def init_cache() -> None:
+    """Initialize the cache manager.
+
+    Scans the cache directory and loads the list of existing cached files,
+    sorted by modification time.
     """
     global _cache_file_list
     cache_root = get_cache_root()
@@ -47,9 +49,14 @@ def init_cache():
     _cleanup_old_cache()
 
 
-def _add_cache_file_list(path: str):
-    """
-    Add new cache file to management list and perform cleanup (internal function)
+def _add_cache_file_list(path: str) -> None:
+    """Add a cache file to the management list and perform cleanup.
+
+    Internal function. Adds or updates the file in the cache list and
+    triggers cleanup if the maximum number of entries is exceeded.
+
+    Args:
+        path: Path to the cache file.
     """
     logger.info(f"Adding cache file to management system: {path}")
     if not os.path.exists(path):
@@ -76,9 +83,11 @@ def _add_cache_file_list(path: str):
     _cleanup_old_cache()
 
 
-def _cleanup_old_cache():
-    """
-    Clean up old cache files exceeding quantity limit
+def _cleanup_old_cache() -> None:
+    """Remove oldest cache files exceeding the maximum limit.
+
+    Deletes the oldest cache files when the total count exceeds
+    ``_MAX_CACHE_ENTRIES``.
     """
     logger.info(f"Starting cache cleanup check - max allowed: {_MAX_CACHE_ENTRIES}")
     # Calculate number of files to delete
@@ -108,9 +117,17 @@ def _cleanup_old_cache():
         logger.info(f"Cache cleanup completed: Deleted {deleted_count} old files")
 
 
-def set_max_cache_entries(max_entries: int):
-    """
-    Set maximum cache entries and perform cleanup
+def set_max_cache_entries(max_entries: int) -> None:
+    """Set the maximum number of cache entries.
+
+    Triggers an immediate cleanup if the current cache size exceeds
+    the new limit.
+
+    Args:
+        max_entries: Maximum number of cached files allowed.
+
+    Raises:
+        ParameterError: If ``max_entries`` is less than 1.
     """
     global _MAX_CACHE_ENTRIES
     logger.info(f"Received request to set maximum cache entries to: {max_entries}")
@@ -133,8 +150,23 @@ def get_cache_path(
         fqt: int,
         cache_root: Optional[str] = None
 ) -> str:
-    """
-    Generate cache file path based on market, code and time range
+    """Generate a cache file path based on query parameters.
+
+    Args:
+        market: Market identifier.
+        code: Stock code.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        klt: K-line type code.
+        fqt: Forward adjustment type.
+        cache_root: Root directory for cache files. If ``None``,
+            uses the configured default.
+
+    Returns:
+        str: Full path to the cache file.
+
+    Raises:
+        CacheDirectoryError: If the cache directory cannot be created.
     """
     logger.info(f"Generating cache path - market: {market}, stock code: {code}, time range: {start} to {end}")
     root = cache_root or get_cache_root()
@@ -154,8 +186,13 @@ def get_cache_path(
 
 
 def cache_exists(path: str) -> bool:
-    """
-    Check if cache file exists at specified path
+    """Check if a cache file exists at the specified path.
+
+    Args:
+        path: Full path to the cache file.
+
+    Returns:
+        bool: ``True`` if the file exists, ``False`` otherwise.
     """
     exists = os.path.isfile(path)
     logger.info(f"Cache file check - path: {path}, exists: {'Yes' if exists else 'No'}")
@@ -163,8 +200,14 @@ def cache_exists(path: str) -> bool:
 
 
 def load_cache(path: str) -> Optional[pd.DataFrame]:
-    """
-    Read data from cache file into DataFrame, return None on failure
+    """Load cached data from a CSV file into a DataFrame.
+
+    Args:
+        path: Full path to the cache file.
+
+    Returns:
+        Optional[pd.DataFrame]: The loaded DataFrame, or ``None`` if
+            the file is missing or cannot be read.
     """
     logger.info(f"Starting to load cache file: {path}")
     if not cache_exists(path):
@@ -184,9 +227,15 @@ def load_cache(path: str) -> Optional[pd.DataFrame]:
         return None
 
 
-def save_cache(path: str, df: pd.DataFrame):
-    """
-    Save DataFrame to cache file
+def save_cache(path: str, df: pd.DataFrame) -> None:
+    """Save a DataFrame to a cache file.
+
+    Args:
+        path: Full path to the cache file.
+        df: DataFrame to save.
+
+    Raises:
+        CacheSaveError: If the file cannot be written.
     """
     logger.info(f"Starting to save cache file: {path}")
     try:

@@ -1,9 +1,9 @@
 # Yquoter
 
 [![PyPI](https://img.shields.io/pypi/v/yquoter.svg?style=flat&logo=pypi&label=PyPI)](https://pypi.org/project/yquoter/)
-[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.3.0-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.3.1-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
 [![Yquoter CI](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml)
-![Status: Alpha](https://img.shields.io/badge/status-alpha-red?style=flat)
+![Status: Beta](https://img.shields.io/badge/status-beta-yellow?style=flat)
 [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
 [![License](https://img.shields.io/github/license/Yodeesy/Yquoter?style=flat)](./LICENSE)
 
@@ -13,30 +13,39 @@ Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shar
 
 ---
 
-## 🌟 Major Update: Object-Oriented API
+## 🌟 Major Update: v0.3.1 — Async, AI & Multi-Market
 
-From v0.3.0, all core operations are now methods of the `Stock` class.  
+### 🆕 Object-Oriented Design (v0.3.0)
 
-### 🆕 Object-Oriented Design
+From v0.3.0, all core operations are now methods of the `Stock` class.
 
 ```py
-# e.g.
 from yquoter import Stock
 
-# New chained style
+# Chained-style API
 df = Stock(market="us", code="AAPL").get_history(start_date="2023-01-01")
 ```
 
+### 🚀 v0.3.1 Highlights
+
+- **Async Concurrent Architecture**: Report generation uses ``asyncio.gather``
+  to fetch history, realtime, profile, and factors **simultaneously**
+  (up to **2.5x** speedup).
+- **AI-Powered Analysis**: Integrated LLM Gateway supports DeepSeek, ChatGPT,
+  Claude, Qwen, Kimi, and Gemini with **automatic fallback**.
+- **Multi-Market Support**: Seamless access to **CN** (A-shares),
+  **HK** (H-shares), and **US** stocks via a single interface.
+
 ### ⚠️ Compatibility Notice
 
-- **Old functions still work** (`get_stock_history`, `get_ma_n`)
-- **Deprecated** - will be removed in v1.0.0
+- **Old functions still work** (`get_stock_history`, `get_ma_n`, etc.)
+- **Deprecated** — will be removed in v1.0.0
 
 ---
 
 > 🧠 **Project Info**
 >
-> - Version: 0.3.0 
+> - Version: 0.3.1 
 >
 > **Yquoter** is developed by the **Yquoter Team**, co-founded by four students from SYSU and SCUT.  
 >
@@ -68,29 +77,33 @@ This is a high-level overview of the Yquoter package structure:
 Yquoter/
 ├── src/ 
 │   └── yquoter/
-│       ├── __init__.py             # Exposes the main API interfaces (e.g., get_quotes)
-│       ├── reporting.py            # Generate reports for stocks
-│       ├── datasource.py           # Unified interface for all data fetching sources
-│       ├── tushare_source.py       # A module for Tushare users, requiring activation
-│       ├── spider_source.py        # Default data source using internal web scraping
-│       ├── spider_core.py          # Core logic and mechanism for the internal spider
-│       ├── config.py               # Manages configuration settings (tokens, paths)
-│       ├── models.py               # Offer a type-safe and intuitive API
-│       ├── indicators.py           # Utility for calculating technical indicators
-│       ├── logger.py               # Logging configuration and utilities
-│       ├── cache.py                # Manages local data caching mechanisms
-│       ├── utils.py                # General-purpose utility functions
+│       ├── __init__.py             # Public API exports (Stock, LLMGateway, etc.)
+│       ├── reporting.py            # Stock report generation (Markdown + charts)
+│       ├── datasource.py           # Unified data source interface & registry
+│       ├── tushare_source.py       # TuShare data source module (optional)
+│       ├── spider_source.py        # Default web-scraping data source
+│       ├── spider_core.py          # Async concurrency engine (httpx + asyncio)
+│       ├── llm_gateway.py          # AI analysis gateway (multi-provider)
+│       ├── llm_prompts.py          # LLM prompt templates for analysis
+│       ├── config.py               # Configuration management (env, YAML)
+│       ├── models.py               # Stock class (type-safe OOP interface)
+│       ├── indicators.py           # Technical indicators (MA, RSI, BOLL, etc.)
+│       ├── logger.py               # Logging configuration
+│       ├── cache.py                # Local data caching (LRU)
+│       ├── utils.py                # General-purpose utilities
+│       ├── exceptions.py           # Custom exception classes
+│       ├── compat.py               # Backward-compat legacy function wrappers
 │       └── configs/
-│           ├── mapping.yaml        # Mapping for Data & configs
-│           ├── standard.yaml       # Yquoter's data standard
-│           └── dictionary.yaml     # Report's standard words
+│           ├── mapping.yaml        # API field name mappings
+│           ├── standard.yaml       # Data standard definitions
+│           └── dictionary.yaml     # Localized report dictionary (CN/EN)
 │
 ├── examples/
-│   └── basic_usage.ipynb # Detailed usage examples in Jupyter Notebook
+│   └── basic_usage.ipynb           # Jupyter Notebook with usage examples
 │
-├── assets/               # Non-code assets (e.g., logos, screenshots for README)
-├── temp/                 # Temporary files for test (ignored by Git)
-├── .cache/               # Cache files (ignored by Git)
+├── assets/                         # Non-code assets (logos, banners)
+├── out/                            # Generated reports (ignored by Git)
+├── .cache/                         # Cache directory (ignored by Git)
 ├── pyproject.toml        # Package configuration for distribution (PyPI)
 ├── requirements.txt      # Declaration of project dependencies
 ├── LICENSE               # Apache 2.0 Open Source License details
@@ -124,7 +137,7 @@ For detailed descriptions of all function parameters (e.g., market, klt, report_
 | `get_rv`           | Calculate **N-period Rolling Volatility (RV)**.              | `n` (default 5)                                              | `DataFrame` (RV column)               | -                                                            |
 | `get_max_drawdown` | Calculate **Maximum Drawdown and Recovery** over a period.   | `n` (default 5)                                              | `Dict` (Max Drawdown)                 | Runs on the instance's history or an optionally provided `df`. |
 | `get_vol_ratio`    | Calculate **Volume Ratio** (Volume to its N-period average). | `n` (default 20)                                             | `DataFrame` (Volume Ratio)            | -                                                            |
-| `get_report`       | Generate a visualized report of history, realtime, and profile. | `start_date`, `end_date`, `language`                         | `str` (report file path)              | A powerful new feature that consolidates multiple data points. |
+| `get_report`       | Generate a comprehensive Markdown report with profile, realtime, history chart, summary stats, and optional AI analysis. | `start`, `end`, `language`, `llm_provider` (optional) | `str` (Markdown content)              | When ``llm_provider`` is set (e.g. ``"deepseek"``), AI-powered market analysis is appended. |
 
 ### Data Acquisition Functions
 
@@ -159,6 +172,59 @@ These functions primarily take an existing DataFrame (`df`) or data request para
 | `set_default_source` | **Set a new default data source.** | `name` |
 | `init_tushare`            | **Initialize `TuShare` connection** with your API token and **register`TuShare` data interfaces**. | `token (or None)` |
 | `get_newest_df_path`      | **Get the path** of the newest cached data file.             | **None** |
+
+---
+
+## 🤖 LLM Gateway (AI-Powered Analysis)
+
+Yquoter includes a built-in **LLM Gateway** that connects to multiple AI providers
+for automated market analysis. It supports automatic provider detection and
+priority-based fallback.
+
+### Configured via environment variables
+
+| Provider   | Env Variable       | Default Model          |
+|:-----------|:-------------------|:-----------------------|
+| DeepSeek   | `DEEPSEEK_API_KEY` | `deepseek-chat`        |
+| OpenAI     | `OPENAI_API_KEY`   | `gpt-4o-mini`          |
+| Qwen       | `QWEN_API_KEY`     | `qwen-plus`            |
+| Kimi       | `KIMI_API_KEY`     | `moonshot-v1-8k`       |
+| Claude     | `CLAUDE_API_KEY`   | `claude-3-5-haiku-latest` |
+| Gemini     | `GEMINI_API_KEY`   | `gemini-2.0-flash`     |
+
+### Usage
+
+```py
+from yquoter import get_llm_gateway
+
+gateway = get_llm_gateway()
+
+# Check if any provider is configured
+print(gateway.is_available())  # True / False
+
+# List active providers
+print(gateway.list_providers())
+
+# Direct LLM analysis
+result = gateway.analyze(
+    system_prompt="You are a financial analyst.",
+    user_prompt="Analyze the recent price trend...",
+    provider_name="deepseek",  # optional; auto-fallback if omitted
+)
+```
+
+### Use AI in stock reports
+
+```py
+from yquoter import Stock
+
+# Generate a report with DeepSeek AI analysis
+report = Stock("cn", "600519").get_report(
+    language="cn",
+    llm_provider="deepseek",
+)
+# The AI section is appended after the data sections
+```
 
 ---
 
