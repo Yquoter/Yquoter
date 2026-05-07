@@ -5,7 +5,7 @@
 [![Yquoter CI](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml)
 ![Status: Beta](https://img.shields.io/badge/status-beta-yellow?style=flat)
 [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
-[![License](https://img.shields.io/github/license/Yodeesy/Yquoter?style=flat)](./LICENSE)
+[![License](https://img.shields.io/github/license/Yquoter/Yquoter?style=flat)](./LICENSE)
 
 ![Yquoter Social Banner](assets/yquoter_banner.png)
 ---
