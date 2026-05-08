@@ -545,7 +545,6 @@ def init_cache() -> None:
 
 def _add_cache_file_list(path: str) -> None:
     """Add a file to the L2 tracking list and enforce the max limit."""
-    global _cache_file_list
     if not os.path.exists(path):
         logger.error("Cannot add non-existent file to L2 list: %s", path)
         return
