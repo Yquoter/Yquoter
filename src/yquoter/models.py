@@ -10,6 +10,7 @@ from typing import Optional, Union, Literal
 from yquoter.logger import get_logger
 from yquoter.exceptions import DataSourceError
 from yquoter.datasource import _SOURCE_REGISTRY
+from yquoter.plugin_base import DataSource
 from yquoter.datasource import (
     _get_stock_history,
     _get_stock_realtime,
@@ -38,24 +39,38 @@ class Stock:
         loader: Data source loader name. Default is "spider".
     """
 
-    def __init__(self, market: str, code: str, loader: str = "spider"):
+    def __init__(self, market: str, code: str, loader: Union[str, DataSource] = "spider"):
         """Initialize a Stock instance.
 
         Args:
             market: Stock exchange market code. Case-insensitive.
             code: Stock ticker symbol.
-            loader: Data source identifier. Must be registered in the
-                source registry.
+            loader: Data source identifier.  Can be a registered source name
+                (``str``) or a :class:`~yquoter.plugin_base.DataSource`
+                instance.  Default is ``"spider"``.
 
         Raises:
-            DataSourceError: If the specified loader is not registered.
+            DataSourceError: If a string loader is not registered.
         """
         self.market = market.lower()
         self.code = code
-        if loader in _SOURCE_REGISTRY:
+
+        if isinstance(loader, DataSource):
+            self.loader = loader.name
+            self._source_instance = loader
+        elif isinstance(loader, str):
+            if loader not in _SOURCE_REGISTRY:
+                raise DataSourceError(
+                    f"Unknown data source: {loader}; "
+                    f"available sources: {list(_SOURCE_REGISTRY)}"
+                )
             self.loader = loader
+            self._source_instance = None
         else:
-            raise DataSourceError(f"Unknown data source: {loader}; available sources: {list(_SOURCE_REGISTRY)}")
+            raise DataSourceError(
+                f"Invalid loader type: {type(loader).__name__}; "
+                f"expected str or DataSource."
+            )
 
     def __repr__(self):
         """Return unambiguous string representation of the Stock object."""
@@ -93,7 +108,7 @@ class Stock:
             klt=klt,
             fqt=fqt,
             fields=fields,
-            source=self.loader
+            source=self._source_instance or self.loader
         )
 
     def get_realtime(self, fields: Union[str, list[str]] = None) -> pd.DataFrame:
@@ -111,7 +126,7 @@ class Stock:
             market=self.market,
             code=self.code,
             fields=fields,
-            source=self.loader
+            source=self._source_instance or self.loader
         )
 
     def get_profile(self) -> pd.DataFrame:
@@ -124,7 +139,7 @@ class Stock:
         return _get_stock_profile(
             market=self.market,
             code=self.code,
-            source=self.loader
+            source=self._source_instance or self.loader
         )
 
     def get_factors(self, trade_date: str) -> pd.DataFrame:
@@ -140,7 +155,7 @@ class Stock:
             market=self.market,
             code=self.code,
             trade_date=trade_date,
-            source=self.loader
+            source=self._source_instance or self.loader
         )
 
     def get_financials(self,
@@ -169,7 +184,7 @@ class Stock:
             end_day=end_day,
             report_type=report_type,
             limit=limit,
-            source=self.loader
+            source=self._source_instance or self.loader
         )
 
     def get_ma(self, start_date: str = None, end_date: str = None,
@@ -337,4 +352,5 @@ class Stock:
             language=language,
             output_dir=output_dir,
             llm_provider=llm_provider,
+            source=self._source_instance or self.loader,
         )

@@ -13,6 +13,7 @@ from yquoter.exceptions import CodeFormatError, ConfigError, DataFetchError, TuS
 from yquoter.logger import get_logger
 from yquoter.config import REALTIME_STANDARD_FIELDS, TUSHARE_REALTIME_MAPPING
 from yquoter.utils import convert_code_to_tushare, filter_fields
+from yquoter.plugin_base import DataSource
 
 logger = get_logger(__name__)
 
@@ -207,8 +208,15 @@ def get_stock_history_tushare(
     # General data cleaning
     df.sort_values(df.columns[1], inplace=True)  # Sort by date column (position varies by market)
     df.reset_index(drop=True, inplace=True)
-    # TODO: Unify column names across different markets
-    return df
+
+    # Standardise column names: TuShare uses 'trade_date' -> Yquoter 'date'
+    if "trade_date" in df.columns:
+        df.rename(columns={"trade_date": "date"}, inplace=True)
+
+    # Keep only the column set that Yquoter validation expects
+    _STANDARD_COLS = ["date", "open", "high", "low", "close", "vol", "amount"]
+    extra_cols = [c for c in _STANDARD_COLS if c in df.columns]
+    return df[extra_cols] if extra_cols else df
 
 def get_stock_realtime_tushare(
         market: str,
@@ -256,7 +264,7 @@ def get_stock_realtime_tushare(
         fields_to_filter = field if field is not None else REALTIME_STANDARD_FIELDS
         return pd.DataFrame(columns=fields_to_filter)
 
-    current_date = datetime.now().strftime('%Y%m%d %H:%M')
+    current_date = datetime.datetime.now().strftime('%Y%m%d %H:%M')
 
     loc = 0
     if 'code' in df.columns:
@@ -269,3 +277,61 @@ def get_stock_realtime_tushare(
     fields_to_filter = field if field is not None else REALTIME_STANDARD_FIELDS
 
     return filter_fields(df, fields_to_filter)
+
+
+# ======================================================================
+# DataSource plugin wrapper
+# ======================================================================
+
+
+class TushareDataSource(DataSource):
+    """DataSource wrapper for the TuShare Pro API.
+
+    Provides history and realtime data for CN markets via the TuShare
+    financial data platform.  Requires initialisation via
+    :func:`yquoter.init_tushare` before use.
+
+    .. note::
+
+       This source does **not** natively support async I/O.  The
+       :meth:`get_history_async` / :meth:`get_realtime_async` methods
+       inherited from :class:`DataSource` wrap the sync calls in a
+       thread-pool executor, which is safe for use in async contexts.
+    """
+
+    name = "tushare"
+    supported_types = {"history", "realtime"}
+    supports_batch_realtime = False
+
+    @property
+    def initialization_hint(self):
+        return (
+            "Use yquoter.init_tushare(token) to enable the Tushare data source."
+        )
+
+    # -- history --
+
+    def get_history(
+        self,
+        market: str,
+        code: str,
+        start: str,
+        end: str,
+        klt: int = 101,
+        fqt: int = 1,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return get_stock_history_tushare(market, code, start, end, klt=klt, fqt=fqt)
+
+    # -- realtime --
+
+    def get_realtime(
+        self,
+        market: str,
+        code: str,
+        fields=None,
+        **kwargs,
+    ) -> pd.DataFrame:
+        # ``code`` is a single str (guaranteed by the dispatch layer when
+        # ``supports_batch_realtime`` is ``False``).
+        return get_stock_realtime_tushare(market, code, field=fields)

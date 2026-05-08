@@ -27,6 +27,7 @@ from yquoter.config import (
     EASYMONEY_FINANCIALS_MAPPING,
     REALTIME_STANDARD_FIELDS,
 )
+from yquoter.plugin_base import DataSource
 
 # Eastmoney field mapping: User-friendly name -> Eastmoney internal field code
 dict_of_eastmoney = {v: k for k, v in EASTMONEY_REALTIME_MAPPING.items()}
@@ -800,3 +801,118 @@ async def async_get_stock_factors_spider(
     return await _async_crawl_structured_data(
         make_factors_url, parse_factors, factor_cols, datasource="easymoney"
     )
+
+
+# ======================================================================
+# DataSource plugin wrapper
+# ======================================================================
+
+
+class SpiderDataSource(DataSource):
+    """DataSource wrapper for the built-in Eastmoney spider engine.
+
+    Supports all five function types (history, realtime, financials,
+    profile, factors) and provides native async implementations for
+    all four async methods.
+    """
+
+    name = "spider"
+    supported_types = {"history", "realtime", "financials", "profile", "factors"}
+    supports_batch_realtime = True
+
+    # -- history --
+
+    def get_history(
+        self,
+        market: str,
+        code: str,
+        start: str,
+        end: str,
+        klt: int = 101,
+        fqt: int = 1,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return get_stock_history_spider(market, code, start, end, klt, fqt)
+
+    async def get_history_async(
+        self,
+        market: str,
+        code: str,
+        start: str,
+        end: str,
+        klt: int = 101,
+        fqt: int = 1,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return await async_get_stock_history_spider(market, code, start, end, klt, fqt)
+
+    # -- realtime --
+
+    def get_realtime(
+        self,
+        market: str,
+        code,
+        fields=None,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return get_stock_realtime_spider(market, code, fields)
+
+    async def get_realtime_async(
+        self,
+        market: str,
+        code,
+        fields=None,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return await async_get_stock_realtime_spider(market, code, fields)
+
+    # -- financials --
+
+    def get_financials(
+        self,
+        market: str,
+        code: str,
+        end_day: str,
+        report_type: str = "CWBB",
+        limit: int = 12,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return get_stock_financials_spider(market, code, end_day, report_type, limit)
+
+    # -- profile --
+
+    def get_profile(
+        self,
+        market: str,
+        code: str,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return get_stock_profile_spider(market, code)
+
+    async def get_profile_async(
+        self,
+        market: str,
+        code: str,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return await async_get_stock_profile_spider(market, code)
+
+    # -- factors --
+
+    def get_factors(
+        self,
+        market: str,
+        code: str,
+        trade_date: str,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return get_stock_factors_spider(market, code, trade_date)
+
+    async def get_factors_async(
+        self,
+        market: str,
+        code: str,
+        trade_date: str,
+        **kwargs,
+    ) -> pd.DataFrame:
+        return await async_get_stock_factors_spider(market, code, trade_date)

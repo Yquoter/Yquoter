@@ -5,134 +5,347 @@
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
 
+"""Unified data source interface, registry, and dispatch layer.
+
+Yquoter's data source plugin system.  All data retrieval flows through
+this module, which handles source resolution, caching, and result
+validation before dispatching to the appropriate
+:class:`~yquoter.plugin_base.DataSource` implementation.
+"""
+
 import inspect
-import pandas as pd
-from datetime import datetime, timedelta
 from typing import Dict, Callable, Optional, Union
-from yquoter.cache import get_cache_path, cache_exists, load_cache, save_cache
-from yquoter.spider_source import get_stock_history_spider, get_stock_realtime_spider, get_stock_financials_spider, get_stock_profile_spider, get_stock_factors_spider
-from yquoter.exceptions import DataSourceError, ParameterError, DataFetchError
+
+import pandas as pd
+
+from datetime import datetime, timedelta
+
+from yquoter.cache import (
+    cache_get, cache_set,
+    make_cache_key,
+    get_cache_path, cache_exists, load_cache, save_cache,
+)
+from yquoter.exceptions import (
+    DataSourceError,
+    ParameterError,
+    DataFetchError,
+)
 from yquoter.logger import get_logger
 from yquoter.config import modify_df_path
 from yquoter.utils import _validate_dataframe, parse_date_str
+from yquoter.plugin_base import DataSource
 
-# Global registry for data sources:
-# Structure: {source_name: {function_type: function_callable}}
-_SOURCE_REGISTRY: Dict[str, Dict[str, Callable]] = {
-    "spider": {
-        "history": get_stock_history_spider,
-        "realtime": get_stock_realtime_spider,
-        "financials": get_stock_financials_spider,
-        "profile": get_stock_profile_spider,
-        "factors": get_stock_factors_spider,
-    }
-}
-_DEFAULT_SOURCE = "spider"  # Spider source takes priority
 logger = get_logger(__name__)
 
-def register_source(source_name: str, func_type: str,
-                    func: Callable = None):
-    """Register a function type for a data source.
 
-    Can be used as a decorator or a regular function call. Prompts the user
-    for confirmation if an existing function is about to be overwritten in
-    an interactive session.
+# ======================================================================
+# Plugin registry
+# ======================================================================
+
+#: Global registry mapping source names to DataSource instances.
+_SOURCE_REGISTRY: Dict[str, DataSource] = {}
+
+#: Default source used when none is explicitly specified.
+_DEFAULT_SOURCE = "spider"
+
+#: Names that are recognised but require explicit initialisation before use.
+#: Maps name -> user-facing hint string.
+_UNAVAILABLE_SOURCES: Dict[str, str] = {
+    "tushare": (
+        "Use yquoter.init_tushare(token) to enable the Tushare data source."
+    ),
+}
+
+
+def _register_builtin_sources() -> None:
+    """Register all built-in data source plugins."""
+    from yquoter.spider_source import SpiderDataSource
+
+    spider = SpiderDataSource()
+    _SOURCE_REGISTRY[spider.name] = spider
+
+
+_register_builtin_sources()
+
+
+# ======================================================================
+# DynamicDataSource  (backward-compatibility adapter)
+# ======================================================================
+
+
+class DynamicDataSource(DataSource):
+    """Adapter that wraps legacy ``register_source()`` callables as a DataSource.
+
+    This preserves backward compatibility for any code that uses the old
+    ``register_source(name, type, func)`` API.  The class stores per-type
+    callables and dispatches to them using the original ``inspect.signature``
+    parameter filtering.
+    """
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._functions: Dict[str, Callable] = {}
+
+    # -- identity -----------------------------------------------------------------
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def supported_types(self) -> set:
+        return set(self._functions.keys())
+
+    # -- registration -------------------------------------------------------------
+
+    def set_function(
+        self,
+        func_type: str,
+        func: Callable,
+        overwrite_callback: Optional[Callable[[str, str, str, str], bool]] = None,
+    ) -> None:
+        """Register a function for *func_type*, optionally prompting on conflict.
+
+        Args:
+            func_type: Type name (e.g. ``"history"``, ``"realtime"``).
+            func: The callable to register.
+            overwrite_callback: ``(source_name, func_type, old_name, new_name)
+                -> bool``.  Return ``True`` to allow overwrite.
+        """
+        if overwrite_callback and func_type in self._functions:
+            old = self._functions[func_type].__name__
+            new = func.__name__
+            if not overwrite_callback(self._name, func_type, old, new):
+                logger.info(
+                    "Overwrite rejected for '%s' type '%s' (retaining %s)",
+                    self._name, func_type, old,
+                )
+                return
+        self._functions[func_type] = func
+        logger.info(
+            "Dynamic source '%s' registered for type '%s': %s",
+            self._name, func_type, func.__name__,
+        )
+
+    # -- dispatch helpers ---------------------------------------------------------
+
+    @staticmethod
+    def _call_with_filter(func: Callable, **kwargs):
+        """Call *func* passing only the keyword arguments it accepts."""
+        sig = inspect.signature(func)
+        filtered = {k: v for k, v in kwargs.items() if k in sig.parameters}
+        return func(**filtered)
+
+    def _dispatch(self, func_type: str, **kwargs):
+        if func_type not in self._functions:
+            raise DataSourceError(
+                f"Dynamic source '{self._name}' does not have a '{func_type}' "
+                f"function registered."
+            )
+        return self._call_with_filter(self._functions[func_type], **kwargs)
+
+    # -- DataSource methods -------------------------------------------------------
+
+    def get_history(self, market, code, start, end, klt=101, fqt=1, **kwargs):
+        return self._dispatch(
+            "history",
+            market=market, code=code, start=start, end=end,
+            klt=klt, fqt=fqt, **kwargs,
+        )
+
+    def get_realtime(self, market, code, fields=None, **kwargs):
+        return self._dispatch(
+            "realtime", market=market, code=code, fields=fields, **kwargs,
+        )
+
+    def get_financials(self, market, code, end_day, report_type="CWBB",
+                       limit=12, **kwargs):
+        return self._dispatch(
+            "financials",
+            market=market, code=code, end_day=end_day,
+            report_type=report_type, limit=limit, **kwargs,
+        )
+
+    def get_profile(self, market, code, **kwargs):
+        return self._dispatch("profile", market=market, code=code, **kwargs)
+
+    def get_factors(self, market, code, trade_date, **kwargs):
+        return self._dispatch(
+            "factors", market=market, code=code, trade_date=trade_date, **kwargs,
+        )
+
+
+# ======================================================================
+# Source resolution helpers
+# ======================================================================
+
+
+def _resolve_source(
+    source: Optional[Union[str, DataSource]] = None,
+) -> DataSource:
+    """Resolve a source identifier to a :class:`DataSource` instance.
+
+    Accepts:
+
+    * ``None`` -- returns the default source.
+    * ``str`` -- looks up the name in ``_SOURCE_REGISTRY``.
+    * :class:`DataSource` -- returned as-is.
 
     Args:
-        source_name: Name of the data source (e.g., 'tushare').
-        func_type: Type of function to register (e.g., 'realtime',
-            'history').
-        func: The callable function to register. If ``None``, this
-            operates as a decorator.
+        source: Source identifier.
 
     Returns:
-        Callable: The registered function (or decorator wrapper).
+        A DataSource instance ready for use.
+
+    Raises:
+        DataSourceError: If the source name is unknown or unavailable.
     """
+    if source is None:
+        source = _DEFAULT_SOURCE
+
+    if isinstance(source, DataSource):
+        return source
+
+    if isinstance(source, str):
+        name = source.lower()
+        if name in _SOURCE_REGISTRY:
+            return _SOURCE_REGISTRY[name]
+
+        avail = sorted(_SOURCE_REGISTRY.keys())
+        msg = f"Unknown data source: '{source}'; available sources: {avail}."
+        if name in _UNAVAILABLE_SOURCES:
+            msg += f" {_UNAVAILABLE_SOURCES[name]}"
+        raise DataSourceError(msg)
+
+    raise DataSourceError(f"Invalid source type: {type(source).__name__}")
+
+
+# ======================================================================
+# Public API: register / set-default
+# ======================================================================
+
+
+def _overwrite_prompt(source_name, func_type, old_name, new_name) -> bool:
+    """Prompt the user to confirm overwriting an existing function."""
     from yquoter.utils import _is_interactive_session
+
+    if not _is_interactive_session():
+        logger.warning(
+            "Non-interactive session; rejecting overwrite of '%s' type '%s' "
+            "(old: %s, new: %s)",
+            source_name, func_type, old_name, new_name,
+        )
+        return False
+
+    try:
+        answer = input(
+            f"Overwrite source '{source_name}' function type "
+            f"'{func_type}'? [y/N]: "
+        ).lower()
+        return answer == "y"
+    except EOFError:
+        logger.warning("EOF reading input; overwrite rejected.")
+        return False
+
+
+def register_source(
+    source_name: str,
+    func_type: str,
+    func: Callable = None,
+):
+    """Register a function type for a data source.
+
+    Can be used as a decorator or a regular function call.
+
+    If *source_name* matches a built-in source (e.g. ``"spider"``),
+    the registration is redirected to ``{source_name}_custom`` to
+    avoid accidentally overriding built-in behaviour.
+
+    Args:
+        source_name: Data source name (e.g. ``"my_source"``).
+        func_type: Function type (e.g. ``"history"``, ``"realtime"``).
+        func: The callable, or ``None`` for decorator usage.
+
+    Returns:
+        The registered callable (or a decorator wrapper).
+    """
     source_name = source_name.lower()
     func_type = func_type.lower()
 
     def decorator(f: Callable):
-        if source_name not in _SOURCE_REGISTRY:
-            _SOURCE_REGISTRY[source_name] = {}
+        actual_name = source_name
 
-        # Check if the function type is already registered for this source
-        if func_type in _SOURCE_REGISTRY[source_name]:
+        # Redirect if the name clashes with a built-in DataSource.
+        if source_name in _SOURCE_REGISTRY and not isinstance(
+            _SOURCE_REGISTRY[source_name], DynamicDataSource
+        ):
+            actual_name = f"{source_name}_custom"
+            logger.warning(
+                "'%s' is a built-in source; registering as '%s' instead.",
+                source_name, actual_name,
+            )
 
-            old_func_name = _SOURCE_REGISTRY[source_name][func_type].__name__
-            new_func_name = f.__name__
+        if actual_name not in _SOURCE_REGISTRY:
+            _SOURCE_REGISTRY[actual_name] = DynamicDataSource(actual_name)
+        elif not isinstance(_SOURCE_REGISTRY[actual_name], DynamicDataSource):
+            # Safety net -- should not happen after the redirect above.
+            raise DataSourceError(
+                f"Cannot register functions for built-in source '{actual_name}'."
+            )
 
-            overwrite_allowed = False
-
-            if _is_interactive_session():
-                logger.warning(
-                    f"Overwrite detected for source '{source_name}' function type '{func_type}'. "
-                    f"Old: {old_func_name}, New: {new_func_name}"
-                )
-
-                # Use standard input() for user confirmation
-                try:
-                    user_input = input("Overwrite? [y/n]: ").lower()
-                    if user_input == 'y':
-                        overwrite_allowed = True
-                except EOFError:
-                    # Handle cases where input is redirected or closed unexpectedly
-                    logger.warning("Non-interactive input detected; skipping overwrite.")
-            else:
-                logger.warning(
-                    f"Source '{source_name}' function type '{func_type}' is already registered "
-                    f"but running in a non-interactive session. Overwriting is disabled to prevent accidental changes."
-                )
-                # We implicitly set overwrite_allowed = False by skipping the interactive prompt
-
-            if not overwrite_allowed:
-                # If overwrite is not allowed (user said 'n' or non-interactive failure)
-                logger.info(f"Overwrite cancelled. Retaining old function: {old_func_name}")
-                return _SOURCE_REGISTRY[source_name][func_type]  # Return the old function instead of the new one
-
-        # If allowed to overwrite OR if it's a new registration
-        _SOURCE_REGISTRY[source_name][func_type] = f
-        logger.info(f"Source '{source_name}' registered for function type '{func_type}': {f.__name__}")
+        _SOURCE_REGISTRY[actual_name].set_function(
+            func_type, f, overwrite_callback=_overwrite_prompt,
+        )
         return f
 
-    if func is not None:  # Regular function call
+    if func is not None:
         return decorator(func)
+    return decorator
 
-    return decorator  # Decorator usage
 
 def _register_tushare_module() -> None:
-    """Register all available Tushare functions into the source registry.
+    """Register the Tushare data source plugin.
 
-    Adds the 'tushare' data source with its supported function types
-    (e.g., 'history', 'realtime') to the global ``_SOURCE_REGISTRY``.
+    Called by :func:`yquoter.init_tushare` after token validation.
     """
-    from yquoter.tushare_source import get_stock_history_tushare, get_stock_realtime_tushare
-    if "tushare" not in _SOURCE_REGISTRY:
-        _SOURCE_REGISTRY["tushare"] = {
-        "history": get_stock_history_tushare,
-        "realtime": get_stock_realtime_tushare,
-        }
-        logger.info(f"Source 'tushare' registered")
-    else:
-        logger.warning(f"Source 'tushare' already registered")
-    return
+    if "tushare" in _SOURCE_REGISTRY:
+        logger.warning("Source 'tushare' is already registered.")
+        return
+
+    from yquoter.tushare_source import TushareDataSource
+
+    _UNAVAILABLE_SOURCES.pop("tushare", None)
+    _SOURCE_REGISTRY["tushare"] = TushareDataSource()
+    logger.info("Source 'tushare' registered.")
+
 
 def set_default_source(name: str) -> None:
     """Set the global default data source.
 
     Args:
-        name: Name of the data source to set as default.
-            Case-insensitive.
+        name: Source name (case-insensitive).
 
     Raises:
-        DataSourceError: If the specified data source is not registered.
+        DataSourceError: If the name is not registered.
     """
     global _DEFAULT_SOURCE
     name = name.lower()
-    if name not in _SOURCE_REGISTRY:
-        raise DataSourceError(f"Unknown data source: {name}; available sources: {list(_SOURCE_REGISTRY)}")
-    _DEFAULT_SOURCE = name
-    logger.info(f"Default data source set to: {name}")
+
+    if name in _SOURCE_REGISTRY:
+        _DEFAULT_SOURCE = name
+        logger.info("Default data source set to: %s", name)
+        return
+
+    avail = sorted(_SOURCE_REGISTRY.keys())
+    msg = f"Unknown data source: '{name}'; available: {avail}."
+    if name in _UNAVAILABLE_SOURCES:
+        msg += f" {_UNAVAILABLE_SOURCES[name]}"
+    raise DataSourceError(msg)
+
+
+# ======================================================================
+# Synchronous dispatch functions  (public within the package)
+# ======================================================================
 
 
 def _get_stock_history(
@@ -143,424 +356,348 @@ def _get_stock_history(
     klt: Union[str, int] = 101,
     fqt: int = 1,
     fields: str = "basic",
-    source: Optional[str] = None,
-    **kwargs
+    source: Optional[Union[str, DataSource]] = None,
+    **kwargs,
 ) -> pd.DataFrame:
-    """Unified interface for fetching stock historical data.
-
-    Handles cache checking, data fetching from the specified source,
-    and result validation.
+    """Fetch historical stock data with caching.
 
     Args:
-        market: Market identifier ('cn', 'hk', 'us').
-        code: Stock code.
-        start: Start date. Supports ``YYYY-MM-DD`` format (auto-parsed).
-        end: End date. Supports ``YYYY-MM-DD`` format (auto-parsed).
-        source: Data source to use. Defaults to the global default.
-        klt: K-line type code (101=daily, 102=weekly, 103=monthly).
-            Default is 101.
-        fqt: Forward/factor adjustment type. Default is 1.
-        fields: Data field set (``"basic"`` or ``"full"``).
-            Default is ``"basic"``.
-        **kwargs: Additional parameters passed to the data source function.
+        market: Market identifier (``"cn"``, ``"hk"``, ``"us"``).
+        code: Stock ticker symbol.
+        start: Start date.  Supports ``YYYY-MM-DD`` and similar.
+        end: End date.
+        klt: K-line type (101=daily, 102=weekly, 103=monthly).
+        fqt: Forward-adjustment type (1=adjusted, 2=unadjusted).
+        fields: ``"basic"`` or ``"full"`` column set.
+        source: Data source name or instance.  Defaults to global default.
+        **kwargs: Forwarded to the source implementation.
 
     Returns:
-        pd.DataFrame: Validated historical stock data.
-
-    Raises:
-        DataSourceError: If the data source is invalid or uninitialized.
-        ParameterError: If an invalid frequency parameter is provided.
-        DataFetchError: If data fetching fails.
-        DataFormatError: If the returned data format is invalid.
-        DateFormatError: If a date string cannot be parsed.
+        DataFrame with historical OHLCV data.
     """
+    from yquoter.config import FREQ_TO_KLT
+
+    # -- date defaults --
     if start is None and end is None:
-        start = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
-        end = datetime.now().strftime('%Y%m%d')
+        start = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+        end = datetime.now().strftime("%Y%m%d")
     elif start is None and end is not None:
         end = parse_date_str(end)
-        start = (datetime.strptime(end, '%Y%m%d') - timedelta(days=30)).strftime('%Y%m%d')
+        start = (datetime.strptime(end, "%Y%m%d") - timedelta(days=30)).strftime(
+            "%Y%m%d"
+        )
     elif end is None and start is not None:
         start = parse_date_str(start)
-        end = datetime.now().strftime('%Y%m%d')
-    from yquoter.config import FREQ_TO_KLT
+        end = datetime.now().strftime("%Y%m%d")
+
     market = market.lower()
-    # Parse date strings (DateFormatError thrown if format is invalid)
     start = parse_date_str(start)
     end = parse_date_str(end)
-    logger.info(f"Fetching data for {market}:{code} from {start} to {end}")
-    start_dt = datetime.strptime(start, "%Y%m%d")
-    end_dt = datetime.strptime(end, "%Y%m%d")
-    delta_days = (end_dt - start_dt).days
+    logger.info("Fetching history for %s:%s from %s to %s", market, code, start, end)
 
-    src = (source or _DEFAULT_SOURCE).lower()
-    logger.info(f"Using data source: {src}")
-    # Check TuShare availability (if selected)
-    if src == "tushare" and "tushare" not in _SOURCE_REGISTRY:
+    # -- source resolution --
+    src = _resolve_source(source)
+
+    if "history" not in src.supported_types:
         raise DataSourceError(
-            "TuShare data source not enabled. Please initialize and register TuShare first with `yquoter.init_tushare(token)`, "
-            "or use source='spider' instead."
+            f"Data source '{src.name}' does not support history data."
         )
 
-    # Validate selected data source
-    if src not in _SOURCE_REGISTRY:
-        raise DataSourceError(f"Unknown data source: {src}; available sources: {list(_SOURCE_REGISTRY)}")
-
-    # Override klt with freq if freq is provided
-    if klt:
+    # -- klt normalisation --
+    if klt is not None:
         if isinstance(klt, str):
             klt = klt.lower()
             if klt not in FREQ_TO_KLT:
-                raise ParameterError(f"Unknown frequency: {klt}; available values: {list(FREQ_TO_KLT)}")
+                raise ParameterError(
+                    f"Unknown frequency: {klt}; available: {list(FREQ_TO_KLT)}"
+                )
             klt = FREQ_TO_KLT[klt]
-            logger.info(f"Frequency converted to klt: {klt}")
 
-    # --- Cache & Data Fetch Logic ---
+    # -- cache check (L1 -> L2) --
+    cache_key = make_cache_key(
+        "history", market=market, code=code,
+        start=start, end=end, klt=str(klt), fqt=str(fqt),
+    )
+    cached = cache_get(cache_key, "history")
+    if cached is not None:
+        logger.info("Returning cached history for %s:%s", market, code)
+        return _validate_dataframe(cached, fields)
 
-    # 1. Check cache first
-    cache_path = get_cache_path(market, code, start, end, klt, fqt)
-    if cache_exists(cache_path):
-        df_cache = load_cache(cache_path)
-        if df_cache is not None and not df_cache.empty:
-            logger.info(f"Returning data from cache hit: {cache_path}")
-            modify_df_path(cache_path)
-            return _validate_dataframe(df_cache, fields)
-
-    # 2. Fetch from real-time source if cache missing/failed
-    logger.info(f"No cache hit; fetching data from real-time source '{src}'")
-
-    func_type = "history"
-    if func_type not in _SOURCE_REGISTRY[src]:
-        raise DataSourceError(f"Data source '{src}' does not support '{func_type}' data.")
-    func = _SOURCE_REGISTRY[src][func_type]
-
-    # Construct unified parameters
-    params = {
-        "market": market,
-        "code": code,
-        "start": start,
-        "end": end,
-        "klt": klt,
-        "fqt": fqt,
-        "fields": fields,
-        **kwargs,
-    }
-
-    # Filter out parameters not supported by the target function
-    sig = inspect.signature(func)
-    filtered_params = {k: v for k, v in params.items() if k in sig.parameters}
-
+    # -- fetch from source --
+    logger.info("Cache miss; fetching history from '%s'", src.name)
     try:
-        # Fetch data
-        logger.info(f"Calling data source function with parameters: market={market}, code={code}, klt={klt}")
-        df = func(**filtered_params)
-
+        df = src.get_history(
+            market=market, code=code, start=start, end=end,
+            klt=klt, fqt=fqt, fields=fields, **kwargs,
+        )
     except Exception as e:
-        logger.error(f"Failed to fetch data from source '{src}': {e}")
-        raise DataFetchError(f"Failed to fetch data from source '{src}'") from e
+        logger.error("Failed to fetch history from '%s': %s", src.name, e)
+        raise DataFetchError(
+            f"Failed to fetch history data from source '{src.name}'"
+        ) from e
 
-    # 3. Save to cache if data is valid
+    # -- cache save (L1 + L2) --
     if df is not None and not df.empty:
-        logger.info(f"Successfully fetched {len(df)} records from {src}")
-        save_cache(cache_path, df)  # CacheSaveError thrown if save fails
-        logger.info(f"Data cached to: {cache_path}")
-        modify_df_path(cache_path)
+        cache_set(cache_key, "history", df)
 
-    # 4. Validate and return data
     return _validate_dataframe(df, fields)
 
 
 def _get_stock_realtime(
-        market: str,
-        code: Union[str, list[str]],
-        fields: Union[str, list[str]] = None,
-        source: Optional[str] = None,
-        **kwargs
+    market: str,
+    code: Union[str, list[str]],
+    fields: Union[str, list[str]] = None,
+    source: Optional[Union[str, DataSource]] = None,
+    **kwargs,
 ) -> pd.DataFrame:
-    """Unified interface for fetching real-time stock quotes.
+    """Fetch real-time quotes.
 
-    Supports batch queries for sources that support them, and falls back
-    to individual queries for sources like Tushare that require
-    single-code calls.
+    Handles batch-vs-single-code dispatch based on the source's
+    :attr:`~yquoter.plugin_base.DataSource.supports_batch_realtime` flag.
 
     Args:
-        market: Market identifier ('cn', 'hk', 'us').
-        code: Stock code(s) to fetch. Can be a single string or a list.
-        fields: List of fields to filter in the results.
-        source: Data source to use (e.g., 'tushare', 'spider').
-        **kwargs: Additional keyword arguments for the source function.
+        market: Market identifier.
+        code: Single code or list of codes.
+        fields: Fields to retrieve.
+        source: Data source name or instance.
+        **kwargs: Forwarded to the source.
 
     Returns:
-        pd.DataFrame: Standardized real-time quotes.
-
-    Raises:
-        DataSourceError: If the source is unknown or uninitialized.
-        DataFetchError: If data fetching fails.
+        DataFrame with real-time quote data.
     """
-
     market = market.lower()
 
-    # 1. Standardize codes and fields to lists
     if isinstance(code, str):
         code = [code]
     if isinstance(fields, str):
         fields = [fields]
 
-    logger.info(f"Initiating real-time data fetch for {market} with {len(code)} code(s).")
+    logger.info(
+        "Fetching real-time data for %s (%d code(s)).", market, len(code)
+    )
 
-    src = (source or _DEFAULT_SOURCE).lower()
+    # -- cache check (L1 only -- realtime is not persisted) --
+    sorted_codes = tuple(sorted(code))
+    sorted_fields = tuple(sorted(fields)) if fields else ()
+    cache_key = make_cache_key(
+        "realtime", market=market, code=sorted_codes, fields=sorted_fields,
+    )
+    cached = cache_get(cache_key, "realtime")
+    if cached is not None:
+        logger.info("Returning cached realtime for %s", market)
+        return cached
 
-    # Check TuShare availability (if selected)
-    if src == "tushare" and "tushare" not in _SOURCE_REGISTRY:
+    src = _resolve_source(source)
+
+    if "realtime" not in src.supported_types:
         raise DataSourceError(
-            "TuShare data source not enabled. Please initialize and register TuShare first with `yquoter.init_tushare(token)`, "
-            "or use source='spider' instead."
+            f"Data source '{src.name}' does not support realtime data."
         )
 
-    # Validate selected data source
-    if src not in _SOURCE_REGISTRY:
-        raise DataSourceError(f"Unknown data source: {src}; available sources: {list(_SOURCE_REGISTRY)}")
+    all_results: list[pd.DataFrame] = []
 
-    logger.info(f"Using data source: {src}.")
-
-    func_type = "realtime"
-    if func_type not in _SOURCE_REGISTRY[src]:
-        raise DataSourceError(f"Data source '{src}' does not support '{func_type}' data.")
-    func = _SOURCE_REGISTRY[src][func_type]
-
-    all_results = []
-
-    # -------------------------------------------------------------
-    # Core Logic: Dynamic Batching Strategy based on source
-    # -------------------------------------------------------------
-    if src == "tushare":
-        # Tushare requires single-code calls; iterating manually.
-        logger.info(f"Tushare source selected. Iterating through {len(code)} codes individually.")
-
-        for code in code:
-            # Parameters tailored for the single-code Tushare function (expecting 'code')
-            params = {
-                "market": market,
-                "code": code,
-                "fields": fields,
-                **kwargs,
-            }
-
-            sig = inspect.signature(func)
-            filtered_params = {k: v for k, v in params.items() if k in sig.parameters}
-
-            try:
-                # Call the single-stock fetch function
-                df = func(**filtered_params)
-
-                if df is not None and not df.empty:
-                    all_results.append(df)
-                else:
-                    logger.warning(f"Source '{src}' returned empty data for code: {code}.")
-
-            except Exception as e:
-                # Log the error and continue to the next code to maximize data retrieval
-                logger.error(f"Failed to fetch data for code '{code}' from Tushare: {e}", exc_info=True)
-                continue
-
-    else:
-        # Other data sources are assumed to support batch queries.
-        logger.info(f"Source '{src}' is batch-compatible; making a single API call.")
-
-        # Parameters for the batch query function (expecting 'codes')
-        params = {
-            "market": market,
-            "code": code,  # Pass the full list of codes
-            "fields": fields,
-            **kwargs,
-        }
-
-        sig = inspect.signature(func)
-        filtered_params = {k: v for k, v in params.items() if k in sig.parameters}
-
+    if src.supports_batch_realtime:
+        # Batch: pass all codes in a single call.
         try:
-            # Fetch data in a single batch
-            df = func(**filtered_params)
-
+            df = src.get_realtime(
+                market=market, code=code, fields=fields, **kwargs,
+            )
             if df is not None and not df.empty:
                 all_results.append(df)
-            else:
-                logger.warning(f"Batch query to source '{src}' returned empty data.")
-
         except Exception as e:
-            # Batch query failure is considered critical for this source
-            logger.error(f"Failed to fetch data from source '{src}' via batch query: {e}", exc_info=True)
-            raise DataFetchError(f"Failed to fetch data from source '{src}'") from e
+            logger.error("Batch realtime query from '%s' failed: %s", src.name, e)
+            raise DataFetchError(
+                f"Failed to fetch realtime data from source '{src.name}'"
+            ) from e
+    else:
+        # Single-code iteration (e.g. TuShare).
+        for single_code in code:
+            try:
+                df = src.get_realtime(
+                    market=market, code=single_code, fields=fields, **kwargs,
+                )
+                if df is not None and not df.empty:
+                    all_results.append(df)
+            except Exception as e:
+                logger.error(
+                    "Realtime fetch for '%s' from '%s' failed: %s",
+                    single_code, src.name, e,
+                )
+                continue
 
     if not all_results:
-        # If all attempts failed or returned empty data
-        logger.warning(f"All fetch attempts for market '{market}' failed or returned empty data.")
-        # Return an empty DataFrame
+        logger.warning("All realtime fetch attempts returned empty data.")
         return pd.DataFrame()
 
-    # 3. Concatenate and validate/order the final result
-    final_df = pd.concat(all_results, ignore_index=True)
+    result_df = pd.concat(all_results, ignore_index=True)
+    if not result_df.empty:
+        cache_set(cache_key, "realtime", result_df)
+    return result_df
 
-    return final_df
 
 def _get_stock_financials(
-        market: str,
-        code: str,
-        end_day: str,
-        report_type: str = "CWBB",
-        limit: int = 12,
-        source: Optional[str] = None,
-        **kwargs
+    market: str,
+    code: str,
+    end_day: str,
+    report_type: str = "CWBB",
+    limit: int = 12,
+    source: Optional[Union[str, DataSource]] = None,
+    **kwargs,
 ) -> pd.DataFrame:
-    """Unified interface for fetching stock financial statements.
+    """Fetch financial statements.
 
     Args:
-        market: Market identifier ('cn', 'hk', 'us').
-        code: Stock code to fetch.
-        end_day: Latest report period end date in ``YYYYMMDD`` format.
-        report_type: Type of financial report. Options: 'CWBB'
-            (Consolidated), 'LRB' (Income), 'ZCFZB' (Balance Sheet),
-            'XJLLB' (Cash Flow), 'YJBB' (Earnings). Default is 'CWBB'.
-        limit: Maximum number of recent reporting periods to fetch.
-            Default is 12.
-        source: Data source to use (e.g., 'tushare', 'spider').
-        **kwargs: Additional keyword arguments for the source function.
+        market: Market identifier.
+        code: Stock ticker symbol.
+        end_day: Report period end date in ``YYYYMMDD`` format.
+        report_type: Report type code.
+        limit: Number of periods to fetch.
+        source: Data source name or instance.
+        **kwargs: Forwarded to the source.
 
     Returns:
-        pd.DataFrame: Standardized financial statement data.
-
-    Raises:
-        DataSourceError: If the source is unknown or does not support
-            'financials'.
-        DataFetchError: If data fetching fails.
+        DataFrame with financial statement data.
     """
     market = market.lower()
     end_day = parse_date_str(end_day)
+    logger.info("Fetching financials for %s:%s, type=%s", market, code, report_type)
 
-    logger.info(f"Initiating financial data fetch for {market} of {code}.")
+    # -- cache check (L1 -> L2) --
+    cache_key = make_cache_key(
+        "financials", market=market, code=code,
+        end_day=end_day, report_type=report_type, limit=str(limit),
+    )
+    cached = cache_get(cache_key, "financials")
+    if cached is not None:
+        logger.info("Returning cached financials for %s:%s", market, code)
+        return cached
 
-    src = (source or _DEFAULT_SOURCE).lower()
+    src = _resolve_source(source)
 
-    # 1. Source availability check (TuShare specific check)
-    if src == "tushare" and "tushare" not in _SOURCE_REGISTRY:
+    if "financials" not in src.supported_types:
         raise DataSourceError(
-            "TuShare data source not enabled. Please initialize and register TuShare first with `yquoter.init_tushare(token)`, "
-            "or use source='spider' instead."
+            f"Data source '{src.name}' does not support financials data."
         )
 
-    # 2. Validate selected data source
-    if src not in _SOURCE_REGISTRY:
-        raise DataSourceError(f"Unknown data source: {src}; available sources: {list(_SOURCE_REGISTRY)}")
-
-    logger.info(f"Using data source: {src}.")
-
-    # 3. Determine function type and validate source support
-    func_type = "financials"
-    if func_type not in _SOURCE_REGISTRY[src]:
-        raise DataSourceError(f"Data source '{src}' does not support '{func_type}' data.")
-    func = _SOURCE_REGISTRY[src][func_type]
-
-    # 4. Construct unified parameters
-    params = {
-        "market": market,
-        "code": code,
-        "end_day": end_day,
-        "report_type": report_type,
-        "limit": limit,
-        **kwargs,
-    }
-
-    # 5. Filter out parameters not supported by the target function using inspect
-    sig = inspect.signature(func)
-    filtered_params = {k: v for k, v in params.items() if k in sig.parameters}
-
     try:
-        # 6. Fetch data and return
-        logger.info(f"Calling data source function with parameters: market={market}, code={code}, report_type={report_type}")
-        df = func(**filtered_params)
-
+        df = src.get_financials(
+            market=market, code=code, end_day=end_day,
+            report_type=report_type, limit=limit, **kwargs,
+        )
     except Exception as e:
-        logger.error(f"Failed to fetch data from source '{src}': {e}")
-        raise DataFetchError(f"Failed to fetch data from source '{src}'") from e
+        logger.error("Failed to fetch financials from '%s': %s", src.name, e)
+        raise DataFetchError(
+            f"Failed to fetch financials from source '{src.name}'"
+        ) from e
 
-    # Validation or standardization (omitted here, assumed to be in internal functions)
+    if df is not None and not df.empty:
+        cache_set(cache_key, "financials", df)
     return df
 
 
 def _get_stock_profile(
-        market: str,
-        code: str,
-        source: Optional[str] = None,
-        **kwargs
+    market: str,
+    code: str,
+    source: Optional[Union[str, DataSource]] = None,
+    **kwargs,
 ) -> pd.DataFrame:
-    """Unified interface for fetching company profile information.
+    """Fetch company profile information.
 
     Args:
-        market: Market identifier ('cn', 'hk', 'us').
-        code: Stock code to fetch.
-        source: Data source to use (e.g., 'tushare', 'spider').
-        **kwargs: Additional keyword arguments for the source function.
+        market: Market identifier.
+        code: Stock ticker symbol.
+        source: Data source name or instance.
+        **kwargs: Forwarded to the source.
 
     Returns:
-        pd.DataFrame: Standardized company profile data (industry,
-            main business, listing date, etc.).
-
-    Raises:
-        DataSourceError: If the source is unknown or does not support
-            'profile'.
-        DataFetchError: If data fetching fails.
+        DataFrame with company metadata.
     """
     market = market.lower()
+    logger.info("Fetching profile for %s:%s", market, code)
 
-    logger.info(f"Initiating profile data fetch for {market} of {code}.")
+    # -- cache check (L1 -> L2) --
+    cache_key = make_cache_key("profile", market=market, code=code)
+    cached = cache_get(cache_key, "profile")
+    if cached is not None:
+        logger.info("Returning cached profile for %s:%s", market, code)
+        return cached
 
-    src = (source or _DEFAULT_SOURCE).lower()
+    src = _resolve_source(source)
 
-    # 1. Source availability check (TuShare specific check)
-    if src == "tushare" and "tushare" not in _SOURCE_REGISTRY:
+    if "profile" not in src.supported_types:
         raise DataSourceError(
-            "TuShare data source not enabled. Please initialize and register TuShare first with `yquoter.init_tushare(token)`, "
-            "or use source='spider' instead."
+            f"Data source '{src.name}' does not support profile data."
         )
 
-    # 2. Validate selected data source
-    if src not in _SOURCE_REGISTRY:
-        raise DataSourceError(f"Unknown data source: {src}; available sources: {list(_SOURCE_REGISTRY)}")
+    try:
+        df = src.get_profile(market=market, code=code, **kwargs)
+    except Exception as e:
+        logger.error("Failed to fetch profile from '%s': %s", src.name, e)
+        raise DataFetchError(
+            f"Failed to fetch profile from source '{src.name}'"
+        ) from e
 
-    logger.info(f"Using data source: {src}.")
+    if df is not None and not df.empty:
+        cache_set(cache_key, "profile", df)
+    return df
 
-    # 3. Determine function type and validate source support (CORRECTED FUNC_TYPE)
-    func_type = "profile"
-    if func_type not in _SOURCE_REGISTRY[src]:
-        raise DataSourceError(f"Data source '{src}' does not support '{func_type}' data.")
-    func = _SOURCE_REGISTRY[src][func_type]
 
-    # 4. Construct unified parameters
-    params = {
-        "market": market,
-        "code": code,
-        **kwargs,
-    }
+def _get_stock_factors(
+    market: str,
+    code: str,
+    trade_date: str,
+    source: Optional[Union[str, DataSource]] = None,
+    **kwargs,
+) -> pd.DataFrame:
+    """Fetch valuation / market factor data.
 
-    # 5. Filter out parameters not supported by the target function
-    sig = inspect.signature(func)
-    filtered_params = {k: v for k, v in params.items() if k in sig.parameters}
+    Args:
+        market: Market identifier.
+        code: Stock ticker symbol.
+        trade_date: Trading date in ``YYYYMMDD`` format.
+        source: Data source name or instance.
+        **kwargs: Forwarded to the source.
+
+    Returns:
+        DataFrame with factor metrics (PE, PB, etc.).
+    """
+    market = market.lower()
+    trade_date = parse_date_str(trade_date)
+    logger.info("Fetching factors for %s:%s on %s", market, code, trade_date)
+
+    # -- cache check (L1 -> L2) --
+    cache_key = make_cache_key(
+        "factors", market=market, code=code, trade_date=trade_date,
+    )
+    cached = cache_get(cache_key, "factors")
+    if cached is not None:
+        logger.info("Returning cached factors for %s:%s", market, code)
+        return cached
+
+    src = _resolve_source(source)
+
+    if "factors" not in src.supported_types:
+        raise DataSourceError(
+            f"Data source '{src.name}' does not support factors data."
+        )
 
     try:
-        # 6. Fetch data and return
-        logger.info(
-            f"Calling data source function with parameters: market={market}, code={code}")
-        df = func(**filtered_params)
-
+        df = src.get_factors(
+            market=market, code=code, trade_date=trade_date, **kwargs,
+        )
     except Exception as e:
-        logger.error(f"Failed to fetch data from source '{src}': {e}")
-        raise DataFetchError(f"Failed to fetch data from source '{src}'") from e
+        logger.error("Failed to fetch factors from '%s': %s", src.name, e)
+        raise DataFetchError(
+            f"Failed to fetch factors from source '{src.name}'"
+        ) from e
 
+    if df is not None and not df.empty:
+        cache_set(cache_key, "factors", df)
     return df
 
 
 # ======================================================================
-# Async wrappers (internal, for use in reporting.py async kernel)
+# Asynchronous dispatch functions  (internal, for reporting.py)
 # ======================================================================
 
 
@@ -571,24 +708,22 @@ async def _aget_stock_history(
     end: str = None,
     klt: int = 101,
     fqt: int = 1,
+    source: Optional[Union[str, DataSource]] = None,
 ) -> pd.DataFrame:
-    """Async version: directly awaits the async spider implementation.
-
-    Bypasses cache. Use the sync ``_get_stock_history`` when caching
-    is desired.
-    """
-    from yquoter.spider_source import async_get_stock_history_spider
+    """Async variant of :func:`_get_stock_history` (L1+L2 cached)."""
     from yquoter.config import FREQ_TO_KLT
 
     if start is None and end is None:
-        start = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
-        end = datetime.now().strftime('%Y%m%d')
+        start = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+        end = datetime.now().strftime("%Y%m%d")
     elif start is None:
         end = parse_date_str(end)
-        start = (datetime.strptime(end, '%Y%m%d') - timedelta(days=30)).strftime('%Y%m%d')
+        start = (datetime.strptime(end, "%Y%m%d") - timedelta(days=30)).strftime(
+            "%Y%m%d"
+        )
     elif end is None:
         start = parse_date_str(start)
-        end = datetime.now().strftime('%Y%m%d')
+        end = datetime.now().strftime("%Y%m%d")
 
     start = parse_date_str(start)
     end = parse_date_str(end)
@@ -599,116 +734,113 @@ async def _aget_stock_history(
             raise ParameterError(f"Unknown frequency: {klt}")
         klt = FREQ_TO_KLT[klt]
 
-    return await async_get_stock_history_spider(
-        market=market, code=code, start=start, end=end, klt=klt, fqt=fqt
+    # -- cache check (L1 -> L2) --
+    cache_key = make_cache_key(
+        "history", market=market, code=code,
+        start=start, end=end, klt=str(klt), fqt=str(fqt),
     )
+    cached = cache_get(cache_key, "history")
+    if cached is not None:
+        return cached
+
+    src = _resolve_source(source)
+
+    if "history" not in src.supported_types:
+        raise DataSourceError(
+            f"Data source '{src.name}' does not support history data."
+        )
+
+    df = await src.get_history_async(
+        market=market, code=code, start=start, end=end, klt=klt, fqt=fqt,
+    )
+
+    if df is not None and not df.empty:
+        cache_set(cache_key, "history", df)
+    return df
 
 
 async def _aget_stock_realtime(
-        market: str,
-        code: str,
-        fields: list[str] = None,
+    market: str,
+    code: str,
+    fields: list[str] = None,
+    source: Optional[Union[str, DataSource]] = None,
 ) -> pd.DataFrame:
-    """Async version: fetch real-time quotes without thread pool."""
-    from yquoter.spider_source import async_get_stock_realtime_spider
-    return await async_get_stock_realtime_spider(
-        market=market, code=code, fields=fields
+    """Async variant of :func:`_get_stock_realtime` (L1 cached)."""
+    # -- L1 cache check --
+    sorted_fields = tuple(sorted(fields)) if fields else ()
+    cache_key = make_cache_key(
+        "realtime", market=market, code=(code,), fields=sorted_fields,
     )
+    cached = cache_get(cache_key, "realtime")
+    if cached is not None:
+        return cached
+
+    src = _resolve_source(source)
+
+    if "realtime" not in src.supported_types:
+        raise DataSourceError(
+            f"Data source '{src.name}' does not support realtime data."
+        )
+
+    df = await src.get_realtime_async(
+        market=market, code=code, fields=fields,
+    )
+
+    if df is not None and not df.empty:
+        cache_set(cache_key, "realtime", df)
+    return df
 
 
 async def _aget_stock_profile(
-        market: str,
-        code: str,
+    market: str,
+    code: str,
+    source: Optional[Union[str, DataSource]] = None,
 ) -> pd.DataFrame:
-    """Async version: fetch company profile without thread pool."""
-    from yquoter.spider_source import async_get_stock_profile_spider
-    return await async_get_stock_profile_spider(market=market, code=code)
+    """Async variant of :func:`_get_stock_profile` (L1+L2 cached)."""
+    cache_key = make_cache_key("profile", market=market, code=code)
+    cached = cache_get(cache_key, "profile")
+    if cached is not None:
+        return cached
+
+    src = _resolve_source(source)
+
+    if "profile" not in src.supported_types:
+        raise DataSourceError(
+            f"Data source '{src.name}' does not support profile data."
+        )
+
+    df = await src.get_profile_async(market=market, code=code)
+
+    if df is not None and not df.empty:
+        cache_set(cache_key, "profile", df)
+    return df
 
 
 async def _aget_stock_factors(
-        market: str,
-        code: str,
-        trade_date: str,
+    market: str,
+    code: str,
+    trade_date: str,
+    source: Optional[Union[str, DataSource]] = None,
 ) -> pd.DataFrame:
-    """Async version: fetch factors without thread pool."""
-    from yquoter.spider_source import async_get_stock_factors_spider
-    return await async_get_stock_factors_spider(
-        market=market, code=code, trade_date=trade_date
+    """Async variant of :func:`_get_stock_factors` (L1+L2 cached)."""
+    cache_key = make_cache_key(
+        "factors", market=market, code=code, trade_date=trade_date,
     )
+    cached = cache_get(cache_key, "factors")
+    if cached is not None:
+        return cached
 
+    src = _resolve_source(source)
 
-def _get_stock_factors(
-        market: str,
-        code: str,
-        trade_date: str,
-        source: Optional[str] = None,
-        **kwargs
-) -> pd.DataFrame:
-    """Unified interface for fetching stock fundamental factors.
-
-    Fetches valuation and market factors such as PE, PB, and market
-    capitalization for a specific date.
-
-    Args:
-        market: Market identifier ('cn', 'hk', 'us').
-        code: Stock code to fetch.
-        trade_date: Date for the factor snapshot in ``YYYYMMDD`` format.
-        source: Data source to use (e.g., 'tushare', 'spider').
-        **kwargs: Additional keyword arguments for the source function.
-
-    Returns:
-        pd.DataFrame: Standardized factor data.
-
-    Raises:
-        DataSourceError: If the source is unknown or does not support
-            'factors'.
-        DataFetchError: If data fetching fails.
-    """
-    market = market.lower()
-    trade_date = parse_date_str(trade_date)
-
-    logger.info(f"Initiating factors data fetch for {market} of {code}.")
-
-    src = (source or _DEFAULT_SOURCE).lower()
-
-    # 1. Source availability check (TuShare specific check)
-    if src == "tushare" and "tushare" not in _SOURCE_REGISTRY:
+    if "factors" not in src.supported_types:
         raise DataSourceError(
-            "TuShare data source not enabled. Please initialize and register TuShare first with `yquoter.init_tushare(token)`, "
-            "or use source='spider' instead."
+            f"Data source '{src.name}' does not support factors data."
         )
 
-    # 2. Validate selected data source
-    if src not in _SOURCE_REGISTRY:
-        raise DataSourceError(f"Unknown data source: {src}; available sources: {list(_SOURCE_REGISTRY)}")
+    df = await src.get_factors_async(
+        market=market, code=code, trade_date=trade_date,
+    )
 
-    logger.info(f"Using data source: {src}.")
-
-    # 3. Determine function type and validate source support (CORRECTED FUNC_TYPE)
-    func_type = "factors"
-    if func_type not in _SOURCE_REGISTRY[src]:
-        raise DataSourceError(f"Data source '{src}' does not support '{func_type}' data.")
-    func = _SOURCE_REGISTRY[src][func_type]
-
-    # 4. Construct unified parameters
-    params = {
-        "market": market,
-        "code": code,
-        "trade_date": trade_date,
-        **kwargs,
-    }
-
-    # 5. Filter out parameters not supported by the target function
-    sig = inspect.signature(func)
-    filtered_params = {k: v for k, v in params.items() if k in sig.parameters}
-
-    try:
-        # 6. Fetch data and return
-        logger.info(f"Calling data source function with parameters: market={market}, code={code}, trade_date={trade_date}")
-        df = func(**filtered_params)
-
-    except Exception as e:
-        logger.error(f"Failed to fetch data from source '{src}': {e}")
-        raise DataFetchError(f"Failed to fetch data from source '{src}'") from e
-
+    if df is not None and not df.empty:
+        cache_set(cache_key, "factors", df)
     return df

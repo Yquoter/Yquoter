@@ -7,11 +7,12 @@
 
 """Yquoter: A unified financial data interface and analysis toolkit for CN/HK/US markets."""
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 __author__ = "Yquoter Team"
 __email__ = "yodeeshi@gmail.com"
 
 import logging
+from typing import Optional
 
 # ----------------------------------------------------------------------
 # Logging setup
@@ -27,6 +28,7 @@ from yquoter.llm_gateway import LLMGateway, LLMError, LLMNotAvailableError, LLMR
 from yquoter.config import get_newest_df_path
 from yquoter.datasource import register_source, set_default_source
 from yquoter.models import Stock
+from yquoter.plugin_base import DataSource
 from yquoter.exceptions import TuShareNotImportableError
 from yquoter.compat import (
     get_stock_history,
@@ -46,18 +48,47 @@ from yquoter.compat import (
 # ----------------------------------------------------------------------
 # Cache initialization
 # ----------------------------------------------------------------------
-def init_cache_manager(max_entries: int = 50) -> None:
-    """Initialize the cache manager.
+def init_cache_manager(
+    max_entries: int = 50,
+    l1_ttl: Optional[dict[str, int]] = None,
+    l1_max_entries: Optional[dict[str, int]] = None,
+    l2_ttl: Optional[dict[str, int]] = None,
+) -> None:
+    """Initialize the multi-level cache manager.
+
+    Configures L1 (in-memory) and L2 (file) caches for all data types.
+    Defaults are sensible for most users; override individual TTLs or
+    entry limits via the optional parameters.
 
     Args:
-        max_entries: Maximum number of cached files to keep.
-            Default is 50.
+        max_entries: Maximum number of L2 (file) cache entries across
+            all data types.  Default 50.
+        l1_ttl: Per-data-type L1 TTL overrides in seconds.
+            E.g. ``{"history": 1800, "realtime": 15}``.
+        l1_max_entries: Per-data-type L1 max-entry overrides.
+            E.g. ``{"history": 200}``.
+        l2_ttl: Per-data-type L2 (file) TTL overrides in seconds.
+            E.g. ``{"profile": 2592000}`` (30 days).
     """
-    from .cache import init_cache, set_max_cache_entries
+    from yquoter.cache import get_manager, set_max_cache_entries, init_cache as l2_init_cache
+
+    # L2 file cache config (existing).
     set_max_cache_entries(max_entries)
-    init_cache()
+    l2_init_cache()
+
+    # L1 + L2 multi-level config via CacheManager.
+    mgr = get_manager()
+    mgr.initialize(
+        l1_ttl=l1_ttl,
+        l1_max_entries=l1_max_entries,
+        l2_ttl=l2_ttl,
+    )
+
     logging.getLogger(__name__).info(
-        f"Cache manager initialized, max cache entries: {max_entries}"
+        "Cache manager initialised: max_entries=%s, l1=%d types, l2=%d types",
+        max_entries,
+        len(mgr._l1_caches) if hasattr(mgr, '_l1_caches') else 0,
+        len(mgr._l2_ttl) if hasattr(mgr, '_l2_ttl') else 0,
     )
 
 
@@ -131,6 +162,7 @@ __all__ = [
     "init_tushare",
     "init_cache_manager",
     "Stock",
+    "DataSource",
     # LLM
     "get_llm_gateway",
     "LLMGateway",

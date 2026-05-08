@@ -1,7 +1,7 @@
 # Yquoter
 
 [![PyPI](https://img.shields.io/pypi/v/yquoter.svg?style=flat&logo=pypi&label=PyPI)](https://pypi.org/project/yquoter/)
-[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.3.1-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.3.2-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
 [![Yquoter CI](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml)
 ![Status: Beta](https://img.shields.io/badge/status-beta-yellow?style=flat)
 [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
@@ -13,39 +13,65 @@ Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shar
 
 ---
 
-## 🌟 Major Update: v0.3.1 — Async, AI & Multi-Market
+## 🌟 Major Update: v0.3.2 — Plugin Architecture & Multi-Level Cache
 
-### 🆕 Object-Oriented Design (v0.3.0)
+### 🏗️ Data Source Plugin System
 
-From v0.3.0, all core operations are now methods of the `Stock` class.
+The data source layer has been refactored into a proper plugin architecture:
+
+- **``DataSource`` Abstract Base Class**: Define sync/async methods for history,
+  realtime, profile, factors, and financials.  Third-party sources can be
+  added via ``pip install`` with zero changes to core code.
+- **``register_source`` / ``set_default_source``**: Fully backward-compatible.
+- **Per-Source Capabilities**: Each source declares ``supported_types`` and
+  ``supports_batch_realtime`` — the dispatch layer handles the rest.
 
 ```py
-from yquoter import Stock
+from yquoter import Stock, DataSource
 
-# Chained-style API
-df = Stock(market="us", code="AAPL").get_history(start_date="2023-01-01")
+# Use a built-in source
+s = Stock("cn", "600519", loader="tushare")
+
+# Or pass a DataSource instance directly
+class MySource(DataSource):
+    name = "my_source"
+    def get_history(self, ...): ...
+s2 = Stock("cn", "600519", loader=MySource())
 ```
 
-### 🚀 v0.3.1 Highlights
+### ⚡ Multi-Level Cache (L1 Memory + L2 File)
 
-- **Async Concurrent Architecture**: Report generation uses ``asyncio.gather``
-  to fetch history, realtime, profile, and factors **simultaneously**
-  (up to **2.5x** speedup).
-- **AI-Powered Analysis**: Integrated LLM Gateway supports DeepSeek, ChatGPT,
-  Claude, Qwen, Kimi, and Gemini with **automatic fallback**.
-- **Multi-Market Support**: Seamless access to **CN** (A-shares),
-  **HK** (H-shares), and **US** stocks via a single interface.
+Repeated queries are now near-instant:
 
-### ⚠️ Compatibility Notice
+- **L1 In-Memory Cache**: Per-data-type LRU with TTL.  History (100 entries, 1h),
+  profile (20, 24h), factors (20, 1h), financials (10, 24h), realtime (5, 30s).
+- **L2 File Cache**: Persisted CSV files with TTL.  Existing cache files
+  remain compatible.
+- **Unified Path**: Async dispatch (``reporting.py``) now shares the same cache,
+  making report re-generation 10x faster.
+- **Thread-Safe**: All cache operations protected by per-type ``threading.Lock``.
 
-- **Old functions still work** (`get_stock_history`, `get_ma_n`, etc.)
-- **Deprecated** — will be removed in v1.0.0
+```py
+from yquoter import init_cache_manager
+
+# Customise cache TTLs if desired
+init_cache_manager(
+    l1_ttl={"history": 1800, "realtime": 15},
+    l1_max_entries={"history": 200},
+)
+```
+
+### 🚀 v0.3.1 Highlights (previous)
+
+- **Async Concurrent Architecture**: Report generation uses ``asyncio.gather``.
+- **AI-Powered Analysis**: LLM Gateway with DeepSeek, ChatGPT, Claude, etc.
+- **Multi-Market Support**: CN, HK, US via a single interface.
 
 ---
 
 > 🧠 **Project Info**
 >
-> - Version: 0.3.1 
+> - Version: 0.3.2 
 >
 > **Yquoter** is developed by the **Yquoter Team**, co-founded by four students from SYSU and SCUT.  
 >
@@ -78,8 +104,9 @@ Yquoter/
 ├── src/ 
 │   └── yquoter/
 │       ├── __init__.py             # Public API exports (Stock, LLMGateway, etc.)
+│       ├── plugin_base.py          # DataSource ABC (plugin protocol)
 │       ├── reporting.py            # Stock report generation (Markdown + charts)
-│       ├── datasource.py           # Unified data source interface & registry
+│       ├── datasource.py           # Data source registry & dispatch layer
 │       ├── tushare_source.py       # TuShare data source module (optional)
 │       ├── spider_source.py        # Default web-scraping data source
 │       ├── spider_core.py          # Async concurrency engine (httpx + asyncio)
@@ -89,7 +116,7 @@ Yquoter/
 │       ├── models.py               # Stock class (type-safe OOP interface)
 │       ├── indicators.py           # Technical indicators (MA, RSI, BOLL, etc.)
 │       ├── logger.py               # Logging configuration
-│       ├── cache.py                # Local data caching (LRU)
+│       ├── cache.py                # Multi-level cache (L1 memory + L2 file)
 │       ├── utils.py                # General-purpose utilities
 │       ├── exceptions.py           # Custom exception classes
 │       ├── compat.py               # Backward-compat legacy function wrappers

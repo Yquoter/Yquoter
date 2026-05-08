@@ -271,10 +271,10 @@ async def _async_generate_stock_report(
         return await coro
 
     results = await asyncio.gather(
-        _aget_stock_history(market=market, code=code, start=start, end=end),
-        _delayed(_aget_stock_realtime(market=market, code=code), 0.3),
-        _delayed(_aget_stock_profile(market=market, code=code), 0.6),
-        _delayed(_aget_stock_factors(market=market, code=code, trade_date=trade_date), 0.9),
+        _aget_stock_history(market=market, code=code, start=start, end=end, source=source),
+        _delayed(_aget_stock_realtime(market=market, code=code, source=source), 0.3),
+        _delayed(_aget_stock_profile(market=market, code=code, source=source), 0.6),
+        _delayed(_aget_stock_factors(market=market, code=code, trade_date=trade_date, source=source), 0.9),
         return_exceptions=True,
     )
 
