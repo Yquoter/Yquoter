@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yquoter"
-version = "0.3.2"
+version = "0.4.0"
 description = "A unified financial data interface and analysis toolkit for CN/HK/US markets."
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [{ name = "Yodeesy", email = "yodeeshi@gmail.com" }]
