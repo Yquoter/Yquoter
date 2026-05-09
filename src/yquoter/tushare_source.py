@@ -49,7 +49,7 @@ def _check_tushare_token(ts_module, token: str) -> bool:
         logger.warning(f"Tushare Token verification failed. The API server may be unreachable or the token is invalid. Reason: {e}")
         raise TuShareAPIError(f"Tushare Token verification failed: {e}") from e
 
-def init_tushare(token: str = None):
+def init_tushare(token: str = None) -> None:
     """
     Initializes and registers the Tushare data source module.
 

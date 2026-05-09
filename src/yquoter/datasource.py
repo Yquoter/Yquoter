@@ -14,7 +14,7 @@ validation before dispatching to the appropriate
 """
 
 import inspect
-from typing import Dict, Callable, Optional, Union
+from typing import Any, Dict, Callable, Optional, Union
 
 import pandas as pd
 
@@ -160,13 +160,13 @@ class DynamicDataSource(DataSource):
     # -- dispatch helpers ---------------------------------------------------------
 
     @staticmethod
-    def _call_with_filter(func: Callable, **kwargs):
+    def _call_with_filter(func: Callable, **kwargs) -> Any:
         """Call *func* passing only the keyword arguments it accepts."""
         sig = inspect.signature(func)
         filtered = {k: v for k, v in kwargs.items() if k in sig.parameters}
         return func(**filtered)
 
-    def _dispatch(self, func_type: str, **kwargs):
+    def _dispatch(self, func_type: str, **kwargs) -> pd.DataFrame:
         if func_type not in self._functions:
             raise DataSourceError(
                 f"Dynamic source '{self._name}' does not have a '{func_type}' "
@@ -176,30 +176,30 @@ class DynamicDataSource(DataSource):
 
     # -- DataSource methods -------------------------------------------------------
 
-    def get_history(self, market, code, start, end, klt=101, fqt=1, **kwargs):
+    def get_history(self, market, code, start, end, klt=101, fqt=1, **kwargs) -> pd.DataFrame:
         return self._dispatch(
             "history",
             market=market, code=code, start=start, end=end,
             klt=klt, fqt=fqt, **kwargs,
         )
 
-    def get_realtime(self, market, code, fields=None, **kwargs):
+    def get_realtime(self, market, code, fields=None, **kwargs) -> pd.DataFrame:
         return self._dispatch(
             "realtime", market=market, code=code, fields=fields, **kwargs,
         )
 
     def get_financials(self, market, code, end_day, report_type="CWBB",
-                       limit=12, **kwargs):
+                       limit=12, **kwargs) -> pd.DataFrame:
         return self._dispatch(
             "financials",
             market=market, code=code, end_day=end_day,
             report_type=report_type, limit=limit, **kwargs,
         )
 
-    def get_profile(self, market, code, **kwargs):
+    def get_profile(self, market, code, **kwargs) -> pd.DataFrame:
         return self._dispatch("profile", market=market, code=code, **kwargs)
 
-    def get_factors(self, market, code, trade_date, **kwargs):
+    def get_factors(self, market, code, trade_date, **kwargs) -> pd.DataFrame:
         return self._dispatch(
             "factors", market=market, code=code, trade_date=trade_date, **kwargs,
         )

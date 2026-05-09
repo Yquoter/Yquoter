@@ -1,7 +1,7 @@
 # Yquoter
 
 [![PyPI](https://img.shields.io/pypi/v/yquoter.svg?style=flat&logo=pypi&label=PyPI)](https://pypi.org/project/yquoter/)
-[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.3.2-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.3.3-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
 [![Yquoter CI](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml)
 ![Status: Beta](https://img.shields.io/badge/status-beta-yellow?style=flat)
 [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
@@ -10,6 +10,13 @@
 ![Yquoter Social Banner](assets/yquoter_banner.png)
 ---
 Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shares, and US stock prices** easily via one interface.
+
+### 📚 Documentation
+
+- [**Contributing Guide**](CONTRIBUTING.md) — development setup, code style, pull requests
+- [**Plugin Development Guide**](docs/plugin_guide.md) — create and publish custom data sources
+- [**Changelog**](CHANGELOG.md) — version history and release notes
+- [**Parameters Reference**](PARAMETERS.md) — detailed parameter descriptions
 
 ---
 
@@ -261,19 +268,12 @@ report = Stock("cn", "600519").get_report(
 
 ---
 
-## 🤝 Contribution Guide
+## 🤝 Contributing
 
-We welcome contributions of all forms, including bug reports, documentation improvements, feature requests, and code contributions.
+See [**CONTRIBUTING.md**](CONTRIBUTING.md) for development setup, code
+style, testing requirements, and pull request workflow.
 
-Before submitting a Pull Request, please ensure that you:
-
-Adhere to the project's **coding standards**.
-
-Add **necessary test cases** to cover new or modified logic.
-
-Update **relevant documentation** (docstrings, README, or examples).
-
-For major feature changes, please open an Issue first to discuss the idea with the community.
+For plugin development, see the [**Plugin Development Guide**](docs/plugin_guide.md).
 
 ---
 

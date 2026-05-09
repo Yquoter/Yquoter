@@ -17,7 +17,7 @@ from yquoter.logger import get_logger
 logger = get_logger(__name__)
 
 def calc_indicator(df=None, market=None, code=None, start=None, end=None,
-                    pre_days=5, loader=None, indicator_func=None, **kwargs):
+                    pre_days=5, loader=None, indicator_func=None, **kwargs) -> pd.DataFrame:
     """Generic indicator calculator supporting multiple data sources.
 
     Accepts a DataFrame, file path, or fetches data automatically.
@@ -119,7 +119,7 @@ def _get_ma_n(market: str = None, code: str = None, start: str = None,
         pd.DataFrame: Data with an ``MA{n}`` column added.
     """
 
-    def _calc_ma(df, real_start=None, n=5):
+    def _calc_ma(df, real_start=None, n=5) -> pd.DataFrame:
         logger.info(f"Calculating MA{n} indicator")
         df_result = df.copy()
         ma_col = f"MA{n}"
@@ -151,7 +151,7 @@ def _get_rsi_n(market: str = None, code: str = None, start: str = None,
     Returns:
         pd.DataFrame: Data with an ``RSI{n}`` column.
     """
-    def _calc_rsi(df, real_start, n=5):
+    def _calc_rsi(df, real_start, n=5) -> pd.DataFrame:
         logger.info(f"Calculating RSI{n} indicator")
         df['change'] = df['close'].diff()  # Current close - previous close
         df['gain'] = df['change'].where(df['change'] > 0, 0)
@@ -190,7 +190,7 @@ def _get_boll_n(market: str = None, code: str = None, start: str = None,
         pd.DataFrame: Data with ``upper``, ``mid``, and ``lower``
             band columns.
     """
-    def _calc_boll(df, real_start, n=20):
+    def _calc_boll(df, real_start, n=20) -> pd.DataFrame:
         logger.info(f"Calculating Bollinger Bands with {n}-period window")
         ma_values = df['close'].rolling(window=n, min_periods=1).mean().round(2)
         std_values = df['close'].rolling(window=n, min_periods=1).std().round(2)
@@ -222,7 +222,7 @@ def _get_vol_ratio(market: str = None, code: str = None, start: str = None,
     Returns:
         pd.DataFrame: Data with a ``vol_ratio{n}`` column.
     """
-    def _calc_vol_ratio(df,real_start,n=5):
+    def _calc_vol_ratio(df, real_start, n=5) -> pd.DataFrame:
         logger.info(f"Calculating volume ratio with {n}-period average")
         vol_col = f"vol{n}"
         result_col = f"vol_ratio{n}"
@@ -261,7 +261,7 @@ def _get_max_drawdown(market: str = None, code: str = None,
             - ``recovery_date``: Recovery date (or ``None``).
     """
 
-    def _calc_max_drawdown(df,real_start,n=5):
+    def _calc_max_drawdown(df, real_start, n=5) -> dict:
         logger.info(f"Calculating max drawdown with {n}-period lookback")
         df = df[df['date'] >= real_start].copy()
         df['cum_max'] = df['close'].cummax()
@@ -312,7 +312,7 @@ def _get_rv_n(market: str = None, code: str = None, start: str = None,
     Returns:
         pd.DataFrame: Data with an ``RV{n}`` column.
     """
-    def _calc_rv_n(df,real_start,n=5):
+    def _calc_rv_n(df, real_start, n=5) -> pd.DataFrame:
         logger.info(f"Calculating {n}-period rolling volatility")
         # Calculate logarithmic returns
         df["log_change"] = np.log(df['close'] / df['close'].shift(1))

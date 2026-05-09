@@ -325,12 +325,12 @@ async def _async_generate_stock_report(
     if df_realtime is not None and not df_realtime.empty:
         data = df_realtime.iloc[0]
 
-        def _fmt_price(val):
+        def _fmt_price(val) -> str:
             if isinstance(val, (int, float, str)) and str(val).replace('.', '', 1).isdigit():
                 return f"${float(val):.2f}"
             return str(val) if val is not None else 'N/A'
 
-        def _fmt_vol(val):
+        def _fmt_vol(val) -> str:
             if isinstance(val, (int, float, str)) and str(val).replace('.', '', 1).isdigit():
                 return f"{float(val):,.0f}"
             return str(val) if val is not None else 'N/A'

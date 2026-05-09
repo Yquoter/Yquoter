@@ -268,7 +268,7 @@ def get_stock_realtime_spider(
             f"&version=6.3.8"
             f"&_={ts}"
         )
-    def parse_realtime_data(json_data):
+    def parse_realtime_data(json_data) -> list:
         """Parse Eastmoney real-time JSON response into structured 2D list"""
         realtime_data = json_data.get("data", {}).get("diff", [])
         result = []
@@ -340,7 +340,7 @@ def get_stock_financials_spider(
                 f"&_={ts}"
             )
 
-        def parse_financials(json_data):
+        def parse_financials(json_data) -> list:
             """Parse Eastmoney F10 Financial JSON"""
             data = json_data.get("result", {}).get("data", [])
             rows = []
@@ -431,7 +431,7 @@ def get_stock_profile_spider(
 
     basic_cols = ['CODE', 'NAME', 'LISTING_DATE', 'MAIN_BUSINESS', 'INDUSTRY']
 
-    def parse_basic(json_data):
+    def parse_basic(json_data) -> list:
         if market == "cn":
             info = json_data.get('jbzl', {})[0]
             data = json_data.get('fxxg', {})[0]
@@ -520,7 +520,7 @@ def get_stock_factors_spider(
         return full_url
     factor_cols = ['TRADE_DATE', 'SECURITY_CODE', 'PE_TTM', 'PE_LAR', 'PB_MRQ', 'PEG_CAR', 'PS_TTM', 'PCF_OCF_TTM', 'PCF_OCF_LAR']
 
-    def parse_factors(json_data):
+    def parse_factors(json_data) -> list:
         """Parse K-line API response to get factors for a single day"""
         datas = json_data.get('result', {}).get('data', [])
         data = {}
@@ -641,7 +641,7 @@ async def async_get_stock_realtime_spider(
             f"&_={ts}"
         )
 
-    def parse_realtime_data(json_data):
+    def parse_realtime_data(json_data) -> list:
         realtime_data = json_data.get("data", {}).get("diff", [])
         result = []
         for single_data in realtime_data:
@@ -697,7 +697,7 @@ async def async_get_stock_profile_spider(
 
     basic_cols = ['CODE', 'NAME', 'LISTING_DATE', 'MAIN_BUSINESS', 'INDUSTRY']
 
-    def parse_basic(json_data):
+    def parse_basic(json_data) -> list:
         if not isinstance(json_data, dict):
             return []
         if market == "cn":
@@ -782,7 +782,7 @@ async def async_get_stock_factors_spider(
         'PB_MRQ', 'PEG_CAR', 'PS_TTM', 'PCF_OCF_TTM', 'PCF_OCF_LAR'
     ]
 
-    def parse_factors(json_data):
+    def parse_factors(json_data) -> list:
         if not isinstance(json_data, dict):
             return []
         result = json_data.get('result')
