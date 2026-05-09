@@ -41,7 +41,7 @@ jobs:
       - name: 🧪 Run tests with pytest
         run: |
           echo "Running pytest..."
-          pip install pytest pytest-cov
+          pip install pytest pytest-cov pytest-asyncio
           pytest tests/ --cov=src/yquoter --cov-report=term-missing
 
       - name: 🏗️ Build distribution files
