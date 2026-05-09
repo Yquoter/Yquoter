@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
+## [0.4.0] — 2026-05-09
 
 ### Added
+- **MCP Tool layer**: 12 tools via `yquoter[server]` (`mcp>=1.27`)
+  - Data query: stock_history, stock_realtime, stock_profile, stock_factors, stock_financials
+  - Technical indicators: stock_ma, stock_rsi, stock_bollinger, stock_volatility, stock_max_drawdown
+  - AI + report: stock_report, ai_analyze
+- Async thread-pool dispatch for spider event-loop safety
+- Logging redirected to stderr for clean MCP stdio communication
+
+### Added (previous unreleased items)
 - CHANGELOG.md, CONTRIBUTING.md, and plugin developer guide
-- Full type annotations across all modules
-- Additional example notebooks
+- Full type annotations across modules (97.8% coverage)
 
 ---
 
