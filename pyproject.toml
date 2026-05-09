@@ -42,6 +42,7 @@ all = [
     "mplfinance",
     "tabulate",
 ]
+dev = ["pytest>=7.0", "pytest-cov>=4.0"]
 
 [project.urls]
 Homepage = "https://github.com/Yodeesy/Yquoter"
@@ -59,3 +60,6 @@ exclude = ["yquoter/log*", "yquoter/.env"]
 
 [tool.setuptools.package-data]
 "yquoter" = ["configs/*.yaml"]
+
+[project.entry-points."yquoter.data_sources"]
+spider = "yquoter.spider_source:SpiderDataSource"

@@ -68,6 +68,36 @@ def _register_builtin_sources() -> None:
 _register_builtin_sources()
 
 
+def discover_plugins() -> None:
+    """Auto-discover third-party DataSource plugins via entry_points.
+
+    Scans the ``yquoter.data_sources`` entry point group and registers
+    any plugin whose name does not already exist in the registry.
+    Third-party packages declare their plugin in ``pyproject.toml``::
+
+        [project.entry-points."yquoter.data_sources"]
+        akshare = "my_package:AkShareDataSource"
+    """
+    from importlib.metadata import entry_points
+
+    eps = entry_points(group="yquoter.data_sources")
+    discovered = 0
+    for ep in eps:
+        if ep.name not in _SOURCE_REGISTRY:
+            try:
+                cls = ep.load()
+                instance = cls()
+                _SOURCE_REGISTRY[ep.name] = instance
+                discovered += 1
+                logger.info("Discovered data source plugin: %s", ep.name)
+            except Exception as e:
+                logger.warning(
+                    "Failed to load plugin '%s': %s", ep.name, e,
+                )
+    if discovered:
+        logger.info("Plugin discovery complete: %d new source(s)", discovered)
+
+
 # ======================================================================
 # DynamicDataSource  (backward-compatibility adapter)
 # ======================================================================

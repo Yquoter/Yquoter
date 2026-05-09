@@ -33,6 +33,12 @@ jobs:
           flake8 src/yquoter --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 src/yquoter --count --exit-zero --max-complexity=12 --max-line-length=120 --statistics
 
+      - name: 🧪 Run tests with pytest
+        run: |
+          echo "Running pytest..."
+          pip install pytest pytest-cov
+          pytest tests/ --cov=src/yquoter --cov-report=term-missing
+
       - name: 📦 Install Yquoter package (editable)
         run: |
           echo "Installing Yquoter in editable mode..."

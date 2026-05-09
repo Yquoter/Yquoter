@@ -26,7 +26,7 @@ logger = get_logger(__name__)
 # ----------------------------------------------------------------------
 from yquoter.llm_gateway import LLMGateway, LLMError, LLMNotAvailableError, LLMResponseError, normalize_provider_name
 from yquoter.config import get_newest_df_path
-from yquoter.datasource import register_source, set_default_source
+from yquoter.datasource import register_source, set_default_source, discover_plugins
 from yquoter.models import Stock
 from yquoter.plugin_base import DataSource
 from yquoter.exceptions import TuShareNotImportableError
@@ -97,6 +97,12 @@ try:
     init_cache_manager()
 except Exception as e:
     logging.getLogger(__name__).warning(f"Cache manager init failed: {e}")
+
+# Auto-discover DataSource plugins via entry_points.
+try:
+    discover_plugins()
+except Exception as e:
+    logging.getLogger(__name__).warning(f"Plugin discovery failed: {e}")
 
 
 # ----------------------------------------------------------------------

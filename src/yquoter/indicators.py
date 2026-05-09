@@ -90,6 +90,10 @@ def calc_indicator(df=None, market=None, code=None, start=None, end=None,
     data['date'] = pd.to_datetime(data['date'])
     data = data.sort_values('date').reset_index(drop=True)
 
+    # If real_start is still not set but start is provided, derive it
+    if real_start is None and start is not None:
+        real_start = parse_date_str(start, "%Y%m%d")
+
     # Calculate and format result
     result = indicator_func(data, real_start, **kwargs)
     if isinstance(result, pd.DataFrame):
