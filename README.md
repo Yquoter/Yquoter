@@ -1,7 +1,7 @@
 # Yquoter
 
 [![PyPI](https://img.shields.io/pypi/v/yquoter.svg?style=flat&logo=pypi&label=PyPI)](https://pypi.org/project/yquoter/)
-[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.3.3-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.4.0-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
 [![Yquoter CI](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml)
 ![Status: Beta](https://img.shields.io/badge/status-beta-yellow?style=flat)
 [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
@@ -19,6 +19,37 @@ Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shar
 - [**Parameters Reference**](PARAMETERS.md) — detailed parameter descriptions
 
 ---
+
+## 🌟 Major Update: v0.4.0 — MCP Tool Layer (AI Agent Integration)
+
+### 🤖 MCP Server (12 Tools)
+
+Yquoter is now an **MCP server** that any MCP-compatible client (Claude
+Desktop, VS Code extensions, custom agents) can connect to.
+
+```json
+{
+  "mcpServers": {
+    "yquoter": {
+      "command": "python",
+      "args": ["-m", "yquoter.mcp_server"]
+    }
+  }
+}
+```
+
+**Data query**: ``stock_history``, ``stock_realtime``, ``stock_profile``,
+``stock_factors``, ``stock_financials``
+
+**Technical indicators**: ``stock_ma``, ``stock_rsi``, ``stock_bollinger``,
+``stock_volatility``, ``stock_max_drawdown``
+
+**AI + Report**: ``stock_report``, ``ai_analyze``
+
+```bash
+pip install yquoter[server]
+python -m yquoter.mcp_server
+```
 
 ## 🌟 Major Update: v0.3.2 — Plugin Architecture & Multi-Level Cache
 
@@ -78,7 +109,7 @@ init_cache_manager(
 
 > 🧠 **Project Info**
 >
-> - Version: 0.3.2 
+> - Version: 0.4.0 
 >
 > **Yquoter** is developed by the **Yquoter Team**, co-founded by four students from SYSU and SCUT.  
 >
@@ -99,7 +130,9 @@ pip install yquoter
 pip install yquoter[tushare]
 # With Plotting
 pip install yquoter[plotting]
-# Full install
+# With MCP Server
+pip install yquoter[server]
+# Full install (everything)
 pip install yquoter[all]
 ```
 
