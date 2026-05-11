@@ -267,33 +267,33 @@ class CacheManager:
         if data_type == "realtime":
             return None
 
-        # Key format: (data_type_discriminator, market, code, ...)
-        # We unpack based on the first element (discriminator).
-        if not key or len(key) < 1:
+        # Key format: (data_type_discriminator, source_name, market, code, ...)
+        if not key or len(key) < 2:
             return None
 
         disc = key[0]
-        if disc == "history" and len(key) >= 7:
-            _, market, code, start, end, klt_str, fqt_str = key[:7]
-            folder = os.path.join(root, market.lower(), code)
+        source = key[1]
+        if disc == "history" and len(key) >= 8:
+            _, _, market, code, start, end, klt_str, fqt_str = key[:8]
+            folder = os.path.join(root, source, market.lower(), code)
             return os.path.join(
                 folder, f"{start}_{end}_klt{klt_str}_fqt{fqt_str}.csv",
             )
 
-        if disc == "profile" and len(key) >= 3:
-            _, market, code = key[:3]
-            folder = os.path.join(root, market.lower(), code)
+        if disc == "profile" and len(key) >= 4:
+            _, _, market, code = key[:4]
+            folder = os.path.join(root, source, market.lower(), code)
             return os.path.join(folder, "profile.csv")
 
-        if disc == "factors" and len(key) >= 4:
-            _, market, code, trade_date = key[:4]
-            folder = os.path.join(root, market.lower(), code)
+        if disc == "factors" and len(key) >= 5:
+            _, _, market, code, trade_date = key[:5]
+            folder = os.path.join(root, source, market.lower(), code)
             return os.path.join(folder, f"factors_{trade_date}.csv")
 
-        if disc == "financials" and len(key) >= 5:
-            _, market, code, end_day, report_type = key[:5]
-            limit = key[5] if len(key) > 5 else "12"
-            folder = os.path.join(root, market.lower(), code)
+        if disc == "financials" and len(key) >= 6:
+            _, _, market, code, end_day, report_type = key[:6]
+            limit = key[6] if len(key) > 6 else "12"
+            folder = os.path.join(root, source, market.lower(), code)
             return os.path.join(
                 folder, f"financials_{end_day}_{report_type}_{limit}.csv",
             )
@@ -432,27 +432,27 @@ def get_manager() -> CacheManager:
 # ======================================================================
 
 
-def make_cache_key(data_type: str, **params: Any) -> Tuple:
+def make_cache_key(data_type: str, source: str = "", **params: Any) -> Tuple:
     """Build a deterministic, hashable cache key from named parameters.
 
-    The key always starts with *data_type* so that the L2 path generator
-    can identify the structure without extra metadata.
+    The key starts with *data_type* and *source* so the L2 path generator
+    can identify the structure and isolate sources from each other.
 
     Examples::
 
-        make_cache_key("history", market="cn", code="600519",
+        make_cache_key("history", source="spider", market="cn", code="600519",
                        start="20260501", end="20260508", klt="101", fqt="1")
-        # -> ("history", "cn", "600519", "20260501", "20260508", "101", "1")
+        # -> ("history", "spider", "cn", "600519", "20260501", "20260508", "101", "1")
 
-        make_cache_key("profile", market="cn", code="600519")
-        # -> ("profile", "cn", "600519")
+        make_cache_key("profile", source="spider", market="cn", code="600519")
+        # -> ("profile", "spider", "cn", "600519")
 
-        make_cache_key("realtime", market="cn",
+        make_cache_key("realtime", source="spider", market="cn",
                        code=("000001", "600519"),
                        fields=("close", "vol"))
-        # -> ("realtime", "cn", ("000001", "600519"), ("close", "vol"))
+        # -> ("realtime", "spider", "cn", ("000001", "600519"), ("close", "vol"))
     """
-    return (data_type,) + tuple(
+    return (data_type, source) + tuple(
         tuple(sorted(v)) if isinstance(v, (list, set)) else v
         for v in params.values()
     )

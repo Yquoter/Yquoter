@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.4.1] — 2026-05-11
+
+### Fixed
+- **Cache key source isolation** (P0): cache keys now include the source name,
+  preventing cross-source cache poisoning when switching between data sources.
+  L2 file paths are prefixed with the source name (`.cache/{source}/{market}/...`).
+- **`register_source` accepts DataSource instances**: the function now supports
+  both `register_source(name, DataSource())` and the legacy
+  `register_source(name, func_type, func)` forms.
+- **Indicators respect the plugin system**: all indicator functions now accept
+  a `source` parameter and pass it through to the data-fetch layer, so custom
+  data sources are used for indicator calculations.
+- **MCP Server async dispatch**: data tools now call async dispatch functions
+  directly instead of wrapping sync calls in a thread pool, eliminating the
+  double async wrapping (async handler → thread pool → asyncio.run_until_complete
+  → async spider).
+- **Stock resolves source once**: `Stock.__init__` now resolves the data source
+  immediately and caches the `DataSource` instance, instead of re-resolving on
+  every method call.
+
+### Changed
+- MCP Server tools accept an optional `source` parameter for data source selection.
+- Updated `examples/plugin_example.py` to use `register_source(name, DataSource())` form.
+
+---
+
 ## [0.4.0] — 2026-05-09
 
 ### Added

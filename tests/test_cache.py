@@ -113,24 +113,29 @@ class TestL1Cache:
 class TestMakeCacheKey:
     def test_history_key(self):
         k = make_cache_key(
-            "history", market="cn", code="600519",
+            "history", source="spider", market="cn", code="600519",
             start="20260501", end="20260508", klt="101", fqt="1",
         )
-        assert k == ("history", "cn", "600519", "20260501", "20260508", "101", "1")
+        assert k == ("history", "spider", "cn", "600519", "20260501", "20260508", "101", "1")
 
     def test_profile_key(self):
-        k = make_cache_key("profile", market="cn", code="600519")
-        assert k == ("profile", "cn", "600519")
+        k = make_cache_key("profile", source="spider", market="cn", code="600519")
+        assert k == ("profile", "spider", "cn", "600519")
 
     def test_realtime_key_sorted(self):
         k = make_cache_key(
-            "realtime", market="cn",
+            "realtime", source="spider", market="cn",
             code=("000001", "600519"),
             fields=("close", "vol"),
         )
         assert k[0] == "realtime"
-        assert k[1] == "cn"
-        assert k[2] == ("000001", "600519")
+        assert k[1] == "spider"
+        assert k[2] == "cn"
+        assert k[3] == ("000001", "600519")
+
+    def test_missing_source_defaults_to_empty(self):
+        k = make_cache_key("profile", market="cn", code="600519")
+        assert k == ("profile", "", "cn", "600519")
 
 
 # ======================================================================
@@ -140,7 +145,7 @@ class TestMakeCacheKey:
 
 class TestCacheAPI:
     def test_cache_set_get_l1_hit(self, l2_cache_dir):
-        ckey = make_cache_key("profile", market="cn", code="TEST_UNIFIED")
+        ckey = make_cache_key("profile", source="test", market="cn", code="TEST_UNIFIED")
         df = pd.DataFrame({"NAME": ["test"]})
         cache_set(ckey, "profile", df)
         result = cache_get(ckey, "profile")
@@ -152,7 +157,8 @@ class TestCacheAPI:
         assert result is None
 
     def test_realtime_l1_only(self, l2_cache_dir):
-        ckey = make_cache_key("realtime", market="cn", code=("TEST",), fields=())
+        ckey = make_cache_key("realtime", source="test", market="cn",
+                              code=("TEST",), fields=())
         df = pd.DataFrame({"close": [100.0]})
         cache_set(ckey, "realtime", df)
         # L1 hit
@@ -164,8 +170,8 @@ class TestCacheAPI:
         assert path is None
 
     def test_cache_invalidate(self, l2_cache_dir):
-        ckey = make_cache_key("factors", market="cn", code="INVAL_TEST",
-                              trade_date="20260501")
+        ckey = make_cache_key("factors", source="test", market="cn",
+                              code="INVAL_TEST", trade_date="20260501")
         df = pd.DataFrame({"PE": [15.0]})
         cache_set(ckey, "factors", df)
         assert cache_get(ckey, "factors") is not None
@@ -173,7 +179,7 @@ class TestCacheAPI:
         assert cache_get(ckey, "factors") is None
 
     def test_l2_persistence_and_promotion(self, l2_cache_dir):
-        ckey = make_cache_key("profile", market="cn", code="L2_PERSIST")
+        ckey = make_cache_key("profile", source="test", market="cn", code="L2_PERSIST")
         mgr = get_manager()
         path = mgr.get_l2_path("profile", ckey)
         assert path is not None
@@ -235,8 +241,10 @@ class TestLegacyCacheAPI:
         assert True
 
     def test_legacy_file_loadable_via_new_api(self, l2_cache_dir):
-        """Old-format CSV files should be loadable via cache_get."""
-        path = get_cache_path("cn", "LEGACY3", "20260501", "20260508", 101, 1)
+        """Cache files written via cache_set are loadable via cache_get."""
+        ckey = make_cache_key("history", source="test", market="cn",
+                              code="LEGACY3", start="20260501", end="20260508",
+                              klt="101", fqt="1")
         df = pd.DataFrame({
             "date": ["20260501", "20260502"],
             "close": [100.0, 101.0],
@@ -246,11 +254,8 @@ class TestLegacyCacheAPI:
             "vol": [5000, 6000],
             "amount": [500000, 606000],
         })
-        save_cache(path, df)
+        cache_set(ckey, "history", df)
 
-        ckey = make_cache_key("history", market="cn", code="LEGACY3",
-                              start="20260501", end="20260508",
-                              klt="101", fqt="1")
         result = cache_get(ckey, "history")
         assert result is not None
         assert len(result) == 2

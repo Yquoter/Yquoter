@@ -31,7 +31,7 @@ synchronous methods (one per data type) and four asynchronous variants:
 | Realtime     | ``get_realtime()``        | ``get_realtime_async()``      |
 | Profile      | ``get_profile()``         | ``get_profile_async()``       |
 | Factors      | ``get_factors()``         | ``get_factors_async()``       |
-| Financials   | ``get_financials()``      | *(no async variant)*          |
+| Financials   | ``get_financials()``      | ``get_financials_async()``    |
 
 You only need to implement the methods your source supports.  Unsupported
 methods raise :class:`~yquoter.exceptions.DataSourceError` by default.

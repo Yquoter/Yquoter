@@ -16,7 +16,8 @@ class TestStockInit:
         assert s.market == "cn"
         assert s.code == "600519"
         assert s.loader == "spider"
-        assert s._source_instance is None
+        assert s._source_instance is not None
+        assert s._source_instance.name == "spider"
 
     def test_with_datasource_instance(self):
         mock = MockDataSource()
@@ -25,9 +26,11 @@ class TestStockInit:
         assert s._source_instance is mock
 
     def test_with_registered_mock_source(self):
-        _SOURCE_REGISTRY["test_stock"] = MockDataSource()
+        mock = MockDataSource(name="test_stock")
+        _SOURCE_REGISTRY["test_stock"] = mock
         s = Stock("cn", "MOCK", loader="test_stock")
         assert s.loader == "test_stock"
+        assert s._source_instance is mock
         _SOURCE_REGISTRY.pop("test_stock", None)
 
     def test_invalid_loader_string_raises(self):

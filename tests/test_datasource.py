@@ -87,6 +87,27 @@ class TestRegisterSource:
         assert "spider" in _SOURCE_REGISTRY  # original intact
         self._cleanup("spider_custom")
 
+    def test_datasource_instance_form(self):
+        mock = MockDataSource(name="ds_instance_test")
+        register_source("ds_instance_test", mock)
+        assert "ds_instance_test" in _SOURCE_REGISTRY
+        assert _SOURCE_REGISTRY["ds_instance_test"] is mock
+        self._cleanup("ds_instance_test")
+
+    def test_datasource_instance_builtin_redirect(self):
+        mock = MockDataSource(name="spider")
+        result = register_source("spider", mock)
+        # Should be registered under "spider_custom"
+        assert "spider_custom" in _SOURCE_REGISTRY
+        assert _SOURCE_REGISTRY["spider_custom"] is mock
+        assert result is mock
+        self._cleanup("spider_custom")
+
+    def test_both_instance_and_func_raises(self):
+        mock = MockDataSource()
+        with pytest.raises(Exception):
+            register_source("bad", mock, lambda: None)
+
 
 # ======================================================================
 # set_default_source

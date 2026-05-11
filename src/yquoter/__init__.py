@@ -7,7 +7,7 @@
 
 """Yquoter: A unified financial data interface and analysis toolkit for CN/HK/US markets."""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __author__ = "Yquoter Team"
 __email__ = "yodeeshi@gmail.com"
 

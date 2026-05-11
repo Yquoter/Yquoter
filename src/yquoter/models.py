@@ -39,38 +39,30 @@ class Stock:
         loader: Data source loader name. Default is "spider".
     """
 
-    def __init__(self, market: str, code: str, loader: Union[str, DataSource] = "spider"):
+    def __init__(self, market: str, code: str, loader: Optional[Union[str, DataSource]] = None):
         """Initialize a Stock instance.
 
         Args:
             market: Stock exchange market code. Case-insensitive.
             code: Stock ticker symbol.
             loader: Data source identifier.  Can be a registered source name
-                (``str``) or a :class:`~yquoter.plugin_base.DataSource`
-                instance.  Default is ``"spider"``.
+                (``str``), a :class:`~yquoter.plugin_base.DataSource`
+                instance, or ``None`` to use the global default (see
+                :func:`~yquoter.set_default_source`).
 
         Raises:
             DataSourceError: If a string loader is not registered.
         """
+        from yquoter.datasource import _resolve_source
+
         self.market = market.lower()
         self.code = code
 
-        if isinstance(loader, DataSource):
-            self.loader = loader.name
-            self._source_instance = loader
-        elif isinstance(loader, str):
-            if loader not in _SOURCE_REGISTRY:
-                raise DataSourceError(
-                    f"Unknown data source: {loader}; "
-                    f"available sources: {list(_SOURCE_REGISTRY)}"
-                )
-            self.loader = loader
-            self._source_instance = None
-        else:
-            raise DataSourceError(
-                f"Invalid loader type: {type(loader).__name__}; "
-                f"expected str or DataSource."
-            )
+        # Resolve once and cache the DataSource instance so we never
+        # re-lookup by name on every method call.
+        src = _resolve_source(loader)
+        self.loader = src.name
+        self._source_instance = src
 
     def __repr__(self):
         """Return unambiguous string representation of the Stock object."""
@@ -206,7 +198,8 @@ class Stock:
             code=self.code,
             start=start_date,
             end=end_date,
-            n=n
+            n=n,
+            source=self._source_instance or self.loader,
         )
 
     def get_rv(self, start_date: str = None, end_date: str = None,
@@ -226,7 +219,8 @@ class Stock:
             code=self.code,
             start=start_date,
             end=end_date,
-            n=n
+            n=n,
+            source=self._source_instance or self.loader,
         )
     def get_rsi(self, start_date: str = None, end_date: str = None,
                 n: int = 5) -> pd.DataFrame:
@@ -245,7 +239,8 @@ class Stock:
             code=self.code,
             start=start_date,
             end=end_date,
-            n=n
+            n=n,
+            source=self._source_instance or self.loader,
         )
 
     def get_boll(self, start_date: str = None, end_date: str = None,
@@ -266,7 +261,8 @@ class Stock:
             code=self.code,
             start=start_date,
             end=end_date,
-            n=n
+            n=n,
+            source=self._source_instance or self.loader,
         )
 
     def get_vol_ratio(self, start_date: str = None, end_date: str = None,
@@ -286,7 +282,8 @@ class Stock:
             code=self.code,
             start=start_date,
             end=end_date,
-            n=n
+            n=n,
+            source=self._source_instance or self.loader,
         )
 
     def get_max_drawdown(self, start_date: str = None, end_date: str = None,
@@ -314,7 +311,8 @@ class Stock:
             code=self.code,
             start=start_date,
             end=end_date,
-            n=n
+            n=n,
+            source=self._source_instance or self.loader,
         )
 
     def get_report(self,

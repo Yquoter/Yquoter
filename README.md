@@ -8,10 +8,34 @@
 [![License](https://img.shields.io/github/license/Yquoter/Yquoter?style=flat)](./LICENSE)
 
 ![Yquoter Social Banner](assets/yquoter_banner.png)
----
-Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shares, and US stock prices** easily via one interface.
 
-### 📚 Documentation
+---
+
+> ## Disclaimer
+>
+> **Yquoter is an open-source financial data tool framework for individual
+> developers and learners.**
+>
+> - **The built-in spider is for personal, educational, non-commercial use only.**
+>   It scrapes publicly accessible web interfaces and provides **no warranty**
+>   of timeliness, accuracy, completeness, or availability.
+> - **This project does NOT purchase, hold, or resell any financial data license.**
+>   It is not a substitute for legitimate commercial data channels (Tushare
+>   Pro, Wind, Bloomberg, etc.).
+> - **The data-source plugin architecture is the core design.** Users are
+>   expected to bring their own data sources (paid APIs, internal databases,
+>   licensed third-party data) by implementing the
+>   [`DataSource` ABC](docs/plugin_guide.md). Yquoter serves only as the
+>   unified interface layer.
+> - **Use at your own risk.** You are solely responsible for complying with
+>   the terms of service of any data source you connect, the legality of the
+>   data you use, and any consequences of your investment decisions.
+> - This project is **not affiliated with** East Money, Tushare, or any other
+>   data platform.
+
+---
+
+## Documentation
 
 - [**Contributing Guide**](CONTRIBUTING.md) — development setup, code style, pull requests
 - [**Plugin Development Guide**](docs/plugin_guide.md) — create and publish custom data sources
@@ -20,12 +44,206 @@ Yquoter: Your **universal cross-market quote fetcher**. Fetch **A-shares, H-shar
 
 ---
 
-## 🌟 Major Update: v0.4.0 — MCP Tool Layer (AI Agent Integration)
+## Features
 
-### 🤖 MCP Server (12 Tools)
+Yquoter provides a unified interface for fetching and analyzing financial data
+across **CN (A-shares)**, **HK (H-shares)**, and **US** markets.
 
-Yquoter is now an **MCP server** that any MCP-compatible client (Claude
-Desktop, VS Code extensions, custom agents) can connect to.
+| Category | Capability |
+|:---------|:-----------|
+| **Market data** | Historical OHLCV (daily/weekly), real-time quotes, company profiles, valuation factors (PE, PB, PS), financial statements (balance sheet, income statement, cash flow) |
+| **Technical indicators** | MA, RSI, Bollinger Bands, rolling volatility, volume ratio, maximum drawdown |
+| **AI analysis** | Multi-provider LLM gateway (DeepSeek, OpenAI, Claude, Qwen, Kimi, Gemini) with automatic fallback |
+| **Reporting** | Markdown stock reports with embedded candlestick charts, summary statistics, and optional AI commentary |
+| **MCP server** | 12-tool MCP-compatible server for AI agent integration (Claude Desktop, VS Code, custom agents) |
+| **Plugin system** | `DataSource` ABC — swap or extend the data backend without touching core code |
+| **Caching** | Two-level cache (L1 in-memory LRU + L2 file-based CSV) with per-type TTL and thread safety |
+
+---
+
+## Project Info
+
+| | |
+|:--|:--|
+| **Version** | 0.4.0 |
+| **License** | Apache 2.0 |
+| **Lead** | [@Yodeesy](https://github.com/Yodeesy) |
+| **Contributors** | [@Sukice](https://github.com/Sukice), [@encounter666741](https://github.com/encounter666741), [@Gaeulczy](https://github.com/Gaeulczy) |
+
+Yquoter is developed by the **Yquoter Team**, co-founded by four students from
+SYSU and SCUT. The first version (v0.1.0) was completed collaboratively in 2025.
+
+---
+
+## Installation
+
+```bash
+pip install yquoter            # Minimal (spider + core)
+pip install yquoter[tushare]   # With Tushare data source
+pip install yquoter[plotting]  # With chart rendering (mplfinance)
+pip install yquoter[server]    # With MCP server dependencies
+pip install yquoter[all]       # Everything
+```
+
+---
+
+## Quick Start
+
+```python
+from yquoter import Stock
+
+# Create a stock object (default: spider data source)
+s = Stock("cn", "600519")
+
+# Fetch data
+history   = s.get_history(start_date="2026-01-01", end_date="2026-05-10")
+realtime  = s.get_realtime()
+profile   = s.get_profile()
+factors   = s.get_factors(trade_date="2026-05-09")
+financials = s.get_financials(end_day="2025-12-31")
+
+# Technical indicators
+ma    = s.get_ma(n=20)
+rsi   = s.get_rsi(n=14)
+boll  = s.get_boll(n=20)
+
+# Generate a full Markdown report
+report = s.get_report(start="2026-01-01", end="2026-05-10", language="en")
+
+# With AI analysis (requires DEEPSEEK_API_KEY or similar env var)
+report = s.get_report(language="en", llm_provider="deepseek")
+```
+
+**[📘 Full tutorial (Jupyter Notebook)](./examples/basic_usage.ipynb)**
+
+---
+
+## Core API
+
+### Stock class (recommended)
+
+The `Stock` class is the primary API. All methods return `pd.DataFrame` unless
+noted otherwise.
+
+| Method | Description | Key Parameters |
+|:-------|:------------|:---------------|
+| `get_history` | Historical OHLCV K-line data | `start_date`, `end_date`, `klt`, `fqt` |
+| `get_realtime` | Real-time quote snapshot | `fields` (optional) |
+| `get_profile` | Company name, industry, listing date | — |
+| `get_factors` | Valuation factors (PE, PB, PS, etc.) | `trade_date` |
+| `get_financials` | Financial statements | `end_day`, `report_type`, `limit` |
+| `get_ma` | N-period moving average | `start_date`, `end_date`, `n` |
+| `get_rsi` | N-period RSI | `start_date`, `end_date`, `n` |
+| `get_boll` | N-period Bollinger Bands | `start_date`, `end_date`, `n` |
+| `get_rv` | N-period rolling volatility | `start_date`, `end_date`, `n` |
+| `get_vol_ratio` | Volume ratio vs. N-period average | `start_date`, `end_date`, `n` |
+| `get_max_drawdown` | Max drawdown with recovery metrics | `start_date`, `end_date` |
+| `get_report` | Markdown report with optional AI | `start`, `end`, `language`, `llm_provider` |
+
+For full parameter details, see the [Parameters Reference](./PARAMETERS.md).
+
+### Switching data sources
+
+```python
+# Use Tushare (requires TUSHARE_TOKEN)
+from yquoter import init_tushare
+init_tushare("your_token")
+
+s = Stock("cn", "600519", loader="tushare")
+
+# Use a custom DataSource instance
+from yquoter import DataSource
+
+class MySource(DataSource):
+    name = "my_source"
+    # implement get_history, get_realtime, ...
+    ...
+
+s = Stock("cn", "600519", loader=MySource())
+```
+
+### Legacy functions (deprecated since v0.3.0)
+
+Module-level `get_stock_history`, `get_stock_realtime`, `get_stock_financials`,
+`get_ma_n`, `get_boll_n`, `generate_stock_report`, etc. are still available for
+backward compatibility but emit `DeprecationWarning`. Prefer the `Stock` class.
+
+### Utilities
+
+| Function | Description |
+|:---------|:------------|
+| `init_cache_manager` | Configure L1/L2 cache TTLs and entry limits |
+| `register_source` | Register a custom data source plugin |
+| `set_default_source` | Change the default data source |
+| `init_tushare` | Initialize Tushare with an API token |
+| `get_llm_gateway` | Get the LLM gateway instance |
+| `get_newest_df_path` | Get the path of the newest cached data file |
+
+---
+
+## LLM Gateway
+
+Yquoter includes a multi-provider AI analysis gateway with automatic provider
+detection and priority-based fallback. Configure via environment variables:
+
+| Provider | Env Variable | Default Model |
+|:---------|:-------------|:--------------|
+| DeepSeek | `DEEPSEEK_API_KEY` | `deepseek-chat` |
+| OpenAI | `OPENAI_API_KEY` | `gpt-4o-mini` |
+| Qwen | `QWEN_API_KEY` | `qwen-plus` |
+| Kimi | `KIMI_API_KEY` | `moonshot-v1-8k` |
+| Claude | `CLAUDE_API_KEY` | `claude-3-5-haiku-latest` |
+| Gemini | `GEMINI_API_KEY` | `gemini-2.0-flash` |
+
+```python
+from yquoter import get_llm_gateway
+
+gateway = get_llm_gateway()
+print(gateway.is_available())     # True if any key is set
+print(gateway.list_providers())   # List active providers
+
+result = gateway.analyze(
+    system_prompt="You are a financial analyst.",
+    user_prompt="Analyze the recent price trend...",
+    provider_name="deepseek",     # optional; auto-fallback if omitted
+)
+```
+
+---
+
+## Plugin System
+
+The data-source layer is built on the `DataSource` abstract base class. To plug
+in a custom data backend, subclass `DataSource` and implement the methods for
+the data types you support.
+
+```python
+from yquoter import DataSource, Stock, register_source
+import pandas as pd
+
+class MySource(DataSource):
+    name = "my_source"
+
+    def get_history(self, market, code, start, end, **kwargs) -> pd.DataFrame:
+        # Fetch from your own API / database
+        ...
+
+    def get_realtime(self, market, code, **kwargs) -> pd.DataFrame:
+        ...
+
+# Register and use
+register_source("my_source", MySource())
+s = Stock("cn", "600519", loader="my_source")
+```
+
+See the [Plugin Development Guide](docs/plugin_guide.md) for the full protocol
+(async methods, capability flags, entry-point discovery, and publishing).
+
+---
+
+## MCP Server
+
+Yquoter can run as an MCP-compatible server exposing 12 tools to AI agents:
 
 ```json
 {
@@ -38,279 +256,27 @@ Desktop, VS Code extensions, custom agents) can connect to.
 }
 ```
 
-**Data query**: ``stock_history``, ``stock_realtime``, ``stock_profile``,
-``stock_factors``, ``stock_financials``
-
-**Technical indicators**: ``stock_ma``, ``stock_rsi``, ``stock_bollinger``,
-``stock_volatility``, ``stock_max_drawdown``
-
-**AI + Report**: ``stock_report``, ``ai_analyze``
-
 ```bash
 pip install yquoter[server]
 python -m yquoter.mcp_server
 ```
 
-## 🌟 Major Update: v0.3.2 — Plugin Architecture & Multi-Level Cache
-
-### 🏗️ Data Source Plugin System
-
-The data source layer has been refactored into a proper plugin architecture:
-
-- **``DataSource`` Abstract Base Class**: Define sync/async methods for history,
-  realtime, profile, factors, and financials.  Third-party sources can be
-  added via ``pip install`` with zero changes to core code.
-- **``register_source`` / ``set_default_source``**: Fully backward-compatible.
-- **Per-Source Capabilities**: Each source declares ``supported_types`` and
-  ``supports_batch_realtime`` — the dispatch layer handles the rest.
-
-```py
-from yquoter import Stock, DataSource
-
-# Use a built-in source
-s = Stock("cn", "600519", loader="tushare")
-
-# Or pass a DataSource instance directly
-class MySource(DataSource):
-    name = "my_source"
-    def get_history(self, ...): ...
-s2 = Stock("cn", "600519", loader=MySource())
-```
-
-### ⚡ Multi-Level Cache (L1 Memory + L2 File)
-
-Repeated queries are now near-instant:
-
-- **L1 In-Memory Cache**: Per-data-type LRU with TTL.  History (100 entries, 1h),
-  profile (20, 24h), factors (20, 1h), financials (10, 24h), realtime (5, 30s).
-- **L2 File Cache**: Persisted CSV files with TTL.  Existing cache files
-  remain compatible.
-- **Unified Path**: Async dispatch (``reporting.py``) now shares the same cache,
-  making report re-generation 10x faster.
-- **Thread-Safe**: All cache operations protected by per-type ``threading.Lock``.
-
-```py
-from yquoter import init_cache_manager
-
-# Customise cache TTLs if desired
-init_cache_manager(
-    l1_ttl={"history": 1800, "realtime": 15},
-    l1_max_entries={"history": 200},
-)
-```
-
-### 🚀 v0.3.1 Highlights (previous)
-
-- **Async Concurrent Architecture**: Report generation uses ``asyncio.gather``.
-- **AI-Powered Analysis**: LLM Gateway with DeepSeek, ChatGPT, Claude, etc.
-- **Multi-Market Support**: CN, HK, US via a single interface.
+**Tools**: `stock_history`, `stock_realtime`, `stock_profile`, `stock_factors`,
+`stock_financials`, `stock_ma`, `stock_rsi`, `stock_bollinger`,
+`stock_volatility`, `stock_max_drawdown`, `stock_report`, `ai_analyze`.
 
 ---
 
-> 🧠 **Project Info**
->
-> - Version: 0.4.0 
->
-> **Yquoter** is developed by the **Yquoter Team**, co-founded by four students from SYSU and SCUT.  
->
-> **Project Lead:** [@Yodeesy](https://github.com/Yodeesy)  
-> **Core Contributors:** [@Sukice](https://github.com/Sukice), [@encounter666741](https://github.com/encounter666741), [@Gaeulczy](https://github.com/Gaeulczy)  
->
-> The first version (v0.1.0) was completed collaboratively in 2025.
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style,
+testing requirements, and pull request workflow.
+
+For plugin development, see the [Plugin Development Guide](docs/plugin_guide.md).
 
 ---
 
-## 📦 Installation
+## License
 
-```bash
-## Installation Options
-# Minimal:
-pip install yquoter
-# With Tushare Module
-pip install yquoter[tushare]
-# With Plotting
-pip install yquoter[plotting]
-# With MCP Server
-pip install yquoter[server]
-# Full install (everything)
-pip install yquoter[all]
-```
-
----
-## 📂 Project Structure
-This is a high-level overview of the Yquoter package structure:
-```
-Yquoter/
-├── src/ 
-│   └── yquoter/
-│       ├── __init__.py             # Public API exports (Stock, LLMGateway, etc.)
-│       ├── plugin_base.py          # DataSource ABC (plugin protocol)
-│       ├── reporting.py            # Stock report generation (Markdown + charts)
-│       ├── datasource.py           # Data source registry & dispatch layer
-│       ├── tushare_source.py       # TuShare data source module (optional)
-│       ├── spider_source.py        # Default web-scraping data source
-│       ├── spider_core.py          # Async concurrency engine (httpx + asyncio)
-│       ├── llm_gateway.py          # AI analysis gateway (multi-provider)
-│       ├── llm_prompts.py          # LLM prompt templates for analysis
-│       ├── config.py               # Configuration management (env, YAML)
-│       ├── models.py               # Stock class (type-safe OOP interface)
-│       ├── indicators.py           # Technical indicators (MA, RSI, BOLL, etc.)
-│       ├── logger.py               # Logging configuration
-│       ├── cache.py                # Multi-level cache (L1 memory + L2 file)
-│       ├── utils.py                # General-purpose utilities
-│       ├── exceptions.py           # Custom exception classes
-│       ├── compat.py               # Backward-compat legacy function wrappers
-│       └── configs/
-│           ├── mapping.yaml        # API field name mappings
-│           ├── standard.yaml       # Data standard definitions
-│           └── dictionary.yaml     # Localized report dictionary (CN/EN)
-│
-├── examples/
-│   └── basic_usage.ipynb           # Jupyter Notebook with usage examples
-│
-├── assets/                         # Non-code assets (logos, banners)
-├── out/                            # Generated reports (ignored by Git)
-├── .cache/                         # Cache directory (ignored by Git)
-├── pyproject.toml        # Package configuration for distribution (PyPI)
-├── requirements.txt      # Declaration of project dependencies
-├── LICENSE               # Apache 2.0 Open Source License details
-├── README.md             # Project documentation (this file)
-├── .gitignore            # Files/directories to exclude from version control
-└── .github/workflows/ci.yml  # GitHub Actions workflow for Continuous Integration
-```
----
-## 🚀 Core API Reference
-
-The **Yquoter** library exposes a set of standardized functions for data acquisition and technical analysis.
-
-For detailed descriptions of all function parameters (e.g., market, klt, report_type), please refer to the dedicated **[Parameters Reference](./PARAMETERS.md)**.
-
-> 📝 **Note:** Yquoter internally integrates and standardizes external data sources like **Tushare**. This means Tushare users can leverage Yquoter's unified API and caching mechanisms without dealing with complex native interface calls. To learn more about the underlying data source, visit the [Tushare GitHub repository](https://github.com/waditu/tushare).
-
-**Returns**: `pandas.DataFrame`
-
-### Stock Class Methods Reference (Optimized for O-O)
-
-| unction            | Description                                                  | Primary Parameters                                           | Returns                               | Notes                                                        |
-| ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------- | ------------------------------------------------------------ |
-| `get_history`      | Fetch historical **OHLCV (K-line)** data for a date range.   | `start_date`, `end_date`, `klt`, `fqt`, `fields('basic' or 'full')` | `DataFrame` (OHLCV)                   | These parameters define the data range and frequency.        |
-| `get_realtime`     | Fetch the latest trading snapshot (**real-time quotes**).    | `fields` (optional)                                          | `DataFrame` (Realtime Quotes)         | The stock is determined by the instance's `code`.            |
-| `get_factors`      | Fetch historical **valuation/market factors** (e.g., PE, PB). | `trade_date`                                                 | `DataFrame` (Factors)                 | `trade_date` specifies the day for the factor data.          |
-| `get_profile`      | Fetch **basic profile information** (company name, listing date, industry). | **None**                                                     | `DataFrame` (Profile)                 | Requires no parameters; uses the object's stored `code`.     |
-| `get_financials`   | Fetch fundamental **financial statements** (e.g., Income Statement, Balance Sheet). | `end_day`, `report_type`, `limit`                            | `DataFrame` (Financials)              | `end_day` is the cutoff date for the report.                 |
-| `get_ma`           | Calculate **N-period Moving Average (MA)**.                  | `n` (default 5)                                              | `DataFrame` (MA column)               | The calculation is run on the instance's latest history data. |
-| `get_boll`         | Calculate **N-period Bollinger Bands (BOLL)**.               | `n` (default 20)                                             | `DataFrame` (BOLL, Upper/Lower bands) | -                                                            |
-| `get_rsi`          | Calculate **N-period Relative Strength Index (RSI)**.        | `n` (default 5)                                              | `DataFrame` (RSI column)              | -                                                            |
-| `get_rv`           | Calculate **N-period Rolling Volatility (RV)**.              | `n` (default 5)                                              | `DataFrame` (RV column)               | -                                                            |
-| `get_max_drawdown` | Calculate **Maximum Drawdown and Recovery** over a period.   | `n` (default 5)                                              | `Dict` (Max Drawdown)                 | Runs on the instance's history or an optionally provided `df`. |
-| `get_vol_ratio`    | Calculate **Volume Ratio** (Volume to its N-period average). | `n` (default 20)                                             | `DataFrame` (Volume Ratio)            | -                                                            |
-| `get_report`       | Generate a comprehensive Markdown report with profile, realtime, history chart, summary stats, and optional AI analysis. | `start`, `end`, `language`, `llm_provider` (optional) | `str` (Markdown content)              | When ``llm_provider`` is set (e.g. ``"deepseek"``), AI-powered market analysis is appended. |
-
-### Data Acquisition Functions
-
-| Function               | Description                                                  | Primary Parameters                         | Returns                       |
-| ---------------------- | ------------------------------------------------------------ | ------------------------------------------ | ----------------------------- |
-| `get_stock_history`    | Fetch historical **OHLCV** (K-line) data for a date range.   | `market`, `code`, `start`, `end`           | `DataFrame` (OHLCV)           |
-| `get_stock_realtime`   | Fetch the **latest trading snapshot** (real-time quotes).    | `market`, `code`                           | `DataFrame` (Realtime Quotes) |
-| `get_stock_factors`    | Fetch historical **valuation/market factors** (e.g., PE, PB). | `market`, `code`, `trade_day`              | `DataFrame` (Factors)         |
-| `get_stock_profile`    | Fetch **basic profile information** (e.g., company name, listing date, industry). | `market`, `code`                           | `DataFrame` (Profile)         |
-| `get_stock_financials` | Fetch **fundamental financial statements** (e.g., Income Statement, Balance Sheet). | `market`, `code`, `end_day`, `report_type` | `DataFrame` (Financials)      |
-
-### Technical Analysis Functions
-
-These functions primarily take an existing DataFrame (`df`) or data request parameters (`market`, `code`, `start`, `end`) and calculate indicators.
-
-| Function           | Description                                                    | Primary Parameters     | Returns                               |
-| ------------------ |----------------------------------------------------------------| ---------------------- |---------------------------------------|
-| `get_ma_n`         | Calculate **N-period Moving Average** (MA).                    | `df`, `n` (default 5)  | `DataFrame` (MA column)               |
-| `get_boll_n`       | Calculate **N-period Bollinger Bands** (BOLL).                 | `df`, `n` (default 20) | `DataFrame` (BOLL, Upper/Lower bands) |
-| `get_rsi_n`        | Calculate **N-period Relative Strength Index** (RSI).          | `df`, `n` (default 14) | `DataFrame` (RSI column)              |
-| `get_rv_n`         | Calculate **N-period Rolling Volatility** (RV).                | `df`, `n` (default 5)  | `DataFrame` (RV column)               |
-| `get_max_drawdown` | Calculate **Maximum Drawdown** and **Recovery** over a period. | `df`                   | `Dict` (Max Drawdown)                 |
-| `get_vol_ratio`    | Calculate **Volume Ratio** (Volume to its N-period average).   | `df`, `n` (default 5)  | `DataFrame` (Volume Ratio)            |
-
-### Utility Functions
-
-| Function                  | Description                                                  | Primary Parameters |
-| ------------------------- | ------------------------------------------------------------ |--|
-| `init_cache_manager`      | **Initialize the cache manager** with a maximum LRU entry count. | `max_entries` |
-| `generate_stock_report` | Generate **a visualized report** of **history**, **realtime**, **profile** of a stock. | `market`, `code`, `start_date`, `end_date`, `language('cn' or 'en')` |
-| `register_source`         | **Register** a new custom data **source** plugin.            | `source_name`, `func_type (e.g., "realtime")` |
-| `set_default_source` | **Set a new default data source.** | `name` |
-| `init_tushare`            | **Initialize `TuShare` connection** with your API token and **register`TuShare` data interfaces**. | `token (or None)` |
-| `get_newest_df_path`      | **Get the path** of the newest cached data file.             | **None** |
-
----
-
-## 🤖 LLM Gateway (AI-Powered Analysis)
-
-Yquoter includes a built-in **LLM Gateway** that connects to multiple AI providers
-for automated market analysis. It supports automatic provider detection and
-priority-based fallback.
-
-### Configured via environment variables
-
-| Provider   | Env Variable       | Default Model          |
-|:-----------|:-------------------|:-----------------------|
-| DeepSeek   | `DEEPSEEK_API_KEY` | `deepseek-chat`        |
-| OpenAI     | `OPENAI_API_KEY`   | `gpt-4o-mini`          |
-| Qwen       | `QWEN_API_KEY`     | `qwen-plus`            |
-| Kimi       | `KIMI_API_KEY`     | `moonshot-v1-8k`       |
-| Claude     | `CLAUDE_API_KEY`   | `claude-3-5-haiku-latest` |
-| Gemini     | `GEMINI_API_KEY`   | `gemini-2.0-flash`     |
-
-### Usage
-
-```py
-from yquoter import get_llm_gateway
-
-gateway = get_llm_gateway()
-
-# Check if any provider is configured
-print(gateway.is_available())  # True / False
-
-# List active providers
-print(gateway.list_providers())
-
-# Direct LLM analysis
-result = gateway.analyze(
-    system_prompt="You are a financial analyst.",
-    user_prompt="Analyze the recent price trend...",
-    provider_name="deepseek",  # optional; auto-fallback if omitted
-)
-```
-
-### Use AI in stock reports
-
-```py
-from yquoter import Stock
-
-# Generate a report with DeepSeek AI analysis
-report = Stock("cn", "600519").get_report(
-    language="cn",
-    llm_provider="deepseek",
-)
-# The AI section is appended after the data sections
-```
-
----
-
-## 🛠️ Usage Example
-
-**[📘 View the Basic Usage Tutorial (Jupyter Notebook)](./examples/basic_usage.ipynb)**
-
----
-
-## 🤝 Contributing
-
-See [**CONTRIBUTING.md**](CONTRIBUTING.md) for development setup, code
-style, testing requirements, and pull request workflow.
-
-For plugin development, see the [**Plugin Development Guide**](docs/plugin_guide.md).
-
----
-
-## 📜 License
-This project is licensed under the **Apache License 2.0**. See the LICENSE file for more details.
-
----
+This project is licensed under the **Apache License 2.0**. See the
+[LICENSE](./LICENSE) file for details.

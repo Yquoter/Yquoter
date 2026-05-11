@@ -100,6 +100,7 @@ class DataSource(ABC):
         end: str,
         klt: int = 101,
         fqt: int = 1,
+        fields: str = "basic",
         **kwargs,
     ) -> pd.DataFrame:
         """Fetch historical OHLCV K-line data.
@@ -111,6 +112,7 @@ class DataSource(ABC):
             end: End date in ``YYYYMMDD`` format.
             klt: K-line type code.  Default 101 (daily).
             fqt: Forward-adjustment type.  Default 1 (adjusted).
+            fields: ``"basic"`` or ``"full"`` column set.
             **kwargs: Source-specific extra parameters.
 
         Returns:
@@ -248,13 +250,15 @@ class DataSource(ABC):
         end: str,
         klt: int = 101,
         fqt: int = 1,
+        fields: str = "basic",
         **kwargs,
     ) -> pd.DataFrame:
         """Async variant of :meth:`get_history`."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             None, lambda: self.get_history(
-                market, code, start, end, klt=klt, fqt=fqt, **kwargs,
+                market, code, start, end, klt=klt, fqt=fqt,
+                fields=fields, **kwargs,
             ),
         )
 
@@ -294,6 +298,24 @@ class DataSource(ABC):
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             None, lambda: self.get_factors(market, code, trade_date, **kwargs),
+        )
+
+    async def get_financials_async(
+        self,
+        market: str,
+        code: str,
+        end_day: str,
+        report_type: str = "CWBB",
+        limit: int = 12,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Async variant of :meth:`get_financials`."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, lambda: self.get_financials(
+                market, code, end_day,
+                report_type=report_type, limit=limit, **kwargs,
+            ),
         )
 
     def __repr__(self) -> str:

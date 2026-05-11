@@ -176,11 +176,11 @@ class DynamicDataSource(DataSource):
 
     # -- DataSource methods -------------------------------------------------------
 
-    def get_history(self, market, code, start, end, klt=101, fqt=1, **kwargs) -> pd.DataFrame:
+    def get_history(self, market, code, start, end, klt=101, fqt=1, fields="basic", **kwargs) -> pd.DataFrame:
         return self._dispatch(
             "history",
             market=market, code=code, start=start, end=end,
-            klt=klt, fqt=fqt, **kwargs,
+            klt=klt, fqt=fqt, fields=fields, **kwargs,
         )
 
     def get_realtime(self, market, code, fields=None, **kwargs) -> pd.DataFrame:
@@ -280,12 +280,24 @@ def _overwrite_prompt(source_name, func_type, old_name, new_name) -> bool:
 
 def register_source(
     source_name: str,
-    func_type: str,
+    func_type_or_source: Union[str, DataSource] = None,
     func: Callable = None,
 ):
-    """Register a function type for a data source.
+    """Register a data source or a single function for a source.
 
-    Can be used as a decorator or a regular function call.
+    Two calling conventions are supported:
+
+    1. **DataSource instance** — register a complete DataSource::
+
+           register_source("my_source", MyDataSource())
+
+    2. **Decorator / callable** — register a single function type
+       (legacy compat)::
+
+           register_source("my_source", "history", my_history_func)
+
+           @register_source("my_source", "realtime")
+           def my_realtime(**kwargs): ...
 
     If *source_name* matches a built-in source (e.g. ``"spider"``),
     the registration is redirected to ``{source_name}_custom`` to
@@ -293,14 +305,42 @@ def register_source(
 
     Args:
         source_name: Data source name (e.g. ``"my_source"``).
-        func_type: Function type (e.g. ``"history"``, ``"realtime"``).
-        func: The callable, or ``None`` for decorator usage.
+        func_type_or_source: Either a ``DataSource`` instance to
+            register directly, or a function type string
+            (``"history"``, ``"realtime"``, etc.) when used with
+            *func*.
+        func: The callable, or ``None`` for decorator usage.  Only
+            meaningful when *func_type_or_source* is a string.
 
     Returns:
-        The registered callable (or a decorator wrapper).
+        The registered callable or DataSource (or a decorator wrapper).
     """
+    # -- Branch 1: DataSource instance registration -----------------------
+    if isinstance(func_type_or_source, DataSource):
+        if func is not None:
+            raise ParameterError(
+                "register_source accepts (name, DataSource) or "
+                "(name, func_type, func), not both."
+            )
+        source_name = source_name.lower()
+        instance = func_type_or_source
+
+        if source_name in _SOURCE_REGISTRY and not isinstance(
+            _SOURCE_REGISTRY[source_name], DynamicDataSource
+        ):
+            source_name = f"{source_name}_custom"
+            logger.warning(
+                "'%s' is a built-in source; registering as '%s' instead.",
+                func_type_or_source.name, source_name,
+            )
+
+        _SOURCE_REGISTRY[source_name] = instance
+        logger.info("Source '%s' registered (type=%s).", source_name, type(instance).__name__)
+        return instance
+
+    # -- Branch 2: function-type registration (legacy) --------------------
     source_name = source_name.lower()
-    func_type = func_type.lower()
+    func_type = (func_type_or_source or "").lower()
 
     def decorator(f: Callable):
         actual_name = source_name
@@ -445,7 +485,7 @@ def _get_stock_history(
 
     # -- cache check (L1 -> L2) --
     cache_key = make_cache_key(
-        "history", market=market, code=code,
+        "history", source=src.name, market=market, code=code,
         start=start, end=end, klt=str(klt), fqt=str(fqt),
     )
     cached = cache_get(cache_key, "history")
@@ -502,27 +542,24 @@ def _get_stock_realtime(
     if isinstance(fields, str):
         fields = [fields]
 
-    logger.info(
-        "Fetching real-time data for %s (%d code(s)).", market, len(code)
-    )
-
-    # -- cache check (L1 only -- realtime is not persisted) --
-    sorted_codes = tuple(sorted(code))
-    sorted_fields = tuple(sorted(fields)) if fields else ()
-    cache_key = make_cache_key(
-        "realtime", market=market, code=sorted_codes, fields=sorted_fields,
-    )
-    cached = cache_get(cache_key, "realtime")
-    if cached is not None:
-        logger.info("Returning cached realtime for %s", market)
-        return cached
-
     src = _resolve_source(source)
 
     if "realtime" not in src.supported_types:
         raise DataSourceError(
             f"Data source '{src.name}' does not support realtime data."
         )
+
+    # -- cache check (L1 only -- realtime is not persisted) --
+    sorted_codes = tuple(sorted(code))
+    sorted_fields = tuple(sorted(fields)) if fields else ()
+    cache_key = make_cache_key(
+        "realtime", source=src.name, market=market,
+        code=sorted_codes, fields=sorted_fields,
+    )
+    cached = cache_get(cache_key, "realtime")
+    if cached is not None:
+        logger.info("Returning cached realtime for %s", market)
+        return cached
 
     all_results: list[pd.DataFrame] = []
 
@@ -592,22 +629,22 @@ def _get_stock_financials(
     end_day = parse_date_str(end_day)
     logger.info("Fetching financials for %s:%s, type=%s", market, code, report_type)
 
-    # -- cache check (L1 -> L2) --
-    cache_key = make_cache_key(
-        "financials", market=market, code=code,
-        end_day=end_day, report_type=report_type, limit=str(limit),
-    )
-    cached = cache_get(cache_key, "financials")
-    if cached is not None:
-        logger.info("Returning cached financials for %s:%s", market, code)
-        return cached
-
     src = _resolve_source(source)
 
     if "financials" not in src.supported_types:
         raise DataSourceError(
             f"Data source '{src.name}' does not support financials data."
         )
+
+    # -- cache check (L1 -> L2) --
+    cache_key = make_cache_key(
+        "financials", source=src.name, market=market, code=code,
+        end_day=end_day, report_type=report_type, limit=str(limit),
+    )
+    cached = cache_get(cache_key, "financials")
+    if cached is not None:
+        logger.info("Returning cached financials for %s:%s", market, code)
+        return cached
 
     try:
         df = src.get_financials(
@@ -645,19 +682,19 @@ def _get_stock_profile(
     market = market.lower()
     logger.info("Fetching profile for %s:%s", market, code)
 
-    # -- cache check (L1 -> L2) --
-    cache_key = make_cache_key("profile", market=market, code=code)
-    cached = cache_get(cache_key, "profile")
-    if cached is not None:
-        logger.info("Returning cached profile for %s:%s", market, code)
-        return cached
-
     src = _resolve_source(source)
 
     if "profile" not in src.supported_types:
         raise DataSourceError(
             f"Data source '{src.name}' does not support profile data."
         )
+
+    # -- cache check (L1 -> L2) --
+    cache_key = make_cache_key("profile", source=src.name, market=market, code=code)
+    cached = cache_get(cache_key, "profile")
+    if cached is not None:
+        logger.info("Returning cached profile for %s:%s", market, code)
+        return cached
 
     try:
         df = src.get_profile(market=market, code=code, **kwargs)
@@ -695,21 +732,21 @@ def _get_stock_factors(
     trade_date = parse_date_str(trade_date)
     logger.info("Fetching factors for %s:%s on %s", market, code, trade_date)
 
-    # -- cache check (L1 -> L2) --
-    cache_key = make_cache_key(
-        "factors", market=market, code=code, trade_date=trade_date,
-    )
-    cached = cache_get(cache_key, "factors")
-    if cached is not None:
-        logger.info("Returning cached factors for %s:%s", market, code)
-        return cached
-
     src = _resolve_source(source)
 
     if "factors" not in src.supported_types:
         raise DataSourceError(
             f"Data source '{src.name}' does not support factors data."
         )
+
+    # -- cache check (L1 -> L2) --
+    cache_key = make_cache_key(
+        "factors", source=src.name, market=market, code=code, trade_date=trade_date,
+    )
+    cached = cache_get(cache_key, "factors")
+    if cached is not None:
+        logger.info("Returning cached factors for %s:%s", market, code)
+        return cached
 
     try:
         df = src.get_factors(
@@ -764,21 +801,21 @@ async def _aget_stock_history(
             raise ParameterError(f"Unknown frequency: {klt}")
         klt = FREQ_TO_KLT[klt]
 
-    # -- cache check (L1 -> L2) --
-    cache_key = make_cache_key(
-        "history", market=market, code=code,
-        start=start, end=end, klt=str(klt), fqt=str(fqt),
-    )
-    cached = cache_get(cache_key, "history")
-    if cached is not None:
-        return cached
-
     src = _resolve_source(source)
 
     if "history" not in src.supported_types:
         raise DataSourceError(
             f"Data source '{src.name}' does not support history data."
         )
+
+    # -- cache check (L1 -> L2) --
+    cache_key = make_cache_key(
+        "history", source=src.name, market=market, code=code,
+        start=start, end=end, klt=str(klt), fqt=str(fqt),
+    )
+    cached = cache_get(cache_key, "history")
+    if cached is not None:
+        return cached
 
     df = await src.get_history_async(
         market=market, code=code, start=start, end=end, klt=klt, fqt=fqt,
@@ -796,21 +833,22 @@ async def _aget_stock_realtime(
     source: Optional[Union[str, DataSource]] = None,
 ) -> pd.DataFrame:
     """Async variant of :func:`_get_stock_realtime` (L1 cached)."""
-    # -- L1 cache check --
-    sorted_fields = tuple(sorted(fields)) if fields else ()
-    cache_key = make_cache_key(
-        "realtime", market=market, code=(code,), fields=sorted_fields,
-    )
-    cached = cache_get(cache_key, "realtime")
-    if cached is not None:
-        return cached
-
     src = _resolve_source(source)
 
     if "realtime" not in src.supported_types:
         raise DataSourceError(
             f"Data source '{src.name}' does not support realtime data."
         )
+
+    # -- L1 cache check --
+    sorted_fields = tuple(sorted(fields)) if fields else ()
+    cache_key = make_cache_key(
+        "realtime", source=src.name, market=market,
+        code=(code,), fields=sorted_fields,
+    )
+    cached = cache_get(cache_key, "realtime")
+    if cached is not None:
+        return cached
 
     df = await src.get_realtime_async(
         market=market, code=code, fields=fields,
@@ -827,17 +865,17 @@ async def _aget_stock_profile(
     source: Optional[Union[str, DataSource]] = None,
 ) -> pd.DataFrame:
     """Async variant of :func:`_get_stock_profile` (L1+L2 cached)."""
-    cache_key = make_cache_key("profile", market=market, code=code)
-    cached = cache_get(cache_key, "profile")
-    if cached is not None:
-        return cached
-
     src = _resolve_source(source)
 
     if "profile" not in src.supported_types:
         raise DataSourceError(
             f"Data source '{src.name}' does not support profile data."
         )
+
+    cache_key = make_cache_key("profile", source=src.name, market=market, code=code)
+    cached = cache_get(cache_key, "profile")
+    if cached is not None:
+        return cached
 
     df = await src.get_profile_async(market=market, code=code)
 
@@ -853,13 +891,6 @@ async def _aget_stock_factors(
     source: Optional[Union[str, DataSource]] = None,
 ) -> pd.DataFrame:
     """Async variant of :func:`_get_stock_factors` (L1+L2 cached)."""
-    cache_key = make_cache_key(
-        "factors", market=market, code=code, trade_date=trade_date,
-    )
-    cached = cache_get(cache_key, "factors")
-    if cached is not None:
-        return cached
-
     src = _resolve_source(source)
 
     if "factors" not in src.supported_types:
@@ -867,10 +898,55 @@ async def _aget_stock_factors(
             f"Data source '{src.name}' does not support factors data."
         )
 
+    cache_key = make_cache_key(
+        "factors", source=src.name, market=market, code=code, trade_date=trade_date,
+    )
+    cached = cache_get(cache_key, "factors")
+    if cached is not None:
+        return cached
+
     df = await src.get_factors_async(
         market=market, code=code, trade_date=trade_date,
     )
 
     if df is not None and not df.empty:
         cache_set(cache_key, "factors", df)
+    return df
+
+
+async def _aget_stock_financials(
+    market: str,
+    code: str,
+    end_day: str,
+    report_type: str = "CWBB",
+    limit: int = 12,
+    source: Optional[Union[str, DataSource]] = None,
+    **kwargs,
+) -> pd.DataFrame:
+    """Async variant of :func:`_get_stock_financials` (L1+L2 cached)."""
+    market = market.lower()
+    end_day = parse_date_str(end_day)
+
+    src = _resolve_source(source)
+
+    if "financials" not in src.supported_types:
+        raise DataSourceError(
+            f"Data source '{src.name}' does not support financials data."
+        )
+
+    cache_key = make_cache_key(
+        "financials", source=src.name, market=market, code=code,
+        end_day=end_day, report_type=report_type, limit=str(limit),
+    )
+    cached = cache_get(cache_key, "financials")
+    if cached is not None:
+        return cached
+
+    df = await src.get_financials_async(
+        market=market, code=code, end_day=end_day,
+        report_type=report_type, limit=limit, **kwargs,
+    )
+
+    if df is not None and not df.empty:
+        cache_set(cache_key, "financials", df)
     return df
