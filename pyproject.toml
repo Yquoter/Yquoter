@@ -18,6 +18,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "PyYAML~=6.0.2",
     "httpx>=0.27.0",
+    "tabulate>=0.9.0",
 ]
 
 classifiers = [
@@ -31,19 +32,18 @@ classifiers = [
 
 [project.optional-dependencies]
 tushare = ["tushare>=1.2.0"]
-plotting = [
+chart = [
     "matplotlib>=3.5.0",
     "mplfinance",
-    "tabulate",
 ]
+server = ["mcp>=1.27.0"]
 all = [
     "tushare>=1.2.0",
     "matplotlib>=3.5.0",
     "mplfinance",
-    "tabulate",
+    "mcp>=1.27.0",
 ]
-dev = ["pytest>=7.0", "pytest-cov>=4.0"]
-server = ["mcp>=1.27.0"]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "pytest-asyncio>=0.21"]
 
 [project.urls]
 Homepage = "https://github.com/Yodeesy/Yquoter"

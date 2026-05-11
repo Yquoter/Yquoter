@@ -11,6 +11,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
+from tabulate import tabulate as _tabulate
+
 from yquoter.logger import get_logger
 from yquoter.config import LOCALIZATION
 from yquoter.exceptions import PlotLibImportError, ParameterError
@@ -370,20 +372,12 @@ async def _async_generate_stock_report(
     report_sections.append(f"## {L['title_summary']}")
     if df_history is not None and not df_history.empty:
         try:
-            import tabulate  # optional
             summary = (
                 df_history.select_dtypes(include=['number'])
                 .describe()
                 .transpose()
             )
             report_sections.append(summary.to_markdown())
-        except ImportError:
-            report_sections.append(
-                L.get('missing_tabulate', '')
-                + "\n```text\n"
-                + str(df_history.select_dtypes(include=['number']).describe())
-                + "\n```"
-            )
         except Exception as e:
             logger.error("Summary failed: %s", e)
             report_sections.append(L['missing_history'])

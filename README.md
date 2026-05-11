@@ -1,7 +1,7 @@
 # Yquoter
 
 [![PyPI](https://img.shields.io/pypi/v/yquoter.svg?style=flat&logo=pypi&label=PyPI)](https://pypi.org/project/yquoter/)
-[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.4.0-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.4.1-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
 [![Yquoter CI](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml)
 ![Status: Beta](https://img.shields.io/badge/status-beta-yellow?style=flat)
 [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
@@ -55,7 +55,7 @@ across **CN (A-shares)**, **HK (H-shares)**, and **US** markets.
 | **Technical indicators** | MA, RSI, Bollinger Bands, rolling volatility, volume ratio, maximum drawdown |
 | **AI analysis** | Multi-provider LLM gateway (DeepSeek, OpenAI, Claude, Qwen, Kimi, Gemini) with automatic fallback |
 | **Reporting** | Markdown stock reports with embedded candlestick charts, summary statistics, and optional AI commentary |
-| **MCP server** | 12-tool MCP-compatible server for AI agent integration (Claude Desktop, VS Code, custom agents) |
+| **MCP server** | 15-tool MCP-compatible server for AI agent integration (Claude Desktop, VS Code, custom agents) |
 | **Plugin system** | `DataSource` ABC — swap or extend the data backend without touching core code |
 | **Caching** | Two-level cache (L1 in-memory LRU + L2 file-based CSV) with per-type TTL and thread safety |
 
@@ -65,7 +65,7 @@ across **CN (A-shares)**, **HK (H-shares)**, and **US** markets.
 
 | | |
 |:--|:--|
-| **Version** | 0.4.0 |
+| **Version** | 0.4.1 |
 | **License** | Apache 2.0 |
 | **Lead** | [@Yodeesy](https://github.com/Yodeesy) |
 | **Contributors** | [@Sukice](https://github.com/Sukice), [@encounter666741](https://github.com/encounter666741), [@Gaeulczy](https://github.com/Gaeulczy) |
@@ -78,11 +78,12 @@ SYSU and SCUT. The first version (v0.1.0) was completed collaboratively in 2025.
 ## Installation
 
 ```bash
-pip install yquoter            # Minimal (spider + core)
-pip install yquoter[tushare]   # With Tushare data source
-pip install yquoter[plotting]  # With chart rendering (mplfinance)
-pip install yquoter[server]    # With MCP server dependencies
-pip install yquoter[all]       # Everything
+pip install yquoter            # Core: spider + caching + indicators + reporting
+pip install yquoter[tushare]   # Add Tushare data source (requires token)
+pip install yquoter[chart]     # Add K-line chart rendering (matplotlib + mplfinance)
+pip install yquoter[server]    # Add MCP server (yquoter-server command)
+pip install yquoter[all]       # All of the above — full production install
+pip install yquoter[dev]       # Development tools (pytest, pytest-cov, pytest-asyncio)
 ```
 
 ---
@@ -243,7 +244,7 @@ See the [Plugin Development Guide](docs/plugin_guide.md) for the full protocol
 
 ## MCP Server
 
-Yquoter can run as an MCP-compatible server exposing 12 tools to AI agents:
+Yquoter can run as an MCP-compatible server exposing 15 tools to AI agents:
 
 ```json
 {
@@ -261,9 +262,10 @@ pip install yquoter[server]
 python -m yquoter.mcp_server
 ```
 
-**Tools**: `stock_history`, `stock_realtime`, `stock_profile`, `stock_factors`,
-`stock_financials`, `stock_ma`, `stock_rsi`, `stock_bollinger`,
-`stock_volatility`, `stock_max_drawdown`, `stock_report`, `ai_analyze`.
+**Tools**: `stock_search`, `yquoter_status`, `stock_history`, `stock_realtime`,
+`stock_realtime_batch`, `stock_profile`, `stock_factors`, `stock_financials`,
+`stock_ma`, `stock_rsi`, `stock_bollinger`, `stock_volatility`,
+`stock_max_drawdown`, `stock_report`, `ai_analyze`.
 
 ---
 
