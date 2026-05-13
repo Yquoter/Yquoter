@@ -36,12 +36,18 @@ chart = [
     "matplotlib>=3.5.0",
     "mplfinance",
 ]
+plotly = [
+    "plotly>=5.0",
+    "kaleido>=0.2",
+]
 server = ["mcp>=1.27.0"]
 all = [
     "tushare>=1.2.0",
     "matplotlib>=3.5.0",
     "mplfinance",
     "mcp>=1.27.0",
+    "plotly>=5.0",
+    "kaleido>=0.2",
 ]
 dev = ["pytest>=7.0", "pytest-cov>=4.0", "pytest-asyncio>=0.21"]
 
