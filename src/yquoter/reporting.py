@@ -5,11 +5,14 @@
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
 
+import base64
 import os
 import asyncio
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
 
 from tabulate import tabulate as _tabulate
 
@@ -18,6 +21,10 @@ from yquoter.config import LOCALIZATION
 from yquoter.exceptions import PlotLibImportError, ParameterError
 from yquoter.indicators import _get_ma_n
 from yquoter.spider_core import _run_async
+from yquoter.chart_renderer import (
+    get_renderer,
+    _resolve_backend,
+)
 from yquoter.datasource import (
     _get_stock_history,
     _get_stock_realtime,
@@ -33,133 +40,130 @@ from yquoter.datasource import (
 logger = get_logger(__name__)
 
 
-def _get_plot_as_base64(df_history: pd.DataFrame, code: str, title: str,
-                          ylabel: str) -> Optional[str]:
-    """Generate a base64-encoded K-line (candlestick) chart.
-
-    Uses mplfinance to plot the chart and encodes it as a base64 PNG
-    string for embedding in Markdown reports.
+def prepare_chart_data(df_history: pd.DataFrame, code: str):
+    """Validate and prepare OHLCV data for chart rendering.
 
     Args:
-        df_history: DataFrame containing OHLCV stock history data.
-        code: Stock code/ticker for the chart title.
-        title: Title text for the chart.
-        ylabel: Y-axis label text.
+        df_history: Raw historical OHLCV DataFrame.
+        code: Stock code for error messages.
 
     Returns:
-        Optional[str]: Base64-encoded PNG image string, or ``None`` if
-            generation fails.
+        Tuple of ``(df_plot, error_reason)``. On success, *df_plot* is
+        a prepared DataFrame with DatetimeIndex and renamed columns;
+        *error_reason* is ``None``. On failure, *df_plot* is ``None``
+        and *error_reason* describes the problem.
     """
-    # 1. Import check with proper error handling
-    try:
-        import matplotlib.pyplot as plt
-        import mplfinance as mpf
-        import base64
-        from io import BytesIO
-    except PlotLibImportError as e:
-        logger.warning("Visualization libraries not available: %s", e)
-        return None
-
-    # Set a font that supports Chinese
-    plt.rcParams['font.sans-serif'] = [
-        'Microsoft YaHei',  # Windows
-        'SimHei',  # Windows
-        'Arial Unicode MS',  # macOS/Linux
-        'Noto Sans CJK SC',  # Google's Noto Font
-        'WenQuanYi Zen Hei',  # Linux
-        'sans-serif'
-    ]
-
-    # Fix negative sign display
-    plt.rcParams['axes.unicode_minus'] = False
-
-    # 2. Input validation
     if df_history.empty:
-        logger.warning("Empty DataFrame received for stock %s", code)
-        return None
+        return None, f"Empty DataFrame for stock {code}"
 
-    # 3. Data preparation
     df_plot = df_history.copy()
 
-    # 4. Technical Indicators (with error handling)
     try:
-        N = 20
-        df_plot = _get_ma_n(n=N, df=df_plot)
+        df_plot = _get_ma_n(n=20, df=df_plot)
     except Exception as e:
-        logger.warning("Failed to calculate moving average for stock %s: %s", code, str(e))
+        logger.warning("Failed to calculate MA20 for stock %s: %s", code, str(e))
 
     try:
-        # Handle date column/index
         if 'date' in df_plot.columns:
             df_plot['date'] = pd.to_datetime(df_plot['date'], errors='coerce')
             df_plot.set_index('date', inplace=True)
         elif not isinstance(df_plot.index, pd.DatetimeIndex):
-            logger.warning("Invalid datetime index for stock %s", code)
-            return None
+            return None, f"Invalid datetime index for stock {code}"
 
-        # Column standardization
         column_map = {
-            'open': 'Open',
-            'high': 'High',
-            'low': 'Low',
-            'close': 'Close',
-            'vol': 'Volume'
+            'open': 'Open', 'high': 'High', 'low': 'Low',
+            'close': 'Close', 'vol': 'Volume',
         }
         df_plot.rename(columns=column_map, inplace=True)
 
-        # Verify required columns exist
         required_cols = ['Open', 'High', 'Low', 'Close']
         if not all(col in df_plot.columns for col in required_cols):
-            logger.warning("Missing required OHLC columns for stock %s", code)
-            return None
-
+            return None, f"Missing OHLC columns for stock {code}"
     except Exception as e:
-        logger.error("Data preparation failed for stock %s: %s", code, str(e))
-        return None
+        return None, f"Data preparation failed for stock {code}: {e}"
 
-    # 5. Plot generation
+    return df_plot, None
+
+
+def render_chart(
+    df: pd.DataFrame,
+    code: str,
+    *,
+    backend: str = "auto",
+    fmt: str = "markdown",
+    title: str = "",
+    ylabel: str = "Price",
+) -> Optional[str]:
+    """Render a candlestick chart as a format-appropriate string.
+
+    Args:
+        df: Preprocessed DataFrame with DatetimeIndex and columns
+            ``Open``, ``High``, ``Low``, ``Close``, ``Volume``,
+            and optionally ``MA20``.
+        code: Stock ticker symbol for labelling.
+        backend: Chart backend name. ``"auto"`` picks the best available.
+        fmt: Output format. ``"markdown"`` returns a ``data:`` URI;
+            ``"html"`` returns an HTML fragment.
+        title: Chart title text.
+        ylabel: Y-axis label text.
+
+    Returns:
+        - For ``fmt="markdown"``: ``data:image/...;base64,...`` URI string.
+        - For ``fmt="html"``: HTML fragment (``<svg>`` or ``<div>`` + JS).
+        - ``None`` if rendering fails.
+    """
     try:
-        style = mpf.make_mpf_style(
-            base_mpf_style='yahoo',
-            gridstyle='-',
-            rc={'font.family': ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS', 'sans-serif']}
-        )
-
-        add_plots = []
-        if 'MA20' in df_plot.columns:
-            add_plots.append(
-                mpf.make_addplot(df_plot['MA20'], color='b', secondary_y=False)
-            )
-
-        fig, axes = mpf.plot(
-            df_plot,
-            type='candle',
-            style=style,
-            title=title,
-            ylabel=ylabel,
-            volume=True,
-            addplot=add_plots,
-            figratio=(16, 9),
-            figscale=0.8,
-            returnfig=True
-        )
-
-        # 6. Save to buffer and encode
-        buf = BytesIO()
-        fig.savefig(
-            buf,
-            format='png',
-            bbox_inches='tight',
-            dpi=100
-        )
-        plt.close(fig)
-        buf.seek(0)
-
-        return base64.b64encode(buf.read()).decode('utf-8')
-
-    except Exception as e:
-        logger.error("Chart generation failed for stock %s: %s", code, str(e))
+        name = _resolve_backend(backend, fmt)
+    except RuntimeError as e:
+        logger.error("Chart backend resolution failed: %s", e)
         return None
+
+    try:
+        renderer = get_renderer(name)
+    except KeyError:
+        logger.error("Chart renderer '%s' is not registered.", name)
+        return None
+
+    try:
+        if fmt == "markdown":
+            img_bytes = renderer.render(df, code, title, ylabel)
+            if name == "svg" or getattr(renderer, "name", "") == "svg":
+                mime = "image/svg+xml"
+            else:
+                mime = "image/png"
+            b64 = base64.b64encode(img_bytes).decode("utf-8")
+            return f"data:{mime};base64,{b64}"
+        else:  # html
+            try:
+                return renderer.render_interactive(df, code, title, ylabel)
+            except NotImplementedError:
+                svg_bytes = renderer.render(df, code, title, ylabel)
+                return svg_bytes.decode("utf-8")
+    except Exception as e:
+        logger.error("Chart rendering failed (backend=%s, fmt=%s): %s", name, fmt, e)
+        return None
+
+
+
+
+
+# ======================================================================
+# ReportConfig
+# ======================================================================
+
+
+@dataclass
+class ReportConfig:
+    """Configuration for stock report generation.
+
+    All fields have sensible defaults so ``ReportConfig()`` produces
+    a standard Markdown report with auto-detected chart backend.
+    """
+    language: str = "en"
+    output_format: str = "markdown"
+    chart_backend: str = "auto"
+    output_dir: Optional[str] = None
+    llm_provider: Optional[str] = None
 
 
 # ======================================================================
@@ -176,15 +180,12 @@ def _generate_stock_report(
         language: str = 'en',
         output_dir: Optional[str] = None,
         llm_provider: Optional[str] = None,
+        config: Optional[ReportConfig] = None,
 ) -> str:
-    """Generate a comprehensive stock analysis report in Markdown.
+    """Generate a comprehensive stock analysis report.
 
     **Sync front-end** — the async kernel fetches history, realtime,
     profile, and factors **concurrently** to minimise wall-clock time.
-
-    The report includes company profile, real-time quote, historical
-    price chart, summary statistics, and an optional AI-powered
-    analysis section.
 
     Args:
         market: Stock exchange market identifier (e.g., ``'cn'``).
@@ -192,30 +193,38 @@ def _generate_stock_report(
         start: Start date in ``YYYYMMDD`` format.
         end: End date in ``YYYYMMDD`` format.
         source: Data source provider name.
-        language: Report language. ``"en"`` for English,
-            ``"cn"`` for Chinese. Default is ``"en"``.
-        output_dir: Directory to save the report. Defaults to
-            ``"./out"``.
+        language: Report language.  **Ignored if *config* is given.**
+        output_dir: Directory to save the report.  **Ignored if
+            *config* is given.**
         llm_provider: Optional LLM provider for AI analysis.
-            ``None`` (default) skips AI analysis. Otherwise, accepts
-            common names like ``"deepseek"``, ``"ChatGPT"``,
-            ``"Claude"``, ``"qwen"``, etc.
+            **Ignored if *config* is given.**
+        config: :class:`ReportConfig` instance.  When provided,
+            *language*, *output_dir*, and *llm_provider* are taken
+            from *config* instead of the individual parameters.
 
     Returns:
-        str: The full report in Markdown format.
-
-    Raises:
-        ParameterError: If required parameters (``market``, ``code``)
-            are missing.
+        str: The full report in Markdown or HTML format.
     """
+    if config is not None:
+        language = config.language
+        output_dir = config.output_dir
+        llm_provider = config.llm_provider
+        effective_config = config
+    else:
+        effective_config = ReportConfig(
+            language=language,
+            output_format="markdown",
+            chart_backend="auto",
+            output_dir=output_dir,
+            llm_provider=llm_provider,
+        )
+
     return _run_async(
         _async_generate_stock_report(
             market=market, code=code,
             start=start, end=end,
             source=source,
-            language=language,
-            output_dir=output_dir,
-            llm_provider=llm_provider,
+            config=effective_config,
         )
     )
 
@@ -231,9 +240,7 @@ async def _async_generate_stock_report(
         start: Optional[str] = None,
         end: Optional[str] = None,
         source: Optional[str] = None,
-        language: str = 'en',
-        output_dir: Optional[str] = None,
-        llm_provider: Optional[str] = None,
+        config: ReportConfig = ReportConfig(),
 ) -> str:
     """Async kernel: data fetching runs concurrently via thread pool.
 
@@ -244,6 +251,14 @@ async def _async_generate_stock_report(
     if not market or not code:
         raise ParameterError("Both market and code parameters are required")
 
+    # ---- unpack config ----
+    language = config.language
+    output_dir = config.output_dir
+    llm_provider = config.llm_provider
+    output_format = config.output_format
+    chart_backend = config.chart_backend
+
+    # ---- date defaults ----
     today = datetime.now()
     if start is None and end is None:
         start = (today - timedelta(days=30)).strftime('%Y%m%d')
@@ -354,12 +369,28 @@ async def _async_generate_stock_report(
     plot_ylabel = f'{L["price_unit"]} '
     if df_history is not None and not df_history.empty:
         try:
-            b64 = _get_plot_as_base64(df_history, code, plot_title, plot_ylabel)
-            if b64:
-                report_sections.extend([
-                    f"## {L['title_chart']}",
-                    f"![{code} K-Line Chart](data:image/png;base64,{b64})\n",
-                ])
+            df_plot, err = prepare_chart_data(df_history, code)
+            if df_plot is not None:
+                chart_str = render_chart(
+                    df_plot, code,
+                    backend=chart_backend,
+                    fmt=output_format,
+                    title=plot_title,
+                    ylabel=plot_ylabel,
+                )
+                if chart_str:
+                    if output_format == "html":
+                        report_sections.extend([
+                            f"<h2>{L['title_chart']}</h2>",
+                            chart_str,
+                        ])
+                    else:
+                        report_sections.extend([
+                            f"## {L['title_chart']}",
+                            f"![{code} K-Line Chart]({chart_str})\n",
+                        ])
+                else:
+                    report_sections.append(f"## {L['chart_unavailable']}\n{L['chart_note']}\n")
             else:
                 report_sections.append(f"## {L['chart_unavailable']}\n{L['chart_note']}\n")
         except Exception as e:
@@ -490,12 +521,17 @@ async def _async_generate_stock_report(
             logger.warning("AI analysis failed (non-critical): %s", e)
 
     # ---- compile & save ----
-    final_report = "\n".join(report_sections)
+    if output_format == "html":
+        final_report = _wrap_html_report(report_sections, code, market.upper())
+        ext = ".html"
+    else:
+        final_report = "\n".join(report_sections)
+        ext = ".md"
 
     target_dir = output_dir or os.path.join(os.getcwd(), 'out')
     try:
         os.makedirs(target_dir, exist_ok=True)
-        filename = f"{code}_report_{today.strftime('%Y%m%d_%H%M%S')}.md"
+        filename = f"{code}_report_{today.strftime('%Y%m%d_%H%M%S')}{ext}"
         file_path = os.path.join(target_dir, filename)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(final_report)
@@ -504,6 +540,32 @@ async def _async_generate_stock_report(
         logger.error("Failed to save report: %s", e)
 
     return final_report
+
+
+def _wrap_html_report(sections: list[str], code: str, market: str) -> str:
+    """Wrap report sections in a minimal HTML document."""
+    body = "\n".join(sections)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{code} ({market}) Stock Report</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         max-width: 960px; margin: 0 auto; padding: 20px; background: #1a1a2e;
+         color: #e0e0e0; }}
+  h1, h2, h3 {{ color: #ffffff; }}
+  table {{ border-collapse: collapse; width: 100%; margin: 10px 0; }}
+  th, td {{ border: 1px solid #444; padding: 8px; text-align: left; }}
+  th {{ background: #2a2a4a; }}
+  a {{ color: #42a5f5; }}
+</style>
+</head>
+<body>
+{body}
+</body>
+</html>"""
 
 
 async def _async_safe_factors(market, code, trade_date) -> Optional[pd.DataFrame]:
