@@ -30,6 +30,8 @@ from yquoter.datasource import register_source, set_default_source, discover_plu
 from yquoter.models import Stock
 from yquoter.plugin_base import DataSource
 from yquoter.exceptions import TuShareNotImportableError
+from yquoter.reporting import ReportConfig, render_chart, prepare_chart_data
+from yquoter.chart_renderer import register_renderer
 from yquoter.compat import (
     get_stock_history,
     get_stock_realtime,
@@ -174,6 +176,12 @@ __all__ = [
     "LLMGateway",
     "LLMError",
     "normalize_provider_name",
+    # Reporting
+    "ReportConfig",
+    "render_chart",
+    "prepare_chart_data",
+    # Chart renderer
+    "register_renderer",
     # Legacy compat API
     "get_stock_history",
     "get_stock_realtime",
