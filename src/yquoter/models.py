@@ -5,9 +5,14 @@
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
 
+from __future__ import annotations
+
 import pandas as pd
-from typing import Optional, Union, Literal
+from typing import Optional, Union, Literal, TYPE_CHECKING
 from yquoter.logger import get_logger
+
+if TYPE_CHECKING:
+    from yquoter.reporting import ReportConfig
 from yquoter.exceptions import DataSourceError
 from yquoter.datasource import _SOURCE_REGISTRY
 from yquoter.plugin_base import DataSource
@@ -321,7 +326,7 @@ class Stock:
                     language: Literal["cn", "en"] = "en",
                     output_dir: Optional[str] = None,
                     llm_provider: Optional[str] = None,
-                    config: Optional["ReportConfig"] = None) -> str:
+                    config: Optional[ReportConfig] = None) -> str:
         """Generate a comprehensive stock analysis report.
 
         The report includes company profile, real-time quote, historical
