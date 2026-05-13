@@ -320,35 +320,52 @@ class Stock:
                     end: Optional[str] = None,
                     language: Literal["cn", "en"] = "en",
                     output_dir: Optional[str] = None,
-                    llm_provider: Optional[str] = None) -> str:
+                    llm_provider: Optional[str] = None,
+                    config: Optional["ReportConfig"] = None) -> str:
         """Generate a comprehensive stock analysis report.
 
         The report includes company profile, real-time quote, historical
-        price chart, and summary statistics.  Set ``llm_provider`` to
-        enable AI-powered market analysis.
+        price chart, and summary statistics.  Set ``llm_provider`` or
+        ``config.llm_provider`` to enable AI-powered market analysis.
 
         Args:
             start: Report start date in ``YYYY-MM-DD`` format.
             end: Report end date in ``YYYY-MM-DD`` format.
             language: Report language. ``"en"`` for English,
                 ``"cn"`` for Chinese. Default is ``"en"``.
+                **Ignored if *config* is given.**
             output_dir: Directory to save the report file. If ``None``,
                 defaults to ``./out``.
+                **Ignored if *config* is given.**
             llm_provider: Optional LLM provider for AI analysis.
-                ``None`` (default) skips AI. Accepts common names:
-                ``"deepseek"``, ``"ChatGPT"``, ``"Claude"``,
-                ``"qwen"``, ``"kimi"``, ``"gemini"``.
+                **Ignored if *config* is given.**
+            config: :class:`~yquoter.reporting.ReportConfig` instance.
+                When provided, *language*, *output_dir*, *llm_provider*,
+                *output_format*, and *chart_backend* are taken from
+                *config*.
 
         Returns:
-            str: Report content in Markdown format.
+            str: Report content in Markdown or HTML format.
         """
-        return _generate_stock_report(
-            market=self.market,
-            code=self.code,
-            start=start,
-            end=end,
-            language=language,
-            output_dir=output_dir,
-            llm_provider=llm_provider,
-            source=self._source_instance or self.loader,
-        )
+        from yquoter.reporting import _generate_stock_report, ReportConfig as _RC
+
+        if config is not None:
+            return _generate_stock_report(
+                market=self.market,
+                code=self.code,
+                start=start,
+                end=end,
+                source=self._source_instance or self.loader,
+                config=config,
+            )
+        else:
+            return _generate_stock_report(
+                market=self.market,
+                code=self.code,
+                start=start,
+                end=end,
+                source=self._source_instance or self.loader,
+                language=language,
+                output_dir=output_dir,
+                llm_provider=llm_provider,
+            )
