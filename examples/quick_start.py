@@ -9,7 +9,7 @@ Run:
 """
 
 import pandas as pd
-from yquoter import Stock, get_llm_gateway
+from yquoter import Stock, get_llm_gateway, ReportConfig, render_chart, prepare_chart_data
 
 pd.set_option("display.max_columns", 10)
 pd.set_option("display.width", 120)
@@ -101,10 +101,27 @@ else:
 print()
 
 # ---------------------------------------------------------------------------
-# 9. Generate a report (without AI — no API key needed)
+# 9. Generate reports
 # ---------------------------------------------------------------------------
 
+# Default: Markdown with auto chart backend
 report = moutai.get_report(start="2026-04-01", end="2026-05-10", language="en")
-print(f"Report: {len(report)} characters")
+print(f"Report (default Markdown): {len(report)} characters")
+
+# HTML report with SVG chart backend (no extra dependencies)
+report_html = moutai.get_report(
+    start="2026-04-01", end="2026-05-10",
+    config=ReportConfig(output_format="html", chart_backend="svg"),
+)
+print(f"Report (HTML): {len(report_html)} characters, has <svg>: {'<svg' in report_html}")
+
+# ---------------------------------------------------------------------------
+# 10. Standalone chart rendering
+# ---------------------------------------------------------------------------
+
+df_plot, err = prepare_chart_data(history, code="600519")
+if df_plot is not None:
+    chart_uri = render_chart(df_plot, "600519", backend="svg", fmt="markdown")
+    print(f"Chart URI (first 50 chars): {chart_uri[:50]}...")
 print()
 print("Done. See the README and docs/plugin_guide.md for more.")

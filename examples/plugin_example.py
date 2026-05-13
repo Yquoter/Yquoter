@@ -151,6 +151,70 @@ print("After pip install, Yquoter auto-discovers the source on import.")
 for name in ("my_source", "custom_realtime"):
     _SOURCE_REGISTRY.pop(name, None)
 
+# ---------------------------------------------------------------------------
+# Chart Renderer Plugin Example
+# ---------------------------------------------------------------------------
+
+print("=" * 60)
+print("5. Custom Chart Renderer Plugin")
+print("=" * 60)
+
+from yquoter.chart_renderer import register_renderer
+
+class MyCustomRenderer:
+    """A simple chart renderer that returns a text-based chart."""
+
+    name = "my_text"
+    _supports_interactive = False
+
+    def render(self, df, code, title, ylabel):
+        """Return a simple text summary as bytes."""
+        text = f"Chart for {code}: {title}\\n"
+        text += f"Records: {len(df)}, Range: {df['Low'].min():.2f} - {df['High'].max():.2f}\\n"
+        return text.encode("utf-8")
+
+    def render_interactive(self, df, code, title, ylabel):
+        raise NotImplementedError("MyCustomRenderer does not support interactive output")
+
+    @staticmethod
+    def is_available():
+        return True
+
+register_renderer(MyCustomRenderer())
+
+# Show available renderers
+from yquoter.chart_renderer import _RENDERER_REGISTRY as _REND_REG
+print(f"Registered renderers: {sorted(_REND_REG.keys())}")
+
+# Use it
+from yquoter.reporting import render_chart, ReportConfig
+
+# Build a small DataFrame for demo
+import pandas as pd
+dates = pd.date_range("2026-05-01", periods=5, freq="B")
+demo_df = pd.DataFrame({
+    "Open": [100, 102, 101, 103, 102],
+    "High": [105, 106, 104, 107, 105],
+    "Low":  [99,  100, 100, 102, 101],
+    "Close":[102, 101, 103, 102, 104],
+    "Volume":[1000, 1200, 1100, 1300, 1150],
+}, index=dates)
+
+chart = render_chart(demo_df, "DEMO", backend="svg", fmt="html", title="Demo Chart")
+print(f"SVG chart (first 80 chars): {chart[:80]}...")
+
+# Generate a report with ReportConfig
+s = Stock("cn", "999999", loader=MySimpleSource())
+report = s.get_report(
+    start="2026-05-01", end="2026-05-03",
+    config=ReportConfig(output_format="html", chart_backend="svg"),
+)
+print(f"HTML report: {len(report)} chars")
+print(f"Contains <!DOCTYPE html>: {'<!DOCTYPE html>' in report}")
+
+# Cleanup renderer
+_REND_REG.pop("my_text", None)
+
 print()
 print("=" * 60)
 print("Plugin example complete.")

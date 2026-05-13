@@ -1,7 +1,7 @@
 # Yquoter
 
 [![PyPI](https://img.shields.io/pypi/v/yquoter.svg?style=flat&logo=pypi&label=PyPI)](https://pypi.org/project/yquoter/)
-[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.4.1-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-v0.4.2-orange?style=flat&logo=pypi)](https://test.pypi.org/project/yquoter/)
 [![Yquoter CI](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Yodeesy/Yquoter/actions/workflows/ci.yml)
 ![Status: Beta](https://img.shields.io/badge/status-beta-yellow?style=flat)
 [![Join Discord](https://img.shields.io/badge/Discord-Join_Community-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/UpyzsF2Kj4)
@@ -54,7 +54,7 @@ across **CN (A-shares)**, **HK (H-shares)**, and **US** markets.
 | **Market data** | Historical OHLCV (daily/weekly), real-time quotes, company profiles, valuation factors (PE, PB, PS), financial statements (balance sheet, income statement, cash flow) |
 | **Technical indicators** | MA, RSI, Bollinger Bands, rolling volatility, volume ratio, maximum drawdown |
 | **AI analysis** | Multi-provider LLM gateway (DeepSeek, OpenAI, Claude, Qwen, Kimi, Gemini) with automatic fallback |
-| **Reporting** | Markdown stock reports with embedded candlestick charts, summary statistics, and optional AI commentary |
+| **Reporting** | Markdown/HTML reports with pluggable chart backends (matplotlib/SVG/Plotly), summary statistics, and optional AI commentary |
 | **MCP server** | 15-tool MCP-compatible server for AI agent integration (Claude Desktop, VS Code, custom agents) |
 | **Plugin system** | `DataSource` ABC — swap or extend the data backend without touching core code |
 | **Caching** | Two-level cache (L1 in-memory LRU + L2 file-based CSV) with per-type TTL and thread safety |
@@ -65,7 +65,7 @@ across **CN (A-shares)**, **HK (H-shares)**, and **US** markets.
 
 | | |
 |:--|:--|
-| **Version** | 0.4.1 |
+| **Version** | 0.4.2 |
 | **License** | Apache 2.0 |
 | **Lead** | [@Yodeesy](https://github.com/Yodeesy) |
 | **Contributors** | [@Sukice](https://github.com/Sukice), [@encounter666741](https://github.com/encounter666741), [@Gaeulczy](https://github.com/Gaeulczy) |
@@ -81,6 +81,7 @@ SYSU and SCUT. The first version (v0.1.0) was completed collaboratively in 2025.
 pip install yquoter            # Core: spider + caching + indicators + reporting
 pip install yquoter[tushare]   # Add Tushare data source (requires token)
 pip install yquoter[chart]     # Add K-line chart rendering (matplotlib + mplfinance)
+pip install yquoter[plotly]    # Add interactive Plotly chart rendering
 pip install yquoter[server]    # Add MCP server (yquoter-server command)
 pip install yquoter[all]       # All of the above — full production install
 pip install yquoter[dev]       # Development tools (pytest, pytest-cov, pytest-asyncio)
@@ -108,11 +109,23 @@ ma    = s.get_ma(n=20)
 rsi   = s.get_rsi(n=14)
 boll  = s.get_boll(n=20)
 
-# Generate a full Markdown report
+# Generate a full Markdown report (default)
 report = s.get_report(start="2026-01-01", end="2026-05-10", language="en")
+
+# HTML report with interactive Plotly chart
+from yquoter import ReportConfig
+report = s.get_report(
+    start="2026-01-01", end="2026-05-10",
+    config=ReportConfig(output_format="html", chart_backend="plotly"),
+)
 
 # With AI analysis (requires DEEPSEEK_API_KEY or similar env var)
 report = s.get_report(language="en", llm_provider="deepseek")
+
+# Standalone chart rendering
+from yquoter import render_chart, prepare_chart_data
+df_plot, _ = prepare_chart_data(history, code="600519")
+chart = render_chart(df_plot, "600519", backend="svg", fmt="markdown")
 ```
 
 **[📘 Full tutorial (Jupyter Notebook)](./examples/basic_usage.ipynb)**
@@ -139,7 +152,7 @@ noted otherwise.
 | `get_rv` | N-period rolling volatility | `start_date`, `end_date`, `n` |
 | `get_vol_ratio` | Volume ratio vs. N-period average | `start_date`, `end_date`, `n` |
 | `get_max_drawdown` | Max drawdown with recovery metrics | `start_date`, `end_date` |
-| `get_report` | Markdown report with optional AI | `start`, `end`, `language`, `llm_provider` |
+| `get_report` | Markdown/HTML report with optional AI | `start`, `end`, `language`, `llm_provider`, `config` |
 
 For full parameter details, see the [Parameters Reference](./PARAMETERS.md).
 
@@ -175,9 +188,13 @@ backward compatibility but emit `DeprecationWarning`. Prefer the `Stock` class.
 |:---------|:------------|
 | `init_cache_manager` | Configure L1/L2 cache TTLs and entry limits |
 | `register_source` | Register a custom data source plugin |
+| `register_renderer` | Register a custom chart renderer |
 | `set_default_source` | Change the default data source |
 | `init_tushare` | Initialize Tushare with an API token |
 | `get_llm_gateway` | Get the LLM gateway instance |
+| `ReportConfig` | Dataclass for report output format, chart backend, etc. |
+| `render_chart` | Render a candlestick chart with selectable backend |
+| `prepare_chart_data` | Preprocess OHLCV data for chart rendering |
 | `get_newest_df_path` | Get the path of the newest cached data file |
 
 ---

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.4.2] — 2026-05-13
+
+### Added
+- **Chart renderer plugin system**: new ``chart_renderer.py`` module with
+  pluggable ``ChartRenderer`` protocol, string-keyed registry, and
+  auto-resolution logic.
+- **Three built-in chart backends**:
+  - ``MatplotlibRenderer``: high-quality PNG via mplfinance (optional).
+  - ``SvgRenderer``: zero-dependency pure-Python SVG output (always available).
+  - ``PlotlyRenderer``: interactive HTML with hover/zoom/pan, plus static
+    PNG via kaleido (optional).
+- **``ReportConfig`` dataclass**: ``output_format`` (markdown/html),
+  ``chart_backend`` (auto/matplotlib/svg/plotly), ``output_dir``,
+  ``llm_provider``.  Backward-compatible — ``get_report()`` without config
+  works identically.
+- **Public API**: ``render_chart()`` for standalone chart rendering,
+  ``prepare_chart_data()`` for OHLCV preprocessing, ``register_renderer()``
+  for custom chart backend plugins.
+- **HTML report output**: ``output_format="html"`` produces a self-contained
+  HTML document with embedded charts.
+- **``plotly`` extra**: ``pip install yquoter[plotly]`` adds interactive
+  chart support.
+
+### Changed
+- ``get_report()`` and ``generate_stock_report()`` now accept an optional
+  ``config: ReportConfig`` parameter.
+- ``_get_plot_as_base64()`` and ``_render_candlestick_svg()`` removed from
+  ``reporting.py``; chart rendering delegated to ``chart_renderer``.
+- ``docs/plugin_guide.md`` expanded with Chart Renderer Plugins section.
+
+---
+
 ## [0.4.1] — 2026-05-11
 
 ### Fixed

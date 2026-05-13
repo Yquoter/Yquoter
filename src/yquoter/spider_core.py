@@ -6,6 +6,7 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 
 import asyncio
+import random
 import threading
 import httpx
 from datetime import datetime, timedelta
@@ -41,6 +42,72 @@ _ASYNC_HEADERS = {
     "Connection": "keep-alive",
     "Referer": "https://quote.eastmoney.com/",
 }
+
+# HTTP status codes eligible for a retry (server errors + rate-limit).
+_RETRYABLE_STATUS: set[int] = {429, 500, 502, 503, 504}
+
+
+async def _retry_async_get(
+    client: httpx.AsyncClient,
+    url: str,
+    headers: Dict[str, str],
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+) -> httpx.Response:
+    """Execute an async GET with exponential backoff and jitter.
+
+    Retries on network errors (:class:`httpx.NetworkError`,
+    :class:`httpx.RemoteProtocolError`, :class:`httpx.ConnectError`,
+    :class:`httpx.TimeoutException`) and retryable HTTP status codes
+    (429, 5xx).  Client errors (4xx) are returned immediately so the
+    caller can handle them.
+
+    Args:
+        client: httpx async client.
+        url: Request URL.
+        headers: Request headers.
+        max_retries: Maximum retry attempts (default 3, for 4 total
+            attempts).
+        base_delay: Base backoff delay in seconds.
+
+    Returns:
+        :class:`httpx.Response` on success.
+
+    Raises:
+        httpx.HTTPError: If all retries are exhausted.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(max_retries + 1):
+        try:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code not in _RETRYABLE_STATUS:
+                return resp
+            # Retryable status — consume body before discarding.
+            await resp.aread()
+            last_exc = httpx.HTTPStatusError(
+                f"Server error {resp.status_code} for {url}",
+                request=resp.request,
+                response=resp,
+            )
+        except (
+            httpx.NetworkError,
+            httpx.RemoteProtocolError,
+            httpx.ConnectError,
+            httpx.TimeoutException,
+        ) as exc:
+            last_exc = exc
+
+        if attempt < max_retries:
+            delay = base_delay * (2 ** attempt)
+            jitter = random.uniform(-0.25, 0.25) * delay
+            actual = max(0.1, delay + jitter)
+            logger.warning(
+                "HTTP fetch failed (attempt %d/%d): %s. Retrying in %.1fs...",
+                attempt + 1, max_retries + 1, last_exc, actual,
+            )
+            await asyncio.sleep(actual)
+
+    raise last_exc  # type: ignore[misc]
 
 
 async def _async_init_semaphore() -> asyncio.Semaphore:
@@ -265,7 +332,7 @@ async def _async_crawl_kline_segments(
         try:
             async with semaphore:
                 url = make_url(beg, end)
-                resp = await client.get(url, headers=_ASYNC_HEADERS)
+                resp = await _retry_async_get(client, url, _ASYNC_HEADERS)
                 resp.raise_for_status()
                 rows = parse_kline(resp.json())
                 if rows:
@@ -329,7 +396,7 @@ async def _async_crawl_realtime_data(
     url = make_url()
     try:
         async with semaphore:
-            resp = await client.get(url, headers=_ASYNC_HEADERS)
+            resp = await _retry_async_get(client, url, _ASYNC_HEADERS)
             resp.raise_for_status()
             parsed = parse_realtime_data(resp.json())
             if parsed:
@@ -379,7 +446,7 @@ async def _async_crawl_structured_data(
 
     try:
         async with semaphore:
-            resp = await client.get(url, headers=headers)
+            resp = await _retry_async_get(client, url, headers)
             resp.raise_for_status()
             rows = parse_data(resp.json())
 

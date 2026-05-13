@@ -174,4 +174,61 @@ This document provides detailed definitions for the common and specialized param
     | `limit_down_price`                      | Limit Down Price                                                  |
     | `average_price`                         | Average Price                                                     |
     | `datetime`                              | Datetime                                                          |
+
+---
+
+### 7. Report Output Format (`output_format`)
+
+- **Type**: `str`
+- **Description**: Controls the output format of generated reports.
+- **Supported Values**:
+
+| Value        | Description                                      |
+|-------------|--------------------------------------------------|
+| `"markdown"`| Standard Markdown with base64-embedded chart images (default). |
+| `"html"`    | Self-contained HTML document with embedded charts. |
+
+Set via ``ReportConfig(output_format=...)`` passed to ``Stock.get_report()``.
+
+### 8. Chart Backend (`chart_backend`)
+
+- **Type**: `str`
+- **Description**: Selects the chart rendering engine for candlestick charts in reports.
+- **Supported Values**:
+
+| Value          | Description                                              | Dependencies            |
+|---------------|----------------------------------------------------------|-------------------------|
+| `"auto"`       | Auto-select best available backend (default).             | None.                   |
+| `"svg"`        | Pure-Python SVG renderer (always available).              | None (stdlib only).     |
+| `"matplotlib"` | High-quality PNG via matplotlib + mplfinance.             | ``pip install yquoter[chart]`` |
+| `"plotly"`     | Interactive HTML charts with hover/zoom/pan.              | ``pip install yquoter[plotly]`` |
+
+Set via ``ReportConfig(chart_backend=...)`` passed to ``Stock.get_report()``, or
+directly in ``render_chart(df, code, backend=...)``.
+
+### 9. ReportConfig
+
+- **Type**: `dataclass` (``yquoter.reporting.ReportConfig``)
+- **Description**: Bundles all report-generation options into a single configuration object.
+- **Fields**:
+
+| Field            | Type            | Default        | Description                                   |
+|-----------------|-----------------|----------------|-----------------------------------------------|
+| `language`       | `str`           | `"en"`         | Report language: ``"en"`` or ``"cn"``.         |
+| `output_format`  | `str`           | `"markdown"`   | Output format: ``"markdown"`` or ``"html"``.    |
+| `chart_backend`  | `str`           | `"auto"`       | Chart backend (see above).                     |
+| `output_dir`     | `str` or `None` | `None`         | Output directory; ``None`` defaults to ``./out``. |
+| `llm_provider`   | `str` or `None` | `None`         | LLM provider for AI analysis (e.g. ``"deepseek"``). |
+
+Usage:
+
+```python
+from yquoter import Stock, ReportConfig
+
+s = Stock("cn", "600519")
+s.get_report(
+    start="2026-01-01", end="2026-05-10",
+    config=ReportConfig(output_format="html", chart_backend="plotly"),
+)
+```
 ---

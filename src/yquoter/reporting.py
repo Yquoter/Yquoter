@@ -158,6 +158,17 @@ class ReportConfig:
 
     All fields have sensible defaults so ``ReportConfig()`` produces
     a standard Markdown report with auto-detected chart backend.
+
+    Attributes:
+        language: Report language (``"en"`` or ``"cn"``).
+        output_format: ``"markdown"`` for Markdown with data: URIs,
+            ``"html"`` for interactive browser rendering.
+        chart_backend: ``"auto"`` (best available), ``"matplotlib"``,
+            ``"svg"``, or ``"plotly"``.
+        output_dir: Directory for the saved report file.
+            ``None`` defaults to ``./out``.
+        llm_provider: Optional LLM provider name for AI analysis
+            (e.g. ``"deepseek"``, ``"openai"``).
     """
     language: str = "en"
     output_format: str = "markdown"
@@ -246,6 +257,18 @@ async def _async_generate_stock_report(
 
     This function is wrapped by :func:`_generate_stock_report` which
     bridges it back to synchronous callers.
+
+    Args:
+        market: Stock exchange market identifier (e.g., ``'cn'``).
+        code: Stock symbol/ticker.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        source: Data source provider name.
+        config: :class:`ReportConfig` instance with all rendering
+            and output options.
+
+    Returns:
+        str: The full report in Markdown or HTML format.
     """
     # ---- validate & prepare ----
     if not market or not code:
@@ -569,7 +592,17 @@ def _wrap_html_report(sections: list[str], code: str, market: str) -> str:
 
 
 async def _async_safe_factors(market, code, trade_date) -> Optional[pd.DataFrame]:
-    """Fetch factors, tolerating failures gracefully."""
+    """Fetch factors, tolerating failures gracefully.
+
+    Args:
+        market: Stock exchange market identifier.
+        code: Stock symbol/ticker.
+        trade_date: Trading date in ``YYYYMMDD`` format.
+
+    Returns:
+        pd.DataFrame or None: Factor data on success, ``None`` if
+        the fetch fails.
+    """
     try:
         return await _aget_stock_factors(market=market, code=code, trade_date=trade_date)
     except Exception as e:

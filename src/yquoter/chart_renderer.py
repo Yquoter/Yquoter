@@ -142,12 +142,34 @@ def _resolve_backend(requested: str, fmt: str) -> str:
 
 
 def _supports_interactive(renderer: ChartRenderer) -> bool:
-    """Return True if *renderer* supports render_interactive()."""
+    """Return True if *renderer* supports ``render_interactive()``.
+
+    Checks for a ``_supports_interactive`` sentinel attribute set
+    on interactive-capable renderer classes (e.g. PlotlyRenderer,
+    SvgRenderer).
+
+    Args:
+        renderer: A :class:`ChartRenderer` instance.
+
+    Returns:
+        bool: ``True`` if the renderer supports interactive output.
+    """
     return getattr(renderer, "_supports_interactive", False)
 
 
 def _svg_tag(name, attrib=None, text=None, **extra):
-    """Build an XML/HTML tag string from name, attributes, and optional text content."""
+    """Build an XML/HTML tag string.
+
+    Args:
+        name: Tag name (e.g., ``"line"``, ``"rect"``).
+        attrib: Optional dictionary of attribute name-value pairs.
+        text: Optional inner text content. If ``None``, the tag
+            is self-closing.
+        **extra: Additional attributes as keyword arguments.
+
+    Returns:
+        str: The constructed tag string.
+    """
     a = {}
     if attrib:
         a.update(attrib)
