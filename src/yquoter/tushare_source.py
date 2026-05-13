@@ -21,15 +21,15 @@ _pro = None  # Global TuShare API instance
 _ts_module = None # Global TuShare module instance (ts)
 
 def _check_tushare_token(ts_module, token: str) -> bool:
-    """
-    Validates Tushare Token by calling a lightweight API (daily).
+    """Validate Tushare Token by calling a lightweight API (daily).
 
     Args:
-        ts: The imported tushare module.
+        ts_module: The imported tushare module.
         token: The Tushare API token.
 
     Returns:
-        True if the token is valid and connection is successful, False otherwise.
+        bool: True if the token is valid and connection is successful,
+            False otherwise.
     """
     try:
         ts_module.set_token(token)
@@ -50,17 +50,14 @@ def _check_tushare_token(ts_module, token: str) -> bool:
         raise TuShareAPIError(f"Tushare Token verification failed: {e}") from e
 
 def init_tushare(token: str = None) -> None:
-    """
-    Initializes and registers the Tushare data source module.
+    """Initialize and register the Tushare data source module.
 
-    Performs Tushare dependency check, token validation, and module registration.
+    Performs Tushare dependency check, token validation, and module
+    registration.
 
     Args:
-        token: Optional Tushare API token. If None, tries to load from environment
-               variables (e.g., TUSHARE_TOKEN).
-
-    Returns:
-        True if Tushare source was successfully initialized and registered.
+        token: Optional Tushare API token. If None, tries to load from
+            environment variables (e.g., ``TUSHARE_TOKEN``).
     """
     logger.info("Attempting to initialize Tushare data source with token: {token}...")
 
@@ -91,37 +88,39 @@ def init_tushare(token: str = None) -> None:
         raise
 
 def get_pro():
-    """
-    Get initialized TuShare API instance.
+    """Get the initialized TuShare API instance.
 
-        Returns:
-            Initialized tushare.pro_api instance
+    Returns:
+        Initialized ``tushare.pro_api`` instance.
 
-        Raises:
-            ValueError: If TuShare is not initialized and no token is available
+    Raises:
+        ConfigError: If TuShare is not initialized and no token is
+            available.
     """
     if _pro is None:
         logger.error("TuShare not initialized. Must call init_tushare() first.")
         raise ConfigError("TuShare not initialized. Please call init_tushare() before fetching data.")
     return _pro
 
-def _fetch_tushare(market: str, code: str, start: str, end: str, klt: int=101, fqt: int=1) -> pd.DataFrame:
-    """
-    Internal helper function: Fetch historical data via TuShare API (different endpoints for different markets)
+def _fetch_tushare(market: str, code: str, start: str, end: str,
+                   klt: int = 101, fqt: int = 1) -> pd.DataFrame:
+    """Fetch historical data via TuShare API.
 
-        Args:
-            market: Market identifier ('cn', 'hk', 'us')
-            code: Stock code
-            start: Start date in 'YYYYMMDD' format
-            end: End date in 'YYYYMMDD' format
-            klt: K-line type code (101=daily, 102=weekly, 103=monthly)
-            fqt: Adjustment type (0=no adjustment, 1=qfq, 2=hfq)
+    Uses different endpoints for different markets.
 
-        Returns:
-            DataFrame containing historical data
+    Args:
+        market: Market identifier (``'cn'``, ``'hk'``, ``'us'``).
+        code: Stock code.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        klt: K-line type code (101=daily, 102=weekly, 103=monthly).
+        fqt: Adjustment type (0=none, 1=qfq, 2=hfq).
 
-        Raises:
-            ValueError: If market is not supported
+    Returns:
+        pd.DataFrame: Historical OHLCV data.
+
+    Raises:
+        CodeFormatError: If the market is not supported.
     """
     pro = get_pro()
 
@@ -178,21 +177,20 @@ def get_stock_history_tushare(
     start: str,
     end: str,
     klt: int = 101,
-    fqt: int = 1
+    fqt: int = 1,
 ) -> pd.DataFrame:
-    """
-    Get historical stock data from TuShare with caching support.
+    """Get historical stock data from TuShare.
 
-        Args:
-            market: Market identifier ('cn', 'hk', 'us')
-            code: Stock code
-            start: Start date in 'YYYYMMDD' format
-            end: End date in 'YYYYMMDD' format
-            klt: K-line type code (101=daily, 102=weekly, 103=monthly)
-            fqt: Adjustment type (0=no adjustment, 1=qfq, 2=hfq)
+    Args:
+        market: Market identifier (``'cn'``, ``'hk'``, ``'us'``).
+        code: Stock code.
+        start: Start date in ``YYYYMMDD`` format.
+        end: End date in ``YYYYMMDD`` format.
+        klt: K-line type code (101=daily, 102=weekly, 103=monthly).
+        fqt: Adjustment type (0=none, 1=qfq, 2=hfq).
 
-        Returns:
-            DataFrame containing standardized historical data
+    Returns:
+        pd.DataFrame: Standardized historical OHLCV data.
     """
     logger.info(f"Getting historical stock data from TuShare : {code}")
     try:
@@ -219,24 +217,28 @@ def get_stock_history_tushare(
     return df[extra_cols] if extra_cols else df
 
 def get_stock_realtime_tushare(
-        market: str,
-        code: str,
-        field: List[str] = None
+    market: str,
+    code: str,
+    field: List[str] = None,
 ) -> pd.DataFrame:
-    """
-    Get real-time stock quotes (due to TuShare limitations, some markets may return latest daily data).
+    """Get real-time stock quotes from TuShare.
 
-        Args:
-            market: Market identifier ('cn', 'hk', 'us')
-            code: Stock code
-            field: Optional list of fields to filter results
+    Note that for some markets TuShare may return the latest daily data
+    rather than true real-time quotes.
 
-        Returns:
-            DataFrame with real-time quotes, standardized fields:
-                ['code', 'name', 'datetime', 'pre_close', 'high', 'open', 'high', 'low', 'close', 'vol', 'amount']
+    Args:
+        market: Market identifier (``'cn'``, ``'hk'``, ``'us'``).
+        code: Stock code.
+        field: Optional list of fields to filter results.
 
-        Raises:
-            DataSourceError: If market is not supported or implementation is missing
+    Returns:
+        pd.DataFrame: Real-time quotes with standardized fields:
+        ``['code', 'name', 'datetime', 'pre_close', 'high', 'open',
+        'high', 'low', 'close', 'vol', 'amount']``.
+
+    Raises:
+        CodeFormatError: If the market is not supported or the
+            implementation is missing.
     """
     pro = get_pro()
     ts_code = convert_code_to_tushare(code, market)

@@ -165,7 +165,7 @@ def _get_rsi_n(market: str = None, code: str = None, start: str = None,
         df['avg_loss'] = df['loss'].rolling(window=n, min_periods=1).mean()
 
         # Calculate Relative Strength (RS)
-        df['rs'] = df['avg_gain'] / df['avg_loss'].replace(0, 0.0001)  # 避免除以0
+        df['rs'] = df['avg_gain'] / df['avg_loss'].replace(0, 0.0001)  # avoid division by zero
         # Calculate RSI
         rsi_col = f"RSI{n}"
         df[rsi_col] = 100 - (100 / (1 + df['rs']))

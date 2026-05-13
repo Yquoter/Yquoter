@@ -21,6 +21,9 @@ env/
 .vscode/
 .idea/
 
+# Claude Code
+.claude/
+
 # System
 Thumbs.db
 .DS_Store

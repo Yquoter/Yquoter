@@ -9,7 +9,7 @@ import base64
 import os
 import asyncio
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 import pandas as pd
 from datetime import datetime, timedelta
@@ -18,7 +18,7 @@ from tabulate import tabulate as _tabulate
 
 from yquoter.logger import get_logger
 from yquoter.config import LOCALIZATION
-from yquoter.exceptions import PlotLibImportError, ParameterError
+from yquoter.exceptions import ParameterError
 from yquoter.indicators import _get_ma_n
 from yquoter.spider_core import _run_async
 from yquoter.chart_renderer import (

@@ -16,6 +16,14 @@ published to PyPI and auto-discovered by Yquoter users.
 6. [Registration & Discovery](#registration--discovery)
 7. [Publishing to PyPI](#publishing-to-pypi)
 8. [Testing](#testing)
+9. [Chart Renderer Plugins](#chart-renderer-plugins)
+   - [Concept](#chart-concept)
+   - [ChartRenderer Protocol](#chartrenderer-protocol)
+   - [Built-in Renderers](#built-in-renderers)
+   - [Render Function](#render-function)
+   - [ReportConfig Integration](#reportconfig-integration)
+   - [Custom Renderer](#custom-renderer)
+   - [Registration & Auto-Resolution](#chart-registration--auto-resolution)
 
 ---
 
@@ -301,3 +309,242 @@ pytest tests/ --cov=my_package
 - :mod:`yquoter.datasource` — registry and dispatch
 - ``tests/conftest.py`` — ``MockDataSource`` reference implementation
 - ``tests/test_plugin_base.py`` — tests for built-in sources
+
+---
+
+## Chart Renderer Plugins
+
+### Chart Concept
+
+Yquoter's report generation produces candlestick charts.  The **chart
+renderer** layer abstracts *how* the chart is drawn so users can select
+or swap backends without changing the rest of the report pipeline.
+
+Two output formats are supported:
+
+| Output format | Image model | Example use |
+|---------------|-------------|-------------|
+| ``"markdown"`` | Static image embedded as ``data:`` URI (PNG or SVG) | GitHub README, note apps |
+| ``"html"``     | HTML fragment — ``<svg>...</svg>`` or ``<div>`` + JS | Browser viewing, dashboards |
+
+Because standard Markdown cannot execute JavaScript, only static images
+are valid for Markdown output.  HTML output unlocks interactive charts
+(Plotly hover, zoom, pan).
+
+### ChartRenderer Protocol
+
+Every chart renderer conforms to the :class:`ChartRenderer` protocol:
+
+```python
+from typing import Protocol
+
+class ChartRenderer(Protocol):
+    """Protocol for chart rendering backends."""
+
+    name: str  # "matplotlib" | "svg" | "plotly"
+
+    def render(self, df, code: str, title: str, ylabel: str) -> bytes:
+        """Render a static image.
+
+        Returns:
+            PNG bytes (matplotlib, plotly) or SVG bytes (svg backend).
+        """
+        ...
+
+    def render_interactive(self, df, code: str, title: str, ylabel: str) -> str:
+        """Render an interactive HTML fragment.
+
+        Returns:
+            HTML string (``<div id="...">`` with Plotly JS, or ``<svg>``).
+
+        Raises:
+            NotImplementedError: If the renderer does not support
+                interactive output.
+        """
+        ...
+
+    @staticmethod
+    def is_available() -> bool:
+        """Return ``True`` if the required libraries are installed."""
+        ...
+```
+
+The input DataFrame **must be preprocessed** before calling any render
+method: a ``pd.DataFrame`` with a ``DatetimeIndex`` and columns
+``Open``, ``High``, ``Low``, ``Close``, ``Volume``, and optionally
+``MA20``.  Preprocessing is provided by the standalone utility
+:func:`prepare_chart_data` (see below).
+
+### Built-in Renderers
+
+Yquoter ships with three renderers:
+
+| Name | ``render()`` output | ``render_interactive()`` | Dependencies |
+|------|---------------------|--------------------------|--------------|
+| ``"matplotlib"`` | PNG bytes | ``NotImplementedError`` | ``matplotlib`` + ``mplfinance`` |
+| ``"svg"`` | SVG bytes | ``NotImplementedError`` | **None** (stdlib only) |
+| ``"plotly"`` | PNG bytes (via kaleido) | ``<div>`` + Plotly.js | ``plotly``, ``kaleido`` (PNG only) |
+
+The **SVG renderer** is the universal fallback.  It uses only the Python
+standard library (``xml.etree.ElementTree`` + ``math``) and ``pandas``,
+so it is always available and guarantees chart generation even when no
+optional plotting library is installed.
+
+### Render Function
+
+The public entry point for chart rendering is :func:`render_chart`:
+
+```python
+from yquoter.reporting import render_chart
+
+chart_str = render_chart(
+    df_ready,           # preprocessed DataFrame
+    code="600519",
+    backend="auto",     # "auto" | "matplotlib" | "svg" | "plotly"
+    fmt="markdown",     # "markdown" | "html"
+    title="600519 K-Line Chart",
+    ylabel="Price (CNY)",
+)
+```
+
+- ``fmt="markdown"`` → returns a ``data:image/...;base64,...`` URI string
+- ``fmt="html"`` → returns an HTML fragment (``<svg>...</svg>`` or ``<div id="...">`` with JS)
+- ``backend="auto"`` auto-selects the best available backend:
+  - for Markdown: ``matplotlib`` > ``svg``
+  - for HTML: ``plotly`` > ``svg``
+
+The preprocessing utility is also public:
+
+```python
+from yquoter.reporting import prepare_chart_data
+
+df_ready, error = prepare_chart_data(df_history, code="600519")
+if error:
+    print(f"Chart unavailable: {error}")
+```
+
+This separation keeps :func:`render_chart` pure — it only renders, and
+does not mutate or validate the input.
+
+### ReportConfig Integration
+
+The :class:`Stock.get_report` method accepts a :class:`ReportConfig`
+dataclass that bundles all report-generation options:
+
+```python
+from dataclasses import dataclass
+
+@dataclass
+class ReportConfig:
+    language: str = "en"                 # "en" | "cn"
+    output_format: str = "markdown"      # "markdown" | "html"
+    chart_backend: str = "auto"          # "auto" | "matplotlib" | "svg" | "plotly"
+    output_dir: str | None = None        # defaults to "./out"
+    llm_provider: str | None = None      # e.g. "deepseek", "openai"
+```
+
+Usage:
+
+```python
+from yquoter import Stock, ReportConfig
+
+s = Stock("cn", "600519")
+
+# Default: Markdown + auto backend
+s.get_report(start="2026-01-01", end="2026-05-10")
+
+# HTML + interactive Plotly chart
+s.get_report(
+    start="2026-01-01", end="2026-05-10",
+    config=ReportConfig(output_format="html", chart_backend="plotly"),
+)
+
+# Markdown with explicit SVG (no extra dependencies)
+s.get_report(
+    start="2026-01-01", end="2026-05-10",
+    config=ReportConfig(chart_backend="svg"),
+)
+```
+
+The report engine internally:
+
+1. Fetches data concurrently (history, realtime, profile, factors)
+2. Calls :func:`prepare_chart_data` on the history DataFrame
+3. Calls :func:`render_chart` with the selected backend and format
+4. Assembles the report sections and writes the file (``.md`` or ``.html``)
+
+### Custom Renderer
+
+Implement the :class:`ChartRenderer` protocol, then register:
+
+```python
+from yquoter.chart_renderer import register_renderer
+
+class MyRenderer:
+    name = "my_renderer"
+
+    def render(self, df, code, title, ylabel):
+        # Return PNG or SVG bytes
+        ...
+
+    def render_interactive(self, df, code, title, ylabel):
+        # Return HTML string
+        ...
+
+    @staticmethod
+    def is_available():
+        return True
+
+register_renderer(MyRenderer())
+
+# Use it
+from yquoter.reporting import render_chart
+render_chart(df, "600519", backend="my_renderer", fmt="html")
+```
+
+### Chart Registration & Auto-Resolution
+
+Renderers are stored in a module-level registry:
+
+```python
+# yquoter.chart_renderer
+_RENDERER_REGISTRY: dict[str, ChartRenderer] = {}
+
+def register_renderer(renderer: ChartRenderer) -> None:
+    _RENDERER_REGISTRY[renderer.name] = renderer
+
+def get_renderer(name: str) -> ChartRenderer:
+    ...
+```
+
+When ``backend="auto"``, the resolution logic picks the first available
+renderer from a priority list:
+
+| Target format | Priority order |
+|---------------|----------------|
+| ``"markdown"`` | ``matplotlib`` → ``svg`` |
+| ``"html"``     | ``plotly`` → ``svg`` |
+
+The ``"svg"`` renderer is always available, so ``"auto"`` never fails.
+
+If the user requests a specific backend that is not installed, a
+``RuntimeError`` is raised with an install hint:
+
+    Plotly is not installed. Install with: pip install yquoter[plotly]
+
+A new ``plotly`` extra is added to ``pyproject.toml``:
+
+```toml
+[project.optional-dependencies]
+plotly = ["plotly>=5.0", "kaleido>=0.2"]
+```
+
+### Summary: Data Source vs Chart Renderer
+
+| Aspect | DataSource plugin | ChartRenderer plugin |
+|--------|-------------------|----------------------|
+| **What it provides** | Market data (OHLCV, quotes, financials) | Chart images (PNG, SVG, HTML) |
+| **Abstract base** | :class:`~yquoter.plugin_base.DataSource` (ABC) | ``ChartRenderer`` (Protocol) |
+| **Discovery** | ``entry_points`` group ``yquoter.data_sources`` | Manual ``register_renderer()`` |
+| **Select via** | ``Stock(market, code, loader=...)`` | ``ReportConfig(chart_backend=...)`` |
+| **Granularity** | Per source (implements multiple data types) | Per backend (one rendering technology) |
