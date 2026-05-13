@@ -7,13 +7,14 @@ and built-in renderers for matplotlib, SVG (pure Python), and Plotly.
 
 from __future__ import annotations
 
-import base64
 import logging
 import math
 from io import BytesIO
-from typing import Dict, Optional, Protocol
+from typing import Dict, Protocol
 
 import pandas as pd
+
+__all__ = ["register_renderer", "get_renderer"]
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +144,22 @@ def _resolve_backend(requested: str, fmt: str) -> str:
 def _supports_interactive(renderer: ChartRenderer) -> bool:
     """Return True if *renderer* supports render_interactive()."""
     return getattr(renderer, "_supports_interactive", False)
+
+
+def _svg_tag(name, attrib=None, text=None, **extra):
+    """Build an XML/HTML tag string from name, attributes, and optional text content."""
+    a = {}
+    if attrib:
+        a.update(attrib)
+    a.update(extra)
+    parts = [f"<{name}"]
+    for k, v in a.items():
+        parts.append(f' {k}="{v}"')
+    if text is not None:
+        parts.append(f">{text}</{name}>")
+    else:
+        parts.append("/>")
+    return "".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -297,21 +314,6 @@ class SvgRenderer:
         # ---- X coordinates ----
         xs = [pad_left + int(plot_width * (i + 0.5) / n) for i in range(n)]
 
-        # ---- build SVG elements ----
-        def _tag(name, attrib=None, text=None, **extra):
-            a = {}
-            if attrib:
-                a.update(attrib)
-            a.update(extra)
-            parts = [f"<{name}"]
-            for k, v in a.items():
-                parts.append(f' {k}="{v}"')
-            if text is not None:
-                parts.append(f">{text}</{name}>")
-            else:
-                parts.append("/>")
-            return "".join(parts)
-
         lines: list[str] = []
         lines.append(
             f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
@@ -324,7 +326,7 @@ class SvgRenderer:
         for i in range(grid_count + 1):
             y = price_top + int(price_h * i / grid_count)
             lines.append(
-                _tag(
+                _svg_tag(
                     "line",
                     x1=str(pad_left), y1=str(y),
                     x2=str(width - pad_right), y2=str(y),
@@ -334,17 +336,17 @@ class SvgRenderer:
 
         # ---- title ----
         lines.append(
-            _tag(
+            _svg_tag(
                 "text", x=str(width // 2), y="20", fill="#e0e0e0",
                 **{"font-size": "13", "font-family": "sans-serif",
                    "text-anchor": "middle", "font-weight": "bold"},
-                text=title,
+                text=f"{code} {title}".strip(),
             )
         )
 
         # ---- ylabel ----
         lines.append(
-            _tag(
+            _svg_tag(
                 "text", x="12", y=str(price_top + price_h // 2), fill="#888",
                 **{"font-size": "10", "font-family": "sans-serif",
                    "text-anchor": "middle",
@@ -359,7 +361,7 @@ class SvgRenderer:
             y = price_top + int(price_h * (grid_count - i) / grid_count)
             label = f"{p:.2f}"
             lines.append(
-                _tag(
+                _svg_tag(
                     "text", x=str(pad_left - 6), y=str(y + 4), fill="#888",
                     **{"font-size": "9", "font-family": "sans-serif",
                        "text-anchor": "end"},
@@ -378,7 +380,7 @@ class SvgRenderer:
             else:
                 label = f"{v:.0f}"
             lines.append(
-                _tag(
+                _svg_tag(
                     "text", x=str(pad_left - 6), y=str(y + 4), fill="#888",
                     **{"font-size": "9", "font-family": "sans-serif",
                        "text-anchor": "end"},
@@ -404,7 +406,7 @@ class SvgRenderer:
             wick_top = _price_y(h)
             wick_bot = _price_y(l)
             lines.append(
-                _tag(
+                _svg_tag(
                     "line", x1=str(x), y1=str(wick_top),
                     x2=str(x), y2=str(wick_bot),
                     stroke=color, **{"stroke-width": "1"},
@@ -414,7 +416,7 @@ class SvgRenderer:
             # body
             if body_h <= 1:
                 lines.append(
-                    _tag(
+                    _svg_tag(
                         "line",
                         x1=str(x - candle_w // 2), y1=str(_price_y(c)),
                         x2=str(x + candle_w // 2), y2=str(_price_y(c)),
@@ -423,7 +425,7 @@ class SvgRenderer:
                 )
             else:
                 lines.append(
-                    _tag(
+                    _svg_tag(
                         "rect",
                         x=str(x - candle_w // 2), y=str(body_top),
                         width=str(candle_w), height=str(body_h), fill=color,
@@ -440,7 +442,7 @@ class SvgRenderer:
                 ma_points.append(f"{xs[i]},{_price_y(float(v)):.1f}")
             if len(ma_points) >= 2:
                 lines.append(
-                    _tag(
+                    _svg_tag(
                         "polyline", points=" ".join(ma_points),
                         fill="none", stroke="#42a5f5",
                         **{"stroke-width": "1.2"},
@@ -459,7 +461,7 @@ class SvgRenderer:
             y = vol_bottom - bar_h
             bar_w = max(1, candle_w)
             lines.append(
-                _tag(
+                _svg_tag(
                     "rect", x=str(x - bar_w // 2), y=str(y),
                     width=str(bar_w), height=str(bar_h),
                     fill=color, opacity="0.7",
@@ -468,7 +470,7 @@ class SvgRenderer:
 
         # ---- separator ----
         lines.append(
-            _tag(
+            _svg_tag(
                 "line",
                 x1=str(pad_left), y1=str(price_bottom),
                 x2=str(width - pad_right), y2=str(price_bottom),
@@ -491,7 +493,7 @@ class SvgRenderer:
                 date_str = ""
             x = xs[idx]
             lines.append(
-                _tag(
+                _svg_tag(
                     "text", x=str(x), y=str(height - 8), fill="#888",
                     **{"font-size": "8", "font-family": "sans-serif",
                        "text-anchor": "middle"},
@@ -525,70 +527,8 @@ class PlotlyRenderer:
         except ImportError:
             return False
 
-    def render(self, df: pd.DataFrame, code: str, title: str, ylabel: str) -> bytes:
-        try:
-            import plotly.graph_objects as go
-            from plotly.subplots import make_subplots
-        except ImportError:
-            raise RuntimeError(
-                "Plotly is not installed. Install with: "
-                "pip install yquoter[plotly]"
-            )
-
-        fig = make_subplots(
-            rows=2, cols=1, shared_xaxes=True,
-            vertical_spacing=0.03,
-            row_heights=[0.7, 0.3],
-        )
-
-        fig.add_trace(
-            go.Candlestick(
-                x=df.index,
-                open=df['Open'], high=df['High'],
-                low=df['Low'], close=df['Close'],
-                name=code,
-            ),
-            row=1, col=1,
-        )
-
-        if 'MA20' in df.columns:
-            fig.add_trace(
-                go.Scatter(
-                    x=df.index, y=df['MA20'],
-                    mode='lines', name='MA20',
-                    line=dict(color='blue', width=1),
-                ),
-                row=1, col=1,
-            )
-
-        fig.add_trace(
-            go.Bar(
-                x=df.index, y=df['Volume'],
-                name='Volume',
-                marker=dict(color='rgba(128,128,128,0.5)'),
-            ),
-            row=2, col=1,
-        )
-
-        fig.update_layout(
-            title=title,
-            yaxis_title=ylabel,
-            xaxis_rangeslider_visible=False,
-            template='plotly_dark',
-            height=520,
-        )
-
-        try:
-            return fig.to_image(format='png', scale=2)
-        except Exception:
-            raise RuntimeError(
-                "Plotly static image export requires kaleido. "
-                "Install with: pip install kaleido"
-            )
-
-    def render_interactive(
-        self, df: pd.DataFrame, code: str, title: str, ylabel: str
-    ) -> str:
+    def _build_figure(self, df: pd.DataFrame, code: str, title: str, ylabel: str):
+        """Build and return a plotly figure (shared by render and render_interactive)."""
         import plotly.graph_objects as go
         from plotly.subplots import make_subplots
 
@@ -635,6 +575,23 @@ class PlotlyRenderer:
             height=520,
         )
 
+        return fig
+
+    def render(self, df: pd.DataFrame, code: str, title: str, ylabel: str) -> bytes:
+        fig = self._build_figure(df, code, title, ylabel)
+
+        try:
+            return fig.to_image(format='png', scale=2)
+        except ValueError:
+            raise RuntimeError(
+                "Plotly static image export requires kaleido. "
+                "Install with: pip install kaleido"
+            )
+
+    def render_interactive(
+        self, df: pd.DataFrame, code: str, title: str, ylabel: str
+    ) -> str:
+        fig = self._build_figure(df, code, title, ylabel)
         return fig.to_html(full_html=False, include_plotlyjs='cdn')
 
 
