@@ -237,7 +237,7 @@ class SvgRenderer:
     """
 
     name = "svg"
-    _supports_interactive = False
+    _supports_interactive = True
 
     @staticmethod
     def is_available() -> bool:
