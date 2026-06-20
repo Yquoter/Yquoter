@@ -31,7 +31,10 @@ Environment
 
 from typing import Tuple
 
-import cupy as cp
+try:
+    import cupy as cp
+except ImportError:
+    cp = None  # type: ignore[assignment]
 import numpy as np
 
 # ---------------------------------------------------------------------------

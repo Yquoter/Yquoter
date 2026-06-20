@@ -44,9 +44,9 @@ except cp.cuda.runtime.CUDARuntimeError:
     pytest.skip("CUDA runtime error — no usable GPU.", allow_module_level=True)
 
 # Module-level imports depend on CuPy, so they must be done after the guard.
-from low_rank_graph import low_rank_correlation_graph, _matrix_rank  # noqa: E402
-from random_walk import time_ordered_random_walk       # noqa: E402
-from pipeline_manager import run_pipeline              # noqa: E402
+from blank.low_rank_graph import low_rank_correlation_graph, _matrix_rank  # noqa: E402
+from blank.random_walk import time_ordered_random_walk       # noqa: E402
+from blank.pipeline_manager import run_pipeline              # noqa: E402
 
 
 # ===========================================================================

@@ -50,7 +50,10 @@ Environment
 
 from typing import List
 
-import cupy as cp
+try:
+    import cupy as cp
+except ImportError:
+    cp = None  # type: ignore[assignment]
 
 # Numerical epsilon — guards against log(0) when a transition probability
 # is exactly 0 (common after non-negative clipping + diagonal removal).

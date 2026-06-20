@@ -45,6 +45,7 @@ Environment
 - Python + CuPy only
 """
 
+import time
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -57,8 +58,8 @@ try:
 except ImportError:
     cp = None  # type: ignore[assignment]
 
-from low_rank_graph import low_rank_correlation_graph  # type: ignore[import]
-from random_walk import time_ordered_random_walk        # type: ignore[import]
+from blank.low_rank_graph import low_rank_correlation_graph
+from blank.random_walk import time_ordered_random_walk
 
 
 def _ensure_cupy():
@@ -261,6 +262,62 @@ def run_pipeline(
     }
 
     return centralities, timing_info
+
+
+def benchmark_pipeline(
+    parquet_path: str,
+    subset_time_ids: List[int],
+    k: int = 8,
+    walk_length: int = 100,
+    num_walks_per_node: int = 20,
+) -> Dict[str, float]:
+    """End-to-end benchmark: CPU → GPU pipeline, return timing breakdown.
+
+    Runs the full CPU pipeline (data loading → feature engineering →
+    tensor building) followed by the GPU pipeline (low-rank graph →
+    random walk → centrality), then reports timing for each phase.
+
+    Args:
+        parquet_path: Path to ``book_train.parquet``.
+        subset_time_ids: List of time_ids to process.
+        k: SVD truncation rank.
+        walk_length: Random walk steps per walk.
+        num_walks_per_node: Walks per graph node.
+
+    Returns:
+        Dict with keys: n_slices, n_stocks, cpu_time_s, gpu_time_s,
+        total_time_s, cpu_throughput_wps, and GPU timing breakdown.
+    """
+    from blank.pipeline_runner import run_cpu_pipeline
+
+    t_total = time.perf_counter()
+
+    # --- CPU phase ---
+    t_cpu = time.perf_counter()
+    slices = run_cpu_pipeline(
+        parquet_path=parquet_path,
+        time_ids_subset=subset_time_ids,
+    )
+    cpu_time = time.perf_counter() - t_cpu
+
+    # --- GPU phase ---
+    t_gpu = time.perf_counter()
+    centralities, gpu_timing = run_pipeline(
+        slices, k=k, walk_length=walk_length, num_walks_per_node=num_walks_per_node
+    )
+    gpu_time = time.perf_counter() - t_gpu
+
+    total_time = time.perf_counter() - t_total
+
+    return {
+        "n_slices": len(slices),
+        "n_stocks": slices[0].shape[0] if slices else 0,
+        "cpu_time_s": cpu_time,
+        "gpu_time_s": gpu_time,
+        "total_time_s": total_time,
+        "cpu_throughput_wps": len(slices) / cpu_time if cpu_time > 0 else float("inf"),
+        **gpu_timing,
+    }
 
 
 # ===========================================================================
