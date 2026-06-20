@@ -3,6 +3,7 @@
 
 import logging
 import time
+from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
@@ -17,9 +18,8 @@ from blank.tensor_builder import build_tensor
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_PARQUET_PATH = (
-    r"C:\Users\Xhang\Desktop\大三下\并行算法\大作业"
-    r"\optiver-realized-volatility-prediction\book_train.parquet"
+_DEFAULT_PARQUET_PATH = str(
+    Path(__file__).resolve().parent / "dataset" / "book_train.parquet"
 )
 
 

@@ -1,5 +1,5 @@
 # blank/verify_pipeline.py
-"""One-shot end-to-end verification: CPU pipeline -> GPU stub, 10 windows."""
+"""End-to-end verification: CPU pipeline -> GPU pipeline, 10 + 20 windows."""
 
 import sys
 from pathlib import Path
@@ -20,9 +20,8 @@ from blank.data_loader import discover_time_ids
 from blank.pipeline_runner import run_cpu_pipeline
 from blank.pipeline_manager import run_pipeline, benchmark_pipeline
 
-PARQUET_PATH = (
-    r"C:\Users\Xhang\Desktop\大三下\并行算法\大作业"
-    r"\optiver-realized-volatility-prediction\book_train.parquet"
+PARQUET_PATH = str(
+    Path(__file__).resolve().parent / "dataset" / "book_train.parquet"
 )
 
 
@@ -45,9 +44,9 @@ def main():
     assert slices[0].flags["C_CONTIGUOUS"]
     print(f"\nProduced {len(slices)} slices, shape=({N},{F},{T}), float32 C-contiguous\n")
 
-    # --- Phase 2: GPU handoff ---
+    # --- Phase 2: GPU pipeline ---
     print("=" * 60)
-    print("Phase 2: GPU handoff (stub)")
+    print("Phase 2: GPU pipeline (low-rank graph + random walk)")
     print("=" * 60)
     centralities, timing = run_pipeline(slices)
     assert len(centralities) == len(slices)
