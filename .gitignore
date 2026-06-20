@@ -40,3 +40,7 @@ out/
 
 # release
 dist/
+
+blank/dataset
+blank/dataset/.cluade
+.pdf
